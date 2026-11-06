@@ -32,3 +32,23 @@ describe('acquireRootBlur', () => {
     b();
   });
 });
+
+describe('subscribeRootBlur (2026-11-06 업데이트 18)', () => {
+  it('첫 팝업에서 true, 마지막 팝업이 닫힐 때 false를 한 번씩 알린다', async () => {
+    const { subscribeRootBlur, isRootBlurred } = await import('@/lib/ui/root-blur');
+    const seen: boolean[] = [];
+    const off = subscribeRootBlur((b) => seen.push(b));
+    const a = acquireRootBlur();
+    const b = acquireRootBlur();
+    expect(isRootBlurred()).toBe(true);
+    a();
+    b();
+    b();
+    expect(isRootBlurred()).toBe(false);
+    expect(seen).toEqual([true, false]);
+    off();
+    const c = acquireRootBlur();
+    c();
+    expect(seen).toEqual([true, false]);
+  });
+});

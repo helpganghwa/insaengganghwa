@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { TodayTicker as TickerData } from '@/lib/game/today/stats';
+import { isRootBlurred, subscribeRootBlur } from '@/lib/ui/root-blur';
 
 /**
  * 홈 '오늘의 인생강화' 티커 — 전 지표 한 줄 무한 흐름, **rAF 직접 구동**(2026-07-16 확정):
@@ -92,6 +93,7 @@ export function TodayTicker({ data }: { data: TickerData }) {
 
     const step = (t: number) => {
       if (!active || !inView) return; // 정지 상태 — visibility/observer가 재개
+      if (isRootBlurred()) return; // 팝업 뒤 흐림 아래는 정지(2026-11-06 업데이트 18) — 닫힘 구독이 재개
       if (last != null) {
         x -= (SCROLL_PX_PER_S * (t - last)) / 1000;
         const hw = halfWRef.current;
@@ -116,8 +118,12 @@ export function TodayTicker({ data }: { data: TickerData }) {
     });
     if (wrapRef.current) io.observe(wrapRef.current);
     document.addEventListener('visibilitychange', onVisibility);
+    const offBlur = subscribeRootBlur((blurred) => {
+      if (!blurred && active && inView) start();
+    });
     start();
     return () => {
+      offBlur();
       cancelAnimationFrame(raf);
       document.removeEventListener('visibilitychange', onVisibility);
       io.disconnect();

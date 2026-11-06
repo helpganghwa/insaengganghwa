@@ -15,6 +15,7 @@ import {
   itemAnimCell,
 } from '@/lib/game/equipment/item-anim';
 import { transcendStyle, TRANSCEND_TUNING } from '@/lib/game/equipment/transcend';
+import { isRootBlurred, subscribeRootBlur } from '@/lib/ui/root-blur';
 
 const SLOT_EMOJI = { weapon: '⚔️', armor: '🛡️', accessory: '💍' } as const;
 
@@ -589,6 +590,12 @@ function TranscendCanvas({
     let lastDraw = 0;
     const loop = (ts: number) => {
       if (stopped || !visible) return;
+      // 팝업 뒤 흐림 아래에서는 멈춘다(2026-11-06 업데이트 18) — 흐린 정지 화면이면 충분하고, 매 프레임 전체 블러 재계산을 막는다.
+      // 다시 도는 건 아래 subscribeRootBlur(닫힘)가 맡는다.
+      if (isRootBlurred()) {
+        raf = 0;
+        return;
+      }
       if (ts - lastDraw >= TRANSCEND_TUNING.fpsIntervalMs) {
         lastDraw = ts;
         drawTs = ts;
@@ -620,6 +627,10 @@ function TranscendCanvas({
       { rootMargin: '150px' },
     );
     io.observe(canvas);
+    // 팝업이 닫히면(흐림 꺼짐) 멈춰 있던 루프를 다시 돌린다.
+    const offBlur = subscribeRootBlur((blurred) => {
+      if (!blurred && dynamic && built && visible && !stopped && !raf) raf = requestAnimationFrame(loop);
+    });
 
     // 해방 애니 스트립 병렬 로드(있으면).
     if (useAnim) loadStrip(code).then((img) => { if (!stopped) stripImg = img; }).catch(() => {});
@@ -642,6 +653,7 @@ function TranscendCanvas({
     return () => {
       stopped = true;
       io.disconnect();
+      offBlur();
       if (raf) cancelAnimationFrame(raf);
     };
     // coord는 같은 code면 안정. 객체 ref 변동 deps 회피 위해 code 사용.
