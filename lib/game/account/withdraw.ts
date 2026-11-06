@@ -7,6 +7,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { guilds } from '@/lib/db/schema/guild';
 import { removeAllInquiryImagesForUser } from '@/lib/game/support/inquiry';
 import { clearWorldBossOnExit } from '@/lib/game/world-boss/party';
+import { rebuildChampionItems } from '@/lib/game/leaderboard/incremental';
 
 /**
  * 회원탈퇴 — 게임 데이터 파기 + PII 제거, 결제·본인인증·미성년한도는 법정 보존(익명화 in-place).
@@ -85,6 +86,8 @@ export async function withdrawAccount(userId: string): Promise<void> {
   if (led) throw new WithdrawError('LEADER_MUST_TRANSFER');
 
   const uid = sql`${userId}::uuid`;
+  // 탈퇴로 비운 도감 챔피언 자리(커밋 뒤 다음 사람으로 채운다 — 아래 codex_champions 삭제 주석).
+  let vacatedChampions: [number, number][] = [];
 
   await db.transaction(async (tx) => {
     // 잠금 대기 상한(10-04 핫픽스) — 다른 트랜잭션이 이 유저의 행을 잡고 있으면 탈퇴가 잠금을 기다리다 함수 한도(60초)에
@@ -203,8 +206,14 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // 리더보드·개인 기록 — 캐릭터가 사라지면 보드의 값도 유령이 된다(0103·v2 증분화 후속).
     await tx.execute(sql`delete from leaderboard_ranks where user_id = ${uid}`);
     // 도감 챔피언 — 탈퇴 유저가 랭크 슬롯을 계속 점유하면 유령 챔피언이 된다(leaderboard와 동일 취지).
-    // 빈 슬롯은 다음 해방 갱신이 채운다.
-    await tx.execute(sql`delete from codex_champions where user_id = ${uid}`);
+    // 빈 슬롯은 커밋 뒤 그 아이템만 다시 계산해 바로 채운다(2026-11-06 업데이트 18 — 길드원 목록 후광도 이 표를 읽게 되어,
+    // 종전 실시간 계산처럼 즉시 반영되도록. 정지 경로 removeUserFromBoards와 같은 방식).
+    vacatedChampions = (
+      (await tx.execute(sql`delete from codex_champions where user_id = ${uid} returning server_id, catalog_item_id`)) as unknown as {
+        server_id: number;
+        catalog_item_id: number;
+      }[]
+    ).map((r) => [Number(r.server_id), Number(r.catalog_item_id)]);
     await tx.execute(sql`delete from user_milestones where user_id = ${uid}`);
     await tx.execute(sql`delete from user_daily_stats where user_id = ${uid}`);
 
@@ -254,6 +263,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     // 이미지는 PII 밀도가 높아(결제내역 스크린샷 등) 탈퇴 시 파기. 파일 실체는 tx 밖에서.
     await tx.execute(sql`update support_inquiries set image_paths = '{}' where user_id = ${uid}`);
   });
+
+  // 비운 도감 챔피언 자리 채우기(best-effort, tx 밖 — 실패는 시간별 전체 재계산이 교정).
+  await rebuildChampionItems(vacatedChampions).catch((e) => console.warn('[withdraw] codex rebuild failed', (e as Error).message));
 
   // 스토리지 첨부 파기(best-effort, tx 밖) — private 버킷이라 남아도 노출은 없음.
   await removeAllInquiryImagesForUser(userId);

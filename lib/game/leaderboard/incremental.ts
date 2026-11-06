@@ -327,8 +327,8 @@ export async function removeUserFromBoards(userId: string): Promise<void> {
   await rebuildChampionItems(vacated.map((r) => [Number(r.server_id), Number(r.catalog_item_id)]));
 }
 
-/** 아이템 파티션별 codex_champions 재계산 — 실패는 시간별 전체 재계산이 교정(로그만). */
-async function rebuildChampionItems(items: [number, number][]): Promise<void> {
+/** 아이템 파티션별 codex_champions 재계산 — 실패는 시간별 전체 재계산이 교정(로그만). 탈퇴 경로도 쓴다. */
+export async function rebuildChampionItems(items: [number, number][]): Promise<void> {
   if (items.length === 0) return;
   // snapshot.ts가 이 모듈을 import하므로(claimMilestone) 순환을 피해 지연 로드.
   const { rebuildCodexChampionsForItem } = await import('./snapshot');
