@@ -34,7 +34,9 @@
 @keyframes stl{0%,100%{text-shadow:-2px -1px 3px rgba(245,215,110,.5),2px 1px 2px rgba(140,160,255,.3)}50%{text-shadow:2px -1px 3px rgba(140,160,255,.5),-2px 1px 2px rgba(245,215,110,.3)}}
 /* 흐름(flow·flow4·flowy·flowp) — 느린(5~9초) 선형 그라데이션 이동은 90단계(steps)로 끊어 페인트를 초당 10~18회로 줄인다
    (2026-11-06 업데이트 18). 60fps 매 프레임 글자 페인트+필터 재계산 대비 1/3~1/6. 9px 헤더에서 한 단계 이동은 약 1~2px라
-   흐름이 그대로 읽힌다. 키프레임 안의 timing-function이라 호출부 animation 축약(linear)과 무관하게 이 구간에만 걸린다. */
+   흐름이 그대로 읽힌다. 키프레임 안의 timing-function이라 호출부 animation 축약(linear)과 무관하게 이 구간에만 걸린다.
+   ⚠ WebKit(iOS Safari)은 from에 애니메이션 속성(background-position)이 없는 키프레임의 timing-function을 무시해 종전처럼
+   매끄럽게(linear) 흐른다 — 의도적으로 그대로 둔다. from에 속성을 넣으면 iOS 모습이 바뀌므로 실기기 검토 없이 바꾸지 말 것. */
 @keyframes flow{from{animation-timing-function:steps(90,end)}to{background-position:-300% 0}}
 @keyframes flow4{from{animation-timing-function:steps(90,end)}to{background-position:-400% 0}}
 /* 펄스 공용 — text-shadow 반경 대신 brightness(합성기 합성)로: 모바일 끊김 제거 */
