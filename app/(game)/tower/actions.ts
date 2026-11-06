@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
 import { makeErr } from '@/lib/game/action-result';
 import { equipItems, EquipError } from '@/lib/game/equipment/equip';
+import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 import { refreshTowerMetric } from '@/lib/game/leaderboard/incremental';
 import { getActiveServerId } from '@/lib/game/servers';
 import { challengeTower, claimTowerRewards, TowerError, type TowerChallengeResult } from '@/lib/game/tower/service';
@@ -73,7 +75,10 @@ export async function towerEquipAction(userEquipmentIds: string[]) {
     const ids = [...new Set(userEquipmentIds)].slice(0, 3);
     if (!ids.length || !ids.every((id) => /^\d+$/.test(id))) return err('NOT_FOUND');
     // 지금 서버의 장비만(탑 화면은 지금 서버 장비만 보여 준다) — 다른 서버 장비 id가 와도 NOT_FOUND.
-    await equipItems(u, ids.map((id) => BigInt(id)), await getActiveServerId());
+    const sid = await getActiveServerId();
+    await equipItems(u, ids.map((id) => BigInt(id)), sid);
+    // 장비 칭호 즉시 확인(2026-11-06) — 인벤토리 장착과 같다(응답 뒤, 알림 없음).
+    after(() => grantEquipmentTitles(u, sid));
     // 화면을 다시 그리지 않는다(10-01, CLAUDE §11.7) — 헤더 전투력은 보유 장비 전체 합(layout-data equip_stats)이라 장착으로
     // 바뀌지 않고, 탑 화면은 응답을 받으면 장착 상태를 스스로 확정한다. 종전엔 층마다 자동 장착 때 레이아웃+보드(~90KB)가 다시 나갔다.
     return { status: 'success' as const };

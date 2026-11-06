@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { headers } from 'next/headers';
 import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
@@ -10,6 +11,7 @@ import { activateProfile } from '@/lib/game/profile/active';
 import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
 import { equipItem, EquipError } from '@/lib/game/equipment/equip';
+import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 import { reorderUserProfiles } from '@/lib/game/profile/reorder';
 import { AvatarSlotError, expandAvatarSlots } from '@/lib/game/profile/slots';
 import { rateLimited } from '@/lib/ratelimit';
@@ -216,10 +218,11 @@ export async function equipSnapshotItems(
     SERVER_CLOSED: '운영을 종료한 서버의 장비예요.',
   };
   let equipped = 0;
+  let equippedSid: number | null = null;
   let failure: string | null = null;
   for (const id of uniq) {
     try {
-      await equipItem(userId, BigInt(id));
+      equippedSid = await equipItem(userId, BigInt(id));
       equipped += 1;
     } catch (e) {
       failure = e instanceof EquipError ? MSG[e.code] : '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
@@ -228,6 +231,8 @@ export async function equipSnapshotItems(
     }
   }
   if (equipped > 0) {
+    // 장비 칭호 즉시 확인(2026-11-06) — 인벤토리 장착과 같다(응답 뒤, 알림 없음).
+    if (equippedSid != null) { const sid = equippedSid; after(() => grantEquipmentTitles(userId, sid)); }
     // 장착 표시가 있는 화면 전부 — 인벤토리 액션의 revalidate와 같은 목록 + 이 화면·프로필 허브.
     revalidatePath('/');
     revalidatePath('/inventory');

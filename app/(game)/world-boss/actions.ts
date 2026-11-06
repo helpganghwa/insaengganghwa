@@ -5,6 +5,7 @@
  * 판정은 전부 lib/game/world-boss/party.ts(트랜잭션). 여기서는 인증·레이트리밋·점검 게이트·문구만.
  */
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { makeErr } from '@/lib/game/action-result';
@@ -17,6 +18,7 @@ import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, ge
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
+import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 import { activateProfile } from '@/lib/game/profile/active';
 import { db } from '@/lib/db/client';
 import { sql } from 'drizzle-orm';
@@ -224,6 +226,8 @@ export async function equipBestAction(bossId: string) {
     await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid, avatarId
       ? async (tx) => { if (!(await activateProfile(g.u, g.sid, avatarId, tx))) throw new AvatarGoneError(); }
       : undefined);
+    // 장비 칭호 즉시 확인(2026-11-06) — 인벤토리 장착과 같다(응답 뒤, 알림 없음).
+    after(() => grantEquipmentTitles(g.u, g.sid));
     if (avatarId) {
       revalidatePath('/me');
       revalidatePath('/me/profiles');

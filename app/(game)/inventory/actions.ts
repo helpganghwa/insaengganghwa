@@ -1,12 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { makeErr } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { equipItem, unequipItem, EquipError } from '@/lib/game/equipment/equip';
+import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 
 /**
  * 인벤토리 액션 — 장착 전용(외형, 전투력·랭킹 무관 BALANCE §3.2).
@@ -38,7 +40,9 @@ export async function equipAction(id: string) {
   const __b = await actionBlock();
   if (__b) return err(__b);
   try {
-    await equipItem(u, BigInt(id));
+    const sid = await equipItem(u, BigInt(id));
+    // 장비 칭호 즉시 확인(2026-11-06) — 바꿔 낀 조합이 칭호 화면을 열지 않아도 바로 발견된다(응답 뒤, 알림 없음).
+    after(() => grantEquipmentTitles(u, sid));
     revalidate();
     return { status: 'success' as const };
   } catch (e) {
@@ -55,7 +59,9 @@ export async function unequipAction(id: string) {
   const __b = await actionBlock();
   if (__b) return err(__b);
   try {
-    await unequipItem(u, BigInt(id));
+    const sid = await unequipItem(u, BigInt(id));
+    // 해제로는 새 칭호가 생기지 않지만, 칭호 화면 판정 캐시를 비워 바로 열어도 새 장착 상태로 본다.
+    if (sid != null) after(() => grantEquipmentTitles(u, sid));
     revalidate();
     return { status: 'success' as const };
   } catch (e) {

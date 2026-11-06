@@ -11,6 +11,7 @@ import { accrueResidenceTax } from '@/lib/game/guild/tax';
 import { accrueSongpyeon } from '@/lib/game/chuseok/songpyeon';
 import { accrueCandy } from '@/lib/game/halloween/candy';
 import { grantEnhanceMomentTitles } from '@/lib/game/titles/event-grants';
+import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 import { recordError } from '@/lib/ops/record-error';
 import { logMemberAchievement } from '@/lib/game/guild/achievement';
 import { logWorldEvent } from '@/lib/game/world/event';
@@ -239,6 +240,10 @@ export async function applyEnhancePostEffects(r: ResolveResult): Promise<void> {
   } catch (e) {
     console.warn('[enhance.resolve] 순간 칭호 지급 실패', e);
   }
+
+  // 장비 칭호 즉시 확인(2026-11-06) — 장착 중인 장비의 단계가 바뀌면(오름·내림 모두: 같은 단계 맞춤 칭호) 바로 발견.
+  // 장착 안 한 장비면 결과가 같아 원장 변화 없음. 함수 안에서 실패를 삼킨다.
+  if (toLevel !== fromLevel) await grantEquipmentTitles(userId, serverId);
 
   // 길드 세금 누적(GUILD §5.5) — 성공/mega(레벨 상승) 시 거주 구역에 도달레벨 포인트.
   if (toLevel > fromLevel) {

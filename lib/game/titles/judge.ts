@@ -41,6 +41,8 @@ export { PENDING_CODES, EVENT_HOOK_CODES, isOwnerOnlyCode } from './pending';
 import { isOwnerOnlyCode, PENDING_CODES } from './pending';
 import { guildCollectiveCodes } from './guild-facts';
 import { LEGACY_LOCKABLE, legacyLockedTitles } from './legacy-lock';
+import { judgeCache } from './judge-cache';
+import { equipmentTitleCodes } from './equipment-titles';
 import { refreshTitlesMetric } from '@/lib/game/leaderboard/incremental';
 
 /**
@@ -1301,16 +1303,8 @@ export async function activeConditionals(userId: string, serverId: number, m?: M
   const eq = await equippedMap(userId, serverId);
   const out = new Set<string>();
 
-  for (const t of TITLE_SECRETS) {
-    if (t.req) {
-      if (t.req.items.every((k) => (eq.get(k) ?? -1) >= t.req!.min)) out.add(t.code);
-    }
-  }
-  // 장비 상태형
-  const lvls = [...eq.values()];
-  if (lvls.length === 3 && lvls.every((v) => v === lvls[0]) && lvls[0]! >= 50) out.add('balance_master');
-  if (lvls.length === 3 && lvls.every((v) => v >= 100)) out.add('full_armed');
-  if (lvls.some((v) => v >= 200)) out.add('star_holder');
+  // 아이템 발동 + 장비 상태형 — 장착 즉시 확인(equipment-titles.ts)과 같은 규칙 하나.
+  for (const c of equipmentTitleCodes(eq)) out.add(c);
 
   // 집행관
   const zone = (await db.execute(sql`
@@ -1401,8 +1395,7 @@ export async function computeAchievedTitles(
  * 발견 판정 + 원장 기록(멱등). 칭호 화면 진입 등 lazy 시점에 호출.
  * 반환: 이번에 새로 발견된 code 목록.
  */
-/** 판정 결과 인스턴스 캐시 — 새로고침 연타로 27쿼리 지표 수집이 반복되지 않게(풀러 보호). */
-const judgeCache = new Map<string, { at: number; result: { found: string[]; active: Set<string> } }>();
+// 판정 결과 인스턴스 캐시는 judge-cache.ts(장비 칭호 즉시 확인이 장착 변경 때 비운다).
 const JUDGE_TTL_MS = 30_000;
 
 export async function discoverTitles(

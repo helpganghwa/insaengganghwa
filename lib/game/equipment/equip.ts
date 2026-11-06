@@ -15,9 +15,10 @@ export class EquipError extends Error {
   }
 }
 
-export async function equipItem(userId: string, userEquipmentId: bigint): Promise<void> {
+/** 장착한 장비의 서버 id를 돌려준다 — 호출부가 장비 칭호 즉시 확인(grantEquipmentTitles)에 쓴다. */
+export async function equipItem(userId: string, userEquipmentId: bigint): Promise<number> {
   try {
-    await equipItemTx(userId, userEquipmentId);
+    return await equipItemTx(userId, userEquipmentId);
   } catch (e) {
     // 동시 장착 레이스 — 다른 요청이 같은 슬롯을 먼저 점유(부분 UNIQUE ue_user_slot_uq 충돌). 재시도 여지 안내.
     if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
@@ -48,12 +49,12 @@ export async function equipItems(userId: string, userEquipmentIds: bigint[], ser
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-function equipItemTx(userId: string, userEquipmentId: bigint): Promise<void> {
+function equipItemTx(userId: string, userEquipmentId: bigint): Promise<number> {
   return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId));
 }
 
 /** serverId를 주면 그 서버 장비만(아니면 NOT_FOUND) — 무한의 탑처럼 지금 서버 장비만 다루는 곳. */
-async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint, serverId?: number): Promise<void> {
+async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint, serverId?: number): Promise<number> {
   const [equip] = await tx
     .select({
       id: userEquipment.id,
@@ -96,10 +97,12 @@ async function equipInTx(tx: Tx, userId: string, userEquipmentId: bigint, server
       toCatalogItemId: equip.catalogItemId,
     });
   }
+  return equip.serverId;
 }
 
-export async function unequipItem(userId: string, userEquipmentId: bigint): Promise<void> {
-  await db.transaction(async (tx) => {
+/** 해제한 장비의 서버 id(이미 미장착이면 null). */
+export async function unequipItem(userId: string, userEquipmentId: bigint): Promise<number | null> {
+  return db.transaction(async (tx) => {
     const [prev] = await tx
       .update(userEquipment)
       .set({ equippedSlot: null })
@@ -114,12 +117,12 @@ export async function unequipItem(userId: string, userEquipmentId: bigint): Prom
         serverId: userEquipment.serverId,
         catalogItemId: userEquipment.catalogItemId,
       });
-    if (!prev) return; // 이미 미장착 — 변화 없음
+    if (!prev) return null; // 이미 미장착 — 변화 없음
     const [cat] = await tx
       .select({ slot: catalogItems.slot })
       .from(catalogItems)
       .where(eq(catalogItems.id, prev.catalogItemId));
-    if (!cat) return;
+    if (!cat) return prev.serverId;
     await tx.insert(equipmentChangeLogs).values({
       userId,
       serverId: prev.serverId,
@@ -127,5 +130,6 @@ export async function unequipItem(userId: string, userEquipmentId: bigint): Prom
       fromCatalogItemId: prev.catalogItemId,
       toCatalogItemId: null,
     });
+    return prev.serverId;
   });
 }
