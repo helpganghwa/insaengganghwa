@@ -404,10 +404,15 @@ async function collectMetrics(userId: string, serverId: number): Promise<Metrics
              coalesce(max(ra.damage),0)::bigint as max_dmg,
              -- 선봉장 = 그 레이드의 **전체 최초** 공격이 나인 레이드 수. ra.seq는 "내 n번째 공격"이라
              -- seq=1은 참여 수와 동치였다(감사 H4) — 레이드별 최초 공격자(min id)로 판정한다.
-             (select count(*)::int from raids r2
-                join lateral (select a.user_id, a.created_at from raid_attacks a where a.raid_id=r2.id
+             -- 내가 공격한 레이드에서만 출발한다(2026-11-06 업데이트 18) — 종전엔 서버의 레이드 **전부**에 lateral 조회를
+             -- 돌렸다(프로덕션 수천 건). 뜻은 같다: 첫 공격이 나이고 그 시각이 cAt 이후면 그 레이드는 반드시 내 공격 집합에 있다.
+             (select count(*)::int
+                from (select distinct ra3.raid_id from raid_attacks ra3
+                       where ra3.user_id=${u} and ra3.created_at >= ${cAt}) mine
+                join raids r2 on r2.id = mine.raid_id and r2.server_id=${s}
+                join lateral (select a.user_id, a.created_at from raid_attacks a where a.raid_id=mine.raid_id
                               order by a.id limit 1) fa on true
-                where r2.server_id=${s} and fa.user_id=${u} and fa.created_at >= ${cAt}) as vanguard,
+                where fa.user_id=${u} and fa.created_at >= ${cAt}) as vanguard,
              count(*) filter (where extract(hour from ra.created_at ${sql.raw(KST)}) < 6)::int as night,
              count(distinct ra.raid_id) filter (where r.boss_code='dragon_west')::int as r_volcano,
              count(distinct ra.raid_id) filter (where r.boss_code='slime_king')::int as r_swamp,
