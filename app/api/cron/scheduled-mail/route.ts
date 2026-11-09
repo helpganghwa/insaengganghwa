@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { profiles } from '@/lib/db/schema/profiles';
 import { openChuseokCatalogIfDue } from '@/lib/game/chuseok/open';
+import { recordTowerSection12SnapshotIfDue } from '@/lib/game/tower/open';
 import { openHalloweenCatalogIfDue } from '@/lib/game/halloween/open';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
@@ -115,6 +116,13 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error('[scheduled-mail] chuseok-open failed', e);
       await raiseOpsAlert('추석 6종 개방 실패', `openChuseokCatalogIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
+    }
+    // ── 무한의 탑 12구간 개방 공시 스냅샷(2026-11-09) ── 개방 정각이 지나면 한 번 기록한다(멱등). 개방 자체는 서버 시각 게이트. 개방 확인 뒤 제거.
+    try {
+      await recordTowerSection12SnapshotIfDue();
+    } catch (e) {
+      console.error('[scheduled-mail] tower-open snapshot failed', e);
+      await raiseOpsAlert('탑 12구간 공시 스냅샷 실패', `recordTowerSection12SnapshotIfDue: ${(e as Error)?.message ?? String(e)}`).catch(() => undefined);
     }
     // ── 할로윈 6종 자동 개방(2026-10) ── 추석과 같은 방식(멱등).
     try {

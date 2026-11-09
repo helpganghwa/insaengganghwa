@@ -1146,8 +1146,8 @@ export function pointExtraPrice(item: PointExtraItem, boughtToday: number): numb
 // §14. 무한의 탑 (docs/TOWER.md · BALANCE.md §14) — 2026-09-29 확정
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 데이터가 준비된 층 수(확장 시 늘린다 — 2026-10-12 100→110). 지금 열린 층은 towerOpenFloors(). 10층마다 특별층. */
-export const TOWER_FLOORS = 110;
+/** 데이터가 준비된 층 수(확장 시 늘린다 — 2026-10-12 100→110, 2026-11-09 110→120). 지금 열린 층은 towerOpenFloors(). 10층마다 특별층. */
+export const TOWER_FLOORS = 120;
 export const TOWER_SECTION = 10;
 /**
  * 11구간(101~110층) 개방 시각 — 2026-10-15 00:00 KST(2026-10-13 사용자 결정: 코드는 낮에 배포, 개방은 자정 자동).
@@ -1156,14 +1156,22 @@ export const TOWER_SECTION = 10;
 export const TOWER_SECTION_11_OPEN_ISO = '2026-10-14T15:00:00.000Z';
 export const TOWER_SECTION_11_OPEN_MS = Date.parse(TOWER_SECTION_11_OPEN_ISO);
 /**
- * 지금 열린 맨 위 층 — 개방 전 100, 개방 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다.
+ * 12구간(111~120층) 개방 시각 — 프로덕션 배포 다음 날 00:00 KST(2026-11-09 사용자 결정). 11구간과 같은 서버 시각 게이트.
+ * ⚠ 배포일이 정해지면 그 다음 날 00:00 KST(= 배포일 15:00Z)로 바꾼다. 그 전까지는 먼 미래로 둬서 실수로 배포돼도 일찍 열리지 않게 한다.
+ */
+export const TOWER_SECTION_12_OPEN_ISO = '2099-12-31T15:00:00.000Z';
+export const TOWER_SECTION_12_OPEN_MS = Date.parse(TOWER_SECTION_12_OPEN_ISO);
+/**
+ * 지금 열린 맨 위 층 — 11구간 개방 전 100, 12구간 개방 전 110, 그 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다.
  * 스테이징(Vercel preview)·로컬 dev는 **시각과 상관없이 전부 연다**(2026-10-13 사용자: 스테이징에서 110층까지 검수) —
  * 레이드 무료 개설(raid/free-open.ts)과 같은 허용 목록 방식이라 VERCEL_ENV가 비어 있는 프로덕션 빌드에서 조기 개방되지 않는다.
  * env·nodeEnv는 서버에서만 넘긴다(towerOpenFloorsNow) — 클라에는 VERCEL_ENV가 없으니 서버가 내려 준 값과 serverNow() 판정 중 큰 쪽을 쓴다.
  */
 export function towerOpenFloors(now: number | Date = Date.now(), env?: string, nodeEnv?: string): number {
   if (env === 'preview' || env === 'development' || nodeEnv === 'development') return TOWER_FLOORS;
-  return (typeof now === 'number' ? now : now.getTime()) >= TOWER_SECTION_11_OPEN_MS ? TOWER_FLOORS : TOWER_FLOORS - TOWER_SECTION;
+  const t = typeof now === 'number' ? now : now.getTime();
+  if (t >= TOWER_SECTION_12_OPEN_MS) return TOWER_FLOORS;
+  return t >= TOWER_SECTION_11_OPEN_MS ? TOWER_FLOORS - TOWER_SECTION : TOWER_FLOORS - 2 * TOWER_SECTION;
 }
 /** 서버에서 '지금 열린 층' — 배포 환경(VERCEL_ENV)·NODE_ENV를 넣어 판정한다. 클라이언트 컴포넌트에는 props로 내려 준다. */
 export function towerOpenFloorsNow(now: number | Date = Date.now()): number {
@@ -1229,11 +1237,11 @@ export function towerSection(floor: number): number {
   return Math.floor((floor - 1) / TOWER_SECTION) + 1;
 }
 
-/** 구간별 첫 돌파 보상(TOWER.md §5) — 인덱스 = 구간 − 1. 📦는 3의 배수(부위당 ⅓). 11구간(101~110층)은 10구간의 1.4배(2026-10-12 사용자 확정). */
-const TOWER_NORMAL_DIA = [20, 40, 60, 100, 150, 250, 420, 700, 1050, 1500, 2100] as const;
-const TOWER_FIFTH_BOX = [6, 6, 12, 12, 18, 30, 42, 60, 120, 180, 270] as const;
-const TOWER_SPECIAL_DIA = [200, 400, 600, 1000, 1600, 2800, 4800, 8000, 12500, 30000, 42000] as const;
-const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720, 1080] as const;
+/** 구간별 첫 돌파 보상(TOWER.md §5) — 인덱스 = 구간 − 1. 📦는 3의 배수(부위당 ⅓). 11구간(101~110층)은 10구간의 1.4배(2026-10-12 사용자 확정), 12구간(111~120층)은 11구간의 1.4배(2026-11-09 사용자 확정, 토벌 상자 93). */
+const TOWER_NORMAL_DIA = [20, 40, 60, 100, 150, 250, 420, 700, 1050, 1500, 2100, 2940] as const;
+const TOWER_FIFTH_BOX = [6, 6, 12, 12, 18, 30, 42, 60, 120, 180, 270, 378] as const;
+const TOWER_SPECIAL_DIA = [200, 400, 600, 1000, 1600, 2800, 4800, 8000, 12500, 30000, 42000, 58800] as const;
+const TOWER_SPECIAL_BOX = [12, 12, 18, 24, 36, 60, 90, 180, 360, 720, 1080, 1512] as const;
 
 export type TowerReward = { diamond: number; boxes: number };
 /**
@@ -1258,7 +1266,7 @@ export function towerHuntRange(floor: number): { min: number; max: number } {
 export const TOWER_HUNT_DOUBLE_BP = 1000;
 /** 토벌 상자 확률(만분율)과 구간별 상자 수(3의 배수, 부위마다 3분의 1) — 구간 5번째 층 첫 돌파 📦의 약 4분의 1. */
 export const TOWER_HUNT_BOX_BP = 500;
-const TOWER_HUNT_BOX = [3, 3, 3, 3, 6, 9, 12, 15, 30, 45, 66] as const;
+const TOWER_HUNT_BOX = [3, 3, 3, 3, 6, 9, 12, 15, 30, 45, 66, 93] as const;
 export function towerHuntBox(floor: number): number {
   return TOWER_HUNT_BOX[Math.min(TOWER_HUNT_BOX.length, towerSection(Math.max(1, floor))) - 1]!;
 }

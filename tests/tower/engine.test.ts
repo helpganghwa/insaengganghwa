@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TOWER_FLOORS, TOWER_HP_MULT, TOWER_SECTION_11_OPEN_MS, towerHuntBox, towerHuntRange, towerHuntReward, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
+import { TOWER_FLOORS, TOWER_HP_MULT, TOWER_SECTION_11_OPEN_MS, TOWER_SECTION_12_OPEN_MS, towerHuntBox, towerHuntRange, towerHuntReward, towerIsSpecial, towerOpenFloors, towerRequirement, towerReward, towerSection } from '@/lib/game/balance';
 import { simulateTowerBattle, TOWER_SKILL, type TowerSkill } from '@/lib/game/tower/battle';
 import { avatarMultiplier, bestLoadout, drawPool, floorRule, towerCp, type EquippedPiece, type SlotKeys } from '@/lib/game/tower/engine';
 import { TOWER_SKILL_INFO, towerFloorInfo, towerFloorSkills } from '@/lib/game/tower/floors';
@@ -15,11 +15,16 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 ];
 
 describe('무한의 탑 수치', () => {
-  it('11구간 개방 게이트: 2026-10-15 00:00 KST 전에는 100층, 정각부터 110층', () => {
+  it('개방 게이트: 11구간 정각 전 100층, 정각부터 110층, 12구간 정각부터 120층', () => {
     expect(new Date(TOWER_SECTION_11_OPEN_MS).toISOString()).toBe('2026-10-14T15:00:00.000Z');
+    expect(TOWER_SECTION_12_OPEN_MS).toBeGreaterThan(TOWER_SECTION_11_OPEN_MS);
+    expect(new Date(TOWER_SECTION_12_OPEN_MS).getUTCHours()).toBe(15); // KST 자정
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1)).toBe(100);
-    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS)).toBe(TOWER_FLOORS);
-    expect(towerOpenFloors(new Date(TOWER_SECTION_11_OPEN_MS + 1))).toBe(TOWER_FLOORS);
+    expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS)).toBe(110);
+    expect(towerOpenFloors(new Date(TOWER_SECTION_11_OPEN_MS + 1))).toBe(110);
+    expect(towerOpenFloors(TOWER_SECTION_12_OPEN_MS - 1)).toBe(110);
+    expect(towerOpenFloors(TOWER_SECTION_12_OPEN_MS)).toBe(TOWER_FLOORS);
+    expect(towerOpenFloors(TOWER_SECTION_12_OPEN_MS - 1, 'production', 'production')).toBe(110);
     // 스테이징(preview)·로컬 dev는 시각과 상관없이 전부, 프로덕션·빈 env는 정각부터(허용 목록).
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, 'preview')).toBe(TOWER_FLOORS);
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1, undefined, 'development')).toBe(TOWER_FLOORS);
@@ -38,10 +43,13 @@ describe('무한의 탑 수치', () => {
     expect(towerRequirement(110) / towerRequirement(109)).toBeCloseTo(1.45, 2); // 110층은 다른 수문장과 같은 ×1.45(10-13)
     expect(towerRequirement(101) / towerRequirement(100)).toBeCloseTo(towerRequirement(11) / towerRequirement(10), 2); // 11구간 첫 층은 다른 구간과 같은 비율(≈1.05)로 잇는다
     expect(towerRequirement(110)).toBe(1833639); // 10-12판 맨 위 값(1,833,640)과 사실상 같다
+    expect(towerRequirement(111)).toBe(1923158); // 12구간(11-09): 110층 × 1.049
+    expect(towerRequirement(119)).toBe(3304344);
+    expect(towerRequirement(120)).toBe(4791299); // A안 — 다른 수문장과 같은 ×1.45(11-09 사용자 확정)
     expect(towerRequirement(90) / towerRequirement(89)).toBeCloseTo(1.45, 2); // 그 밖의 특별층은 표준
     for (let f = 2; f <= TOWER_FLOORS; f++) expect(towerRequirement(f)).toBeGreaterThan(towerRequirement(f - 1));
   });
-  it('보상 합계 💎161,410 · 📦3,348(100층까지 💎100,510 · 📦1,998), 상자는 3의 배수', () => {
+  it('보상 합계 💎246,670 · 📦5,238(110층까지 💎161,410 · 📦3,348, 100층까지 💎100,510 · 📦1,998), 상자는 3의 배수', () => {
     let d = 0, b = 0;
     for (let f = 1; f <= TOWER_FLOORS; f++) {
       const r = towerReward(f);
@@ -49,8 +57,16 @@ describe('무한의 탑 수치', () => {
       b += r.boxes;
       expect(r.boxes % 3).toBe(0);
     }
-    expect(d).toBe(161410);
-    expect(b).toBe(3348);
+    expect(d).toBe(246670);
+    expect(b).toBe(5238);
+    let d110 = 0, b110 = 0;
+    for (let f = 1; f <= 110; f++) { d110 += towerReward(f).diamond; b110 += towerReward(f).boxes; }
+    expect(d110).toBe(161410);
+    expect(b110).toBe(3348);
+    expect(towerReward(111)).toEqual({ diamond: 2940, boxes: 0 });
+    expect(towerReward(115)).toEqual({ diamond: 2940, boxes: 378 });
+    expect(towerReward(120)).toEqual({ diamond: 58800, boxes: 1512 });
+    expect(towerHuntBox(120)).toBe(93);
     let d100 = 0, b100 = 0;
     for (let f = 1; f <= 100; f++) { d100 += towerReward(f).diamond; b100 += towerReward(f).boxes; }
     expect(d100).toBe(100510);
@@ -306,6 +322,7 @@ describe('층 몬스터·스킬 배치', () => {
     }
     expect(towerFloorSkills(100)).toContain('death');
     expect(towerFloorSkills(110)).toContain('death');
+    expect(towerFloorSkills(120)).toEqual(['awe', 'regen', 'steel', 'rebirth']); // 12구간 수문장(11-09)
   });
 });
 
