@@ -6,6 +6,7 @@
  *  - notificationclick → 적절한 라우트로 포커스/오픈
  *
  * 캐싱 전략은 두지 않음(Next.js + Vercel CDN에 위임). 본 SW의 단일 책임은 푸시.
+ * 페이지 이동은 오프라인 폴백 때문에 가로채되, 내비게이션 미리 출발(navigation preload)로 워커 기동 대기를 없앤다.
  * 향후 오프라인 셸이 필요해지면 별도 검토.
  */
 // 오프라인 폴백(2026-09-11) — 네트워크가 끊긴 채 앱을 열면 크롬 기본 오류 페이지가 앱 전체를
@@ -44,6 +45,17 @@ self.addEventListener('activate', (event) => {
       // 이름이 바뀐 옛 캐시는 지운다 — 두지 않으면 폴백 화면을 고친 뒤에도 예전 것이 남는다.
       const names = await caches.keys();
       await Promise.all(names.filter((n) => n !== OFFLINE_CACHE).map((n) => caches.delete(n)));
+      // 내비게이션 미리 출발(2026-11-09 업데이트 19, '복귀 시 첫 로딩이 느리다' 피드백) — 아래 fetch 핸들러가 모든
+      // 페이지 이동을 가로채므로, 앱이 정리됐다가 다시 열리면 워커가 깨어날 때까지 서버 요청이 출발하지 못했다.
+      // 켜 두면 브라우저가 워커 기동과 **동시에** 페이지를 요청하고, 핸들러는 그 응답(preloadResponse)을 그대로 쓴다.
+      // 미지원 브라우저(구형 Safari 등)는 종전대로 핸들러 안에서 fetch.
+      if (self.registration.navigationPreload) {
+        try {
+          await self.registration.navigationPreload.enable();
+        } catch {
+          /* 켜지 못해도 종전 동작 그대로 */
+        }
+      }
       await self.clients.claim();
     })(),
   );
@@ -62,7 +74,9 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       try {
-        const res = await fetch(req);
+        // 미리 출발한 응답이 있으면 그것을 쓴다(같은 요청이라 두 번 보내지 않는다). 없으면(미지원·미활성) 종전처럼 직접 요청.
+        const preloaded = await event.preloadResponse;
+        const res = preloaded ?? (await fetch(req));
         // 성공한 응답은 그대로 흘려보낸다(캐시하지 않는다 — 게임 상태는 항상 서버 권위).
         if (!offlineRefreshed) {
           offlineRefreshed = true;
