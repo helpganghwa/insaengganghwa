@@ -1120,5 +1120,111 @@
     ]
    }
   ]
+ },
+ {
+  "theme": "과자 공방",
+  "palette": [
+   "#3a2a24",
+   "#8a5a3c",
+   "#d99a9a",
+   "#f3e6d0"
+  ],
+  "mons": [
+   {
+    "floor": 111,
+    "name": "설탕 개미",
+    "desc": "제 몸보다 큰 각설탕을 머리에 인 캐러멜빛 개미.",
+    "art": "small ant carrying a large white sugar cube on its head, glossy caramel brown body",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 112,
+    "name": "곰젤리",
+    "desc": "작은 왕관을 쓴 딸기빛 곰젤리, 몸 아래로 젤리가 녹아내린다.",
+    "art": "translucent dusty rose gummy bear shaped jelly creature, soft highlights, light showing through its body",
+    "guardian": false,
+    "skills": [
+     "regen"
+    ]
+   },
+   {
+    "floor": 113,
+    "name": "생강빵 병정",
+    "desc": "높은 모자를 쓴 생강빵 병정, 하얀 아이싱 단추를 달고 지팡이 사탕을 들었다.",
+    "art": "cute gingerbread cookie guard with white icing buttons and trim, small tall hat, holding a red and white striped candy cane staff",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 114,
+    "name": "솜사탕 해파리",
+    "desc": "분홍 솜사탕 갓 아래 실사탕 촉수를 늘어뜨린 해파리.",
+    "art": "floating jellyfish with a fluffy pink cotton candy bell, thin glossy spun sugar tentacles",
+    "guardian": false,
+    "skills": [
+     "seal"
+    ]
+   },
+   {
+    "floor": 115,
+    "name": "마카롱 미믹",
+    "desc": "분홍 마카롱이 위아래로 벌어져 크림 사이로 이빨을 드러낸다, 짧은 다리로 걷는다.",
+    "art": "large pink macaron opened like a mouth, cream filling with rows of small teeth, two small eyes on the top shell, short stubby legs",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 116,
+    "name": "막대사탕 카멜레온",
+    "desc": "꼬리가 줄무늬 막대사탕처럼 돌돌 말린 크림빛 카멜레온.",
+    "art": "chameleon with pastel candy striped skin, tail curled into a spiral like a swirl lollipop, large round eyes",
+    "guardian": false,
+    "skills": [
+     "multi"
+    ]
+   },
+   {
+    "floor": 117,
+    "name": "초콜릿 비버",
+    "desc": "녹아내리는 밀크 초콜릿 비버, 앞발에 판 초콜릿을 들었다.",
+    "art": "beaver made of glossy milk chocolate, flat tail with a waffle grid pattern, holding a broken chocolate bar",
+    "guardian": false,
+    "skills": []
+   },
+   {
+    "floor": 118,
+    "name": "비스킷 골렘",
+    "desc": "비스킷을 쌓아 만든 골렘, 이음새마다 크림이 발렸다.",
+    "art": "golem made of stacked thick biscuits, white icing at the joints, blocky body, two small glowing eyes",
+    "guardian": false,
+    "skills": [
+     "steel"
+    ]
+   },
+   {
+    "floor": 119,
+    "name": "사탕 공작",
+    "desc": "부채처럼 펼친 꼬리깃이 파스텔빛 사탕 유리로 된 공작.",
+    "art": "peacock with a fanned tail of translucent hard candy glass feathers in soft pastel colors, light passing through the feathers",
+    "guardian": false,
+    "skills": [
+     "reflect"
+    ]
+   },
+   {
+    "floor": 120,
+    "name": "층층 케이크 거인",
+    "desc": "층층 케이크 몸에 롤케이크 팔을 단 거인, 딸기를 얹은 머리 아래로 크림이 흘러내린다.",
+    "art": "huge giant made of a three tier layered cake, small head compared to the massive wide body, stacked sponge and cream layers, a single small crown of strawberries on its head, thick cream dripping down, massive rolled cake arms, intricate piped cream decorations, glowing eyes, highly detailed, no cape, no cloth",
+    "guardian": true,
+    "skills": [
+     "awe",
+     "regen",
+     "steel",
+     "rebirth"
+    ]
+   }
+  ]
  }
 ]

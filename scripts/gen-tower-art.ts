@@ -1,6 +1,6 @@
 /**
  * 무한의 탑 몬스터·구간 배경 생성(Pixellab v2 REST, PIXELLAB_API_KEY_2) — docs/TOWER.md §9 제작 계획.
- *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~11> [--only=bg,mons] [--force]
+ *   bun --env-file=.env.local scripts/gen-tower-art.ts <구간번호 1~12> [--only=bg,mons] [--key=4] [--force]
  * 산출: scripts/tower-art/out/v3/sec<NN>/<key>/<i>.png(후보) + manifest.json. 이미 있으면 건너뛴다(재개형, --force로 다시).
  * 비용(호출 한 번 ≈ 26 gen, 크기에 따라 한 번에 나오는 장수만 다르다): 배경 = 고급(generate-image-v2) 400×240 1장,
  *   몬스터 = 고급 + 기준 그림(style_image = 레이드 슬라임 왕, 윤곽·세밀도·음영만 따르고 색은 구간 팔레트) 128px(수문장 160px) 한 번에 4장.
@@ -9,8 +9,10 @@
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const KEY = process.env.PIXELLAB_API_KEY_2;
-if (!KEY) throw new Error('PIXELLAB_API_KEY_2 없음');
+// 키 선택(--key=4 → PIXELLAB_API_KEY_4, 기본 2).
+const KEY_NAME = `PIXELLAB_API_KEY_${process.argv.find((a) => a.startsWith('--key='))?.slice(6) ?? '2'}`;
+const KEY = process.env[KEY_NAME];
+if (!KEY) throw new Error(`${KEY_NAME} 없음`);
 const API = 'https://api.pixellab.ai/v2';
 const args = process.argv.slice(2);
 const sec = Number(args[0]);
@@ -27,7 +29,7 @@ type Mon = { floor: number; name: string; desc: string; art: string; guardian: b
 type Sec = { theme: string; palette: string[]; mons: Mon[] };
 const data = JSON.parse(readFileSync('scripts/tower-art/monsters.json', 'utf8')) as Sec[];
 const S = data[sec - 1];
-if (!S) throw new Error("구간 번호 1~11");
+if (!S) throw new Error("구간 번호 1~12");
 
 // 구간별 배경 주문문(외형만) — 1단계 테마 설정의 재질·색.
 const BG: Record<number, string> = {
@@ -41,7 +43,8 @@ const BG: Record<number, string> = {
   8: 'interior of a sunken temple inside a tower half flooded with murky teal water, broken stone pillars with faded coral growing on them, shafts of dim light through the water surface',
   9: 'interior of a stopped clock tower, huge bronze gears and clock mechanisms, a giant clock face seen from behind, dust in the air, wooden beams and stone walls',
   10: 'sanctuary on the very top floor of a tall round tower, curved white marble tower walls with tall arched openings showing a sea of clouds far below, a spiral staircase rising up from the floor below, white marble floor and pillars, pale gold ornaments, soft sunlight',
-  11: 'crypt hall inside a tall round stone tower, curved circular stone walls, part of a spiral stone staircase winding upward along the wall, tall narrow arched windows showing a large pale moon and a dark blue night sky outside, rows of weathered grey gravestones and two stone sarcophagi standing on the stone floor inside the hall, iron candle stands with small flames, thin low mist over the floor, a few small pale green wisp lights floating'
+  11: 'crypt hall inside a tall round stone tower, curved circular stone walls, part of a spiral stone staircase winding upward along the wall, tall narrow arched windows showing a large pale moon and a dark blue night sky outside, rows of weathered grey gravestones and two stone sarcophagi standing on the stone floor inside the hall, iron candle stands with small flames, thin low mist over the floor, a few small pale green wisp lights floating',
+  12: 'confectionery workshop hall inside a tall round stone tower, curved circular stone walls, part of a spiral stone staircase winding upward along the wall, tall narrow arched windows, warm wooden shelves along the curved walls holding cakes, cookies and glass candy jars, a large brick oven with a soft warm glow, a long wooden counter with a tiered cake in the center, gingerbread ornaments hanging from wooden ceiling beams, warm wooden floor'
 };
 const PALETTE_WORDS: Record<number, string> = {
   1: 'muted desaturated palette of warm grey, taupe and dim amber candlelight',
@@ -55,6 +58,7 @@ const PALETTE_WORDS: Record<number, string> = {
   9: 'muted desaturated palette of aged bronze, dusty brown and warm grey',
   10: 'muted palette of pearl white, pale gold and soft sky blue',
   11: 'muted desaturated palette of dark blue grey, slate and pale mint green wisp light',
+  12: 'soft muted palette of cream, caramel brown, dusty strawberry pink and pale mint, no saturated primary colors',
 };
 const STYLE_MON =
   'pixel art game monster sprite, full body, three-quarter view facing right, clean readable silhouette, refined elegant detailed pixel art, muted desaturated colors, no text';
@@ -133,9 +137,9 @@ async function pro(key: string, prompt: string, w: number, h: number, noBg: bool
 }
 const pal = PALETTE_WORDS[sec] ?? 'muted desaturated palette';
 const tasks: Promise<void>[] = [];
-// 탑 안이라는 게 보이게(09-30 3구간 검수: '탑 느낌이 안 든다') — 둥근 벽·나선 계단·높은 창 밖 하늘. 5·10·11구간은 이미 탑 꼭대기라 제외.
+// 탑 안이라는 게 보이게(09-30 3구간 검수: '탑 느낌이 안 든다') — 둥근 벽·나선 계단·높은 창 밖 하늘. 5·10·11구간은 이미 탑 꼭대기라, 12구간은 BG에 11구간 짜임을 직접 써서 제외.
 const TOWER_CUE = 'inside a tall round fantasy tower, curved circular stone walls, part of a spiral staircase winding upward along the wall, tall narrow arched windows showing open sky far outside';
-if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${sec === 5 || sec === 10 || sec === 11 ? '' : `${TOWER_CUE}, `}${pal}, ${STYLE_BG}`, 400, 240, false));
+if (only.includes('bg') && BG[sec]) tasks.push(pro('bg', `${BG[sec]}, ${sec === 5 || sec === 10 || sec === 11 || sec === 12 ? '' : `${TOWER_CUE}, `}${pal}, ${STYLE_BG}`, 400, 240, false));
 if (only.includes('mons')) {
   // lanes줄로 나눠 동시에 lanes개씩.
   const mons = S.mons.filter((m) => !onlyFloors || onlyFloors.has(m.floor));
