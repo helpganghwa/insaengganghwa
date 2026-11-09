@@ -1156,10 +1156,10 @@ export const TOWER_SECTION = 10;
 export const TOWER_SECTION_11_OPEN_ISO = '2026-10-14T15:00:00.000Z';
 export const TOWER_SECTION_11_OPEN_MS = Date.parse(TOWER_SECTION_11_OPEN_ISO);
 /**
- * 12구간(111~120층) 개방 시각 — 프로덕션 배포 다음 날 00:00 KST(2026-11-09 사용자 결정). 11구간과 같은 서버 시각 게이트.
- * ⚠ 배포일이 정해지면 그 다음 날 00:00 KST(= 배포일 15:00Z)로 바꾼다. 그 전까지는 먼 미래로 둬서 실수로 배포돼도 일찍 열리지 않게 한다.
+ * 12구간(111~120층) 개방 시각 — 2026-11-11 00:00 KST(2026-11-09 사용자 결정: 업데이트 19와 함께 11-10 오전 배포, 개방은 다음 날 자정 자동).
+ * 11구간과 같은 서버 시각 게이트. 공시 스냅샷은 lib/game/tower/open.ts 훅이 정각 뒤 한 건 남긴다.
  */
-export const TOWER_SECTION_12_OPEN_ISO = '2099-12-31T15:00:00.000Z';
+export const TOWER_SECTION_12_OPEN_ISO = '2026-11-10T15:00:00.000Z';
 export const TOWER_SECTION_12_OPEN_MS = Date.parse(TOWER_SECTION_12_OPEN_ISO);
 /**
  * 지금 열린 맨 위 층 — 11구간 개방 전 100, 12구간 개방 전 110, 그 뒤 TOWER_FLOORS. 화면·도전·공시가 전부 이 값을 본다.

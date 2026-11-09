@@ -17,8 +17,7 @@ const eq = (w: string, a: string, c: string, cp = 100): EquippedPiece[] => [
 describe('무한의 탑 수치', () => {
   it('개방 게이트: 11구간 정각 전 100층, 정각부터 110층, 12구간 정각부터 120층', () => {
     expect(new Date(TOWER_SECTION_11_OPEN_MS).toISOString()).toBe('2026-10-14T15:00:00.000Z');
-    expect(TOWER_SECTION_12_OPEN_MS).toBeGreaterThan(TOWER_SECTION_11_OPEN_MS);
-    expect(new Date(TOWER_SECTION_12_OPEN_MS).getUTCHours()).toBe(15); // KST 자정
+    expect(new Date(TOWER_SECTION_12_OPEN_MS).toISOString()).toBe('2026-11-10T15:00:00.000Z'); // 2026-11-11 00:00 KST
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS - 1)).toBe(100);
     expect(towerOpenFloors(TOWER_SECTION_11_OPEN_MS)).toBe(110);
     expect(towerOpenFloors(new Date(TOWER_SECTION_11_OPEN_MS + 1))).toBe(110);
