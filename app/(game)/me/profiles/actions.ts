@@ -267,7 +267,7 @@ export async function reorderProfiles(ids: string[]): Promise<ActionState> {
   return { status: 'ok' };
 }
 
-/** 아바타 보관함 늘리기(2026-10-06) — 10칸씩, 200칸 미만 💎1,000 · 200칸부터 💎1,500, 최대 300칸, 서버별. */
+/** 아바타 보관함 늘리기(2026-10-06) — 10칸씩, 200칸 미만 💎1,000 · 200칸부터 💎1,500 · 300칸부터 💎2,000, 최대 400칸, 서버별. */
 export async function expandAvatarSlotsAction(key: string, expectedCost?: number): Promise<
   { status: 'ok'; limit: number; diamondBalance: string } | { status: 'error'; code: string }
 > {

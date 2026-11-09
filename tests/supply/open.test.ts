@@ -161,4 +161,37 @@ describe.skipIf(skip)('openSupplyBoxes — DB 통합', () => {
       where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID} and slot=${SLOT}::slot`)) as unknown as { c: string }[];
     expect(box[0]?.c).toBe('0');
   });
+
+  it('100개 열기 — 두 아이템 번갈아 100회: 다중행 경로가 100개도 그대로, 상자·로그·초월 정합(2026-11-09)', async () => {
+    // 초월 11 이상은 피드·이정표 우편이 나가므로(afterPicksApplied) 두 아이템에 50개씩 나눠 T9에서 멈춘다.
+    // 아이템당: 신규 1 + 중복 49 — 선형 임계 누적 1+2+…+9 = 45 → T9, 진행도 4.
+    const a = await unownedCatalog();
+    involved.add(a.id);
+    const b = await unownedCatalog();
+    involved.add(b.id);
+    await setBox(105);
+
+    let i = 0;
+    const res = await openSupplyBoxes({
+      userId: TEST_USER_ID, serverId: SERVER_ID, slot: SLOT, count: 100, rng: () => (i++ % 2 === 0 ? a.index : b.index),
+    });
+    expect(res.length).toBe(100);
+    expect(res.filter((r) => r.isNew).length).toBe(2);
+    expect(res.reduce((s, r) => s + r.transcended, 0)).toBe(18);
+
+    const eq = (await testDb.execute(sql`
+      select catalog_item_id cid, transcend_level tl, transcend_progress tp from user_equipment
+      where user_id=${TEST_USER_ID}::uuid and catalog_item_id in (${a.id}, ${b.id}) order by catalog_item_id`)) as unknown as
+      { cid: number; tl: number; tp: number }[];
+    expect(eq.map((r) => [Number(r.tl), Number(r.tp)])).toEqual([[9, 4], [9, 4]]);
+
+    const logs = (await testDb.execute(sql`
+      select count(*)::int n from supply_open_logs where user_id=${TEST_USER_ID}::uuid and catalog_item_id in (${a.id}, ${b.id})`)) as unknown as { n: number }[];
+    expect(logs[0]?.n).toBe(100);
+
+    const box = (await testDb.execute(sql`
+      select count::text c from user_supply_boxes
+      where user_id=${TEST_USER_ID}::uuid and server_id=${SERVER_ID} and slot=${SLOT}::slot`)) as unknown as { c: string }[];
+    expect(box[0]?.c).toBe('5');
+  });
 });

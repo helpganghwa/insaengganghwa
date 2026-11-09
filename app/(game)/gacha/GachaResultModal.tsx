@@ -12,6 +12,16 @@ import { RarityFrame, rarityBorderStyle, hasRarityBorder } from '@/components/Ra
 import { transcendStyle } from '@/lib/game/equipment/transcend';
 import { advanceTutorial } from '@/components/tutorial/events';
 import { sounds } from '@/lib/game/sound';
+import { GACHA_OPEN_MAX, GACHA_OPEN_MULTI } from '@/lib/game/balance';
+
+// 초월 공개음은 카드마다 같은 시각에 울려 겹친다 — 100개 열기에선 수십 장이 동시에 울려 커지므로 120ms 안의 중복은 한 번만.
+let lastRevealSoundAt = 0;
+function playRevealOnce() {
+  const now = Date.now();
+  if (now - lastRevealSoundAt < 120) return;
+  lastRevealSoundAt = now;
+  sounds.gachaReveal();
+}
 
 import type { OpenedItem } from './actions';
 
@@ -59,7 +69,7 @@ const ResultCard = memo(function ResultCard({
           cur += 1;
           setShown(cur);
           setStepKey((k) => k + 1);
-          sounds.gachaReveal(); // 등급 상승(초월) 공개음
+          playRevealOnce(); // 등급 상승(초월) 공개음 — 동시 카드 중복은 한 번만
         }, base + TREM),
       );
     }
@@ -179,7 +189,10 @@ export function GachaResultModal({
     [sortedResults],
   );
   const single = results.length === 1 ? results[0]! : null;
-  const multiN = remaining >= 2 ? Math.min(10, remaining) : 10;
+  // 'N회 더' — 방금 연 묶음 크기를 이어 간다(2026-11-09): 10개보다 많이 열었으면 100회 묶음, 아니면 10회 묶음.
+  // 남은 상자가 모자라면 남은 만큼. 1회 열기 뒤에는 종전처럼 10회 더.
+  const againBase = results.length > GACHA_OPEN_MULTI ? GACHA_OPEN_MAX : GACHA_OPEN_MULTI;
+  const multiN = remaining >= 2 ? Math.min(againBase, remaining) : againBase;
   const [openLoreIdx, setOpenLoreIdx] = useState<number | null>(null);
   const [resultKey, setResultKey] = useState(0);
   useEffect(() => {

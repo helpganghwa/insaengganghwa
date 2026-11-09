@@ -1,16 +1,25 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { PROFILE_BASE_SLOTS, PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND, PROFILE_SLOT_COST_DIAMOND_TIER2, profileSlotCost, profileSlotLimit } from '@/lib/game/balance';
+import {
+  PROFILE_BASE_SLOTS,
+  PROFILE_MAX,
+  PROFILE_SLOT_COST_DIAMOND,
+  PROFILE_SLOT_COST_DIAMOND_TIER2,
+  PROFILE_SLOT_COST_DIAMOND_TIER3,
+  profileSlotCost,
+  profileSlotLimit,
+} from '@/lib/game/balance';
 import { expandAvatarSlots } from '@/lib/game/profile/slots';
 
 import { endTestDb, sql, testDb } from '../db';
 
 describe('아바타 보관함 한도(순수)', () => {
-  it('기본 100칸 + 늘린 칸, 최대 300칸', () => {
-    expect(PROFILE_MAX).toBe(300);
+  it('기본 100칸 + 늘린 칸, 최대 400칸(11-09)', () => {
+    expect(PROFILE_MAX).toBe(400);
     expect(profileSlotLimit(0)).toBe(PROFILE_BASE_SLOTS);
     expect(profileSlotLimit(30)).toBe(130);
     expect(profileSlotLimit(200)).toBe(300);
+    expect(profileSlotLimit(300)).toBe(400);
     expect(profileSlotLimit(500)).toBe(PROFILE_MAX);
     expect(profileSlotLimit(-5)).toBe(PROFILE_BASE_SLOTS);
   });
@@ -22,6 +31,12 @@ describe('아바타 보관함 한도(순수)', () => {
     expect(profileSlotCost(190)).toBe(1000); // 190→200은 아직 싼 구간
     expect(profileSlotCost(200)).toBe(1500); // 200→210부터 비싼 구간
     expect(profileSlotCost(290)).toBe(1500);
+  });
+
+  it('300칸부터 💎2,000(사용자 확정 11-09)', () => {
+    expect(PROFILE_SLOT_COST_DIAMOND_TIER3).toBe(2000);
+    expect(profileSlotCost(300)).toBe(2000);
+    expect(profileSlotCost(390)).toBe(2000);
   });
 });
 
@@ -89,17 +104,23 @@ describe.skipIf(!U)('아바타 보관함 늘리기 — DB 통합(스테이징 �
     expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 200, duplicate: false, diamondBalance: '0' });
   });
 
-  it('10의 배수가 아닌 옛 값도 300에 맞춰 채운다', async () => {
-    await testDb.execute(sql`update characters set avatar_slot_bonus=193, diamond=5000 where user_id=${U}::uuid and server_id=${S}`);
+  it('10의 배수가 아닌 옛 값도 상한에 맞춰 채운다', async () => {
+    await testDb.execute(sql`update characters set avatar_slot_bonus=293, diamond=5000 where user_id=${U}::uuid and server_id=${S}`);
     expect((await expandAvatarSlots(U, S, key())).limit).toBe(PROFILE_MAX);
     await expect(expandAvatarSlots(U, S, key())).rejects.toMatchObject({ code: 'SLOT_MAX' });
   });
 
-  it('최대 300칸을 넘지 않는다(동시 요청 포함)', async () => {
-    await testDb.execute(sql`update characters set avatar_slot_bonus=190, diamond=5000 where user_id=${U}::uuid and server_id=${S}`);
+  it('최대 400칸을 넘지 않는다(동시 요청 포함)', async () => {
+    await testDb.execute(sql`update characters set avatar_slot_bonus=290, diamond=5000 where user_id=${U}::uuid and server_id=${S}`);
     const rs = await Promise.allSettled([expandAvatarSlots(U, S, key()), expandAvatarSlots(U, S, key()), expandAvatarSlots(U, S, key())]);
     expect(rs.filter((r) => r.status === 'fulfilled').length).toBe(1);
     const [c] = (await testDb.execute(sql`select avatar_slot_bonus as b, diamond::int as d from characters where user_id=${U}::uuid and server_id=${S}`)) as unknown as { b: number; d: number }[];
-    expect(c).toEqual({ b: 200, d: 5000 - PROFILE_SLOT_COST_DIAMOND_TIER2 });
+    expect(c).toEqual({ b: 300, d: 5000 - PROFILE_SLOT_COST_DIAMOND_TIER3 });
+  });
+
+  it('300칸부터는 💎2,000 — 290→300은 아직 💎1,500', async () => {
+    await testDb.execute(sql`update characters set avatar_slot_bonus=190, diamond=3500 where user_id=${U}::uuid and server_id=${S}`);
+    expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 300, duplicate: false, diamondBalance: String(3500 - PROFILE_SLOT_COST_DIAMOND_TIER2) });
+    expect(await expandAvatarSlots(U, S, key())).toEqual({ limit: 310, duplicate: false, diamondBalance: '0' });
   });
 });

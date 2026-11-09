@@ -24,7 +24,7 @@ export async function avatarSlotLimit(userId: string, serverId: number): Promise
 }
 
 /**
- * 아바타 보관함 늘리기(2026-10-06, 10-16 상한 300·구간 가격) — 10칸에 💎1,000, 200칸부터는 💎1,500(profileSlotCost — 잠근 행의 **지금 한도** 기준), 최대 PROFILE_MAX칸. 서버별.
+ * 아바타 보관함 늘리기(2026-10-06, 10-16 상한 300·구간 가격, 11-09 상한 400) — 10칸에 💎1,000, 200칸부터는 💎1,500, 300칸부터는 💎2,000(profileSlotCost — 잠근 행의 **지금 한도** 기준), 최대 PROFILE_MAX칸. 서버별.
  * 칸 증가(상한 조건부 UPDATE)와 다이아 차감(조건부)을 한 트랜잭션에서 — 어느 쪽이든 실패하면 통째로 되돌린다.
  * 조건부 UPDATE가 행을 잠그므로 연타·동시 요청도 상한을 넘지 못한다.
  */
@@ -54,7 +54,7 @@ export async function expandAvatarSlots(
     if (expectedCost !== undefined && expectedCost !== cost) throw new AvatarSlotError('PRICE_CHANGED');
     const rows = await tx
       .update(characters)
-      // 10칸씩 늘리되 최대 300칸까지만 — 10의 배수가 아닌 값이 있어도 마지막 구매에서 300에 맞춘다(prod 10-16 실측: 0 또는 100뿐).
+      // 10칸씩 늘리되 최대 PROFILE_MAX칸까지만 — 10의 배수가 아닌 값이 있어도 마지막 구매에서 상한에 맞춘다(prod 10-16 실측: 0 또는 100뿐).
       .set({ avatarSlotBonus: sql`least(${characters.avatarSlotBonus} + ${PROFILE_SLOT_STEP}, ${PROFILE_MAX - PROFILE_BASE_SLOTS})` })
       .where(
         and(

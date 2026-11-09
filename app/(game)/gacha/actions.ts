@@ -14,6 +14,7 @@ import { openSupplyBoxes, SupplyError } from '@/lib/game/supply';
 import { getActiveCatalog, completeCatalog } from '@/lib/game/catalog';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
 import { loreTeaser } from '@/lib/game/equipment/lore';
+import { GACHA_OPEN_MAX } from '@/lib/game/balance';
 
 export type OpenedItem = {
   catalogItemId: number;
@@ -52,10 +53,11 @@ export async function openAction(slot: Slot, count: number): Promise<OpenActionR
     return { status: 'error', code: 'RATE_LIMITED', message: MSG.RATE_LIMITED! };
   const __b = await actionBlock();
   if (__b) return { status: 'error', code: __b, message: MSG[__b] ?? __b };
-  // count 1~10 범위 클램프 — UI에서도 동일 보장(보유량 < 10이면 보유량까지).
+  // count 1~GACHA_OPEN_MAX(100) 범위 클램프 — UI에서도 동일 보장(보유량이 모자라면 보유량까지).
+  // 100개 열기(2026-11-09, 보리 #545·Eclipse 문의): 개봉은 다중행 일괄 처리(applyCatalogPicks)라 100개도 한 트랜잭션 몇 문장.
   // NaN/Infinity 방어 — 유효하지 않으면 1개(Math.floor(NaN) 클램프가 NaN을 통과시키는 버그 차단).
   const parsed = Math.floor(count);
-  const n = Number.isFinite(parsed) ? Math.max(1, Math.min(10, parsed)) : 1;
+  const n = Number.isFinite(parsed) ? Math.max(1, Math.min(GACHA_OPEN_MAX, parsed)) : 1;
   try {
     const opened = await openSupplyBoxes({ userId, serverId: await getActiveServerId(), slot, count: n });
     // 개봉 아이템은 항상 active 풀에서 나오므로 캐시된 활성 카탈로그로 메타 조회(DB 왕복 제거).

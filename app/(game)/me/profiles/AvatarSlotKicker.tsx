@@ -12,7 +12,15 @@ import { ModalButton, ModalConfirmButton, ModalLayout } from '@/components/Modal
 import { PlusChip } from '@/components/ui/PlusChip';
 import { resyncWhenOnline } from '@/lib/client/resync';
 import { useResourceToast } from '@/components/ResourceToast';
-import { PROFILE_MAX, PROFILE_SLOT_COST_DIAMOND_TIER2, PROFILE_SLOT_STEP, PROFILE_SLOT_TIER2_FROM, profileSlotCost } from '@/lib/game/balance';
+import {
+  PROFILE_MAX,
+  PROFILE_SLOT_COST_DIAMOND_TIER2,
+  PROFILE_SLOT_COST_DIAMOND_TIER3,
+  PROFILE_SLOT_STEP,
+  PROFILE_SLOT_TIER2_FROM,
+  PROFILE_SLOT_TIER3_FROM,
+  profileSlotCost,
+} from '@/lib/game/balance';
 
 import { expandAvatarSlotsAction } from './actions';
 
@@ -140,10 +148,14 @@ export function AvatarSlotKicker({ count, limit }: { count: number; limit: numbe
                 </b>
               </p>
             </div>
-            {/* 구간 안내 — 200칸부터 비싸진다는 것을 미리. 300칸에 닿으면 칭호가 있다는 것은 칭호 화면이 말한다. */}
+            {/* 구간 안내 — 다음 구간(200칸·300칸)부터 비싸진다는 것을 미리. 300칸에 닿으면 칭호가 있다는 것은 칭호 화면이 말한다. */}
             {shown < PROFILE_SLOT_TIER2_FROM ? (
               <p className="mt-2 text-[10.5px] text-zinc-400">
                 {fmt(PROFILE_SLOT_TIER2_FROM)}칸부터는 {PROFILE_SLOT_STEP}칸에 💎{fmt(PROFILE_SLOT_COST_DIAMOND_TIER2)}, 최대 {fmt(PROFILE_MAX)}칸까지 늘릴 수 있어요.
+              </p>
+            ) : shown < PROFILE_SLOT_TIER3_FROM ? (
+              <p className="mt-2 text-[10.5px] text-zinc-400">
+                {fmt(PROFILE_SLOT_TIER3_FROM)}칸부터는 {PROFILE_SLOT_STEP}칸에 💎{fmt(PROFILE_SLOT_COST_DIAMOND_TIER3)}, 최대 {fmt(PROFILE_MAX)}칸까지 늘릴 수 있어요.
               </p>
             ) : (
               <p className="mt-2 text-[10.5px] text-zinc-400">최대 {fmt(PROFILE_MAX)}칸까지 늘릴 수 있어요.</p>
