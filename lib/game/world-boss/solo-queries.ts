@@ -65,7 +65,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
                      where ue.user_id = c.user_id and ue.server_id = c.server_id and ci.active) o), '[]'::json) as owned,
                  coalesce((select json_agg(a) from (
-                    select up.id::text as id, up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
+                    select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
                       from user_profiles up where up.user_id = c.user_id and up.server_id = c.server_id) a), '[]'::json) as avatars
             from characters c left join zones hz on hz.id = c.residence_zone_id
            where c.user_id = ${userId}::uuid and c.server_id = ${serverId}`) as unknown as Promise<
@@ -76,7 +76,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
             eq: { key: string; name: string; slot: SoloSlot; level: number; transcend: number }[];
             owned: { ueid: string; key: string; name: string; slot: SoloSlot; level: number; transcend: number; on: boolean }[];
-            avatars: { id: string; snap: unknown; is_default: boolean; active: boolean }[];
+            avatars: { id: string; south: string | null; snap: unknown; is_default: boolean; active: boolean }[];
           }[]
         >)
       : Promise.resolve(null),
@@ -149,6 +149,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       hasAvatar: !!keys,
       ownedRequired: [...allowed].filter((k) => owned.has(k)).length,
       requiredItems: ownedRequired,
+      avatars: m.avatars.map((a) => ({ id: a.id, south: a.south, isDefault: !!a.is_default, active: !!a.active, keys: !a.is_default ? avatarKeysOf(a.snap) : null })),
       bestPower: plan.changed && Math.round(plan.power) > Math.round(power.weapon + power.armor + power.accessory) ? Math.round(plan.power) : null,
     };
   }

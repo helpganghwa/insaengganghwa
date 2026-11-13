@@ -11,10 +11,11 @@ import { useMemo, useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
-import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
+import { assetUrl } from '@/lib/asset-versions';
 import { Ticker } from '@/components/Ticker';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
@@ -35,7 +36,7 @@ import {
 } from '@/lib/game/world-boss/solo';
 import type { SoloDetail } from '@/lib/game/world-boss/solo-types';
 
-import { soloEquipAction, soloEquipBestAction, soloRunAction } from '../actions';
+import { soloEquipAction, soloEquipBestAction, soloPickAvatarAction, soloRunAction } from '../actions';
 
 export type SoloFx = { idle: string; crouch: string; climb: string; bind: string; expose: string; webshot: string; webnet: string };
 type Run = Awaited<ReturnType<typeof soloRunAction>> extends infer R ? (R extends { status: 'success'; run: infer X } ? X : never) : never;
@@ -112,18 +113,75 @@ function SecondaryButton({ children, className = '', ...p }: React.ButtonHTMLAtt
   );
 }
 
+type SoloMe = NonNullable<SoloDetail['me']>;
+/** 탑 규칙으로 이 아바타(keys) 기준 부위마다 가장 센 요구 장비 — 낙관적 화면용(서버 soloLoadoutForAvatar와 같은 규칙). 요구 장비가 없는 부위는 지금 장착을 ×0으로 둔다. */
+function loadoutWith(me: SoloMe, keys: Partial<Record<SoloSlot, string>> | null) {
+  const pieces = SLOTS.flatMap((slot): SoloMe['pieces'] => {
+    let best: (typeof me.requiredItems)[number] | null = null;
+    let bestV = -1;
+    for (const it of me.requiredItems) {
+      if (it.slot !== slot) continue;
+      const v = it.cp * (keys && keys[slot] === it.key ? 2 : 1);
+      if (v > bestV || (v === bestV && it.equipped)) {
+        best = it;
+        bestV = v;
+      }
+    }
+    if (best) {
+      const mult: 0 | 1 | 2 = keys && keys[slot] === best.key ? 2 : 1;
+      return [{ slot, key: best.key, name: best.name, level: best.level, transcend: best.transcend, cp: best.cp, mult, score: best.cp * mult, src: best.src }];
+    }
+    const cur = me.pieces.find((x) => x.slot === slot);
+    return cur ? [{ ...cur, mult: 0 as const, score: 0 }] : [];
+  });
+  const power = { weapon: 0, armor: 0, accessory: 0 };
+  for (const p of pieces) power[p.slot] += p.score;
+  return { pieces, power, total: power.weapon + power.armor + power.accessory };
+}
+/** 추천 장착 — 보유 아바타 전부(+ 지금 대표가 기본이면 '그대로') 중 가장 센 조합. */
+function bestOverall(me: SoloMe) {
+  const customs = me.avatars.filter((a) => a.keys);
+  const cands: { id: string | null; keys: Partial<Record<SoloSlot, string>> | null }[] = customs.some((a) => a.active) ? customs : [{ id: null, keys: null }, ...customs];
+  let top: { id: string | null; keys: Partial<Record<SoloSlot, string>> | null; lo: ReturnType<typeof loadoutWith> } | null = null;
+  for (const c of cands) {
+    const lo = loadoutWith(me, c.keys);
+    if (!top || lo.total > top.lo.total) top = { ...c, lo };
+  }
+  return top!;
+}
+/** 장착·아바타가 바뀐 뒤의 내 정보(낙관적) — 장착 표시·추천 장착 미리 보기까지 다시 맞춘다. */
+function meAfter(me: SoloMe, pieces: SoloMe['pieces'], avatarId: string | null): Partial<SoloMe> {
+  const power = { weapon: 0, armor: 0, accessory: 0 };
+  for (const p of pieces) power[p.slot] += p.score;
+  const on = new Set(pieces.map((p) => p.key));
+  const avatars = avatarId ? me.avatars.map((a) => ({ ...a, active: a.id === avatarId })) : me.avatars;
+  const cur = avatars.find((a) => a.active);
+  const next: SoloMe = { ...me, pieces, power, avatars, requiredItems: me.requiredItems.map((it) => ({ ...it, equipped: on.has(it.key) && pieces.some((p) => p.slot === it.slot && p.key === it.key) })), avatarSouth: cur?.south ?? me.avatarSouth, hasAvatar: !!cur?.keys };
+  const best = bestOverall(next);
+  const total = power.weapon + power.armor + power.accessory;
+  return { ...next, bestPower: best.lo.total > total ? best.lo.total : null };
+}
+
 export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detail: SoloDetail; spriteSrc: string; bgSrc: string; fx: SoloFx; bossName: string }) {
   const router = useRouter();
   const { showError } = useResourceToast();
   const [view, setView] = useState<'board' | 'prep' | 'battle'>('board');
   const [run, setRun] = useState<Run | null>(null);
-  const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | null>(null);
-  const [extraRetry, setExtraRetry] = useState(0);
+  const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | 'avatar' | null>(null);
   const [poolSlot, setPoolSlot] = useState<SoloSlot>('weapon');
   const [pending, start] = useTransition();
   const keyRef = useRef<string | null>(null);
-  const d = detail;
+  // 낙관적 화면(11-13 사용자) — 서버 응답 전에 먼저 바꿔 보여 주고, 실패하면 되돌린다. 새 데이터(router.refresh)가 오면 base가 달라져 자연히 버려진다.
+  const [opt, setOpt] = useState<{ base: SoloDetail; me: Partial<SoloMe>; total?: number; top?: SoloDetail['top']; extra: number } | null>(null);
+  const live = opt && opt.base === detail ? opt : null;
+  const d: SoloDetail = live ? { ...detail, total: live.total ?? detail.total, top: live.top ?? detail.top, me: detail.me ? { ...detail.me, ...live.me } : null } : detail;
   const me = d.me;
+  const patch = (p: { me?: Partial<SoloMe>; total?: number; top?: SoloDetail['top']; extra?: number }) =>
+    setOpt((prev) => {
+      const cur = prev && prev.base === detail ? prev : { base: detail, me: {}, extra: 0 };
+      return { ...cur, ...p, base: detail, me: { ...cur.me, ...(p.me ?? {}) }, extra: p.extra ?? cur.extra };
+    });
+  const extraRetry = live?.extra ?? 0;
   const active = d.status === 'active';
   const runsLeft = me ? me.freeLeft + me.retryLeft + extraRetry : 0;
   const phase = soloPhaseFor(d.total);
@@ -139,33 +197,54 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         return;
       }
       keyRef.current = null;
-      setRun(r.run);
+      const ru = r.run;
+      // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
+      const meNow = d.me!;
+      const mine = { rank: ru.rank, userId: '__me', nickname: meNow.nickname, best: ru.best, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
+      const others = d.top.filter((x) => !x.me);
+      const top = ru.rank <= 10 ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, 10).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, 10);
+      patch({ me: { freeLeft: 0, retryLeft: ru.runsLeft, best: ru.best, rank: ru.rank }, total: ru.totalAfter, top, extra: 0 });
+      setRun(ru);
       setView('battle');
     });
   }
-  function equipBest() {
+  /** 낙관적 실행 — 먼저 patch, 실패하면 그 직전 상태로 되돌린다. */
+  function optimistic(p: Partial<SoloMe>, call: () => Promise<{ status: string; message?: string }>) {
+    const before = opt;
+    patch({ me: p });
     start(async () => {
-      const r = await soloEquipBestAction(d.id);
+      const r = await call().catch(() => ({ status: 'error', message: '연결이 끊겨 바꾸지 못했어요. 다시 시도해 주세요.' }));
       if (r.status !== 'success') {
-        showError(r.message);
+        setOpt(before);
+        showError(r.message ?? '바꾸지 못했어요.');
         return;
       }
       router.refresh();
     });
   }
+  function equipBest() {
+    if (!me) return;
+    const b = bestOverall(me);
+    optimistic(meAfter(me, b.lo.pieces, b.id), () => soloEquipBestAction(d.id));
+  }
   function equipOne(ueid: string) {
-    start(async () => {
-      const r = await soloEquipAction(d.id, ueid);
-      if (r.status !== 'success') {
-        showError(r.message);
-        return;
-      }
-      router.refresh();
-    });
+    if (!me) return;
+    const it = me.requiredItems.find((x) => x.ueid === ueid);
+    if (!it) return;
+    const keys = me.avatars.find((a) => a.active)?.keys ?? null;
+    const mult: 1 | 2 = keys && keys[it.slot] === it.key ? 2 : 1;
+    const pieces = [...me.pieces.filter((p) => p.slot !== it.slot), { slot: it.slot, key: it.key, name: it.name, level: it.level, transcend: it.transcend, cp: it.cp, mult, score: it.cp * mult, src: it.src }];
+    optimistic(meAfter(me, pieces, null), () => soloEquipAction(d.id, ueid));
+  }
+  function pickAvatar(id: string) {
+    if (!me) return;
+    const av = me.avatars.find((a) => a.id === id);
+    if (!av) return;
+    setSheet(null);
+    optimistic(meAfter(me, loadoutWith(me, av.keys).pieces, id), () => soloPickAvatarAction(d.id, id));
   }
   function closeBattle() {
     setRun(null);
-    setExtraRetry(0);
     setView('board');
     router.refresh();
   }
@@ -180,10 +259,9 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       <ExtraBuyButton
         item="wb_retry"
         trigger={{ label: `재도전 · ${me.retryNext}pt` }}
-        onResult={(r) => {
-          if (!r.duplicate) setExtraRetry((x) => x + 1);
-          onAfter();
-        }}
+        onOptimistic={() => patch({ extra: extraRetry + 1 })}
+        onRollback={() => patch({ extra: Math.max(0, extraRetry) })}
+        onResult={() => onAfter()}
         className="flex-1 rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[14px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)]"
       />
     );
@@ -220,6 +298,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
           }}
           onPattern={() => setSheet('pattern')}
           onEquipBest={equipBest}
+          onAvatar={() => setSheet('avatar')}
           onGo={challenge}
           pending={pending}
           runsLeft={runsLeft}
@@ -243,7 +322,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       )}
 
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
-      {sheet === 'reward' && <RewardSheet stage={phase.stage} best={me?.best ?? null} onClose={() => setSheet(null)} />}
+      {sheet === 'reward' && <RewardSheet stage={phase.stage} best={me?.best ?? null} rank={me?.rank ?? null} onClose={() => setSheet(null)} />}
+      {sheet === 'avatar' && me && <AvatarSheet me={me} onPick={pickAvatar} onClose={() => setSheet(null)} />}
       {sheet === 'pool' && <PoolSheet d={d} slot={poolSlot} onSlot={setPoolSlot} onEquip={equipOne} pending={pending} onClose={() => setSheet(null)} />}
     </div>
   );
@@ -318,13 +398,6 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
 
 type BoardRow = { rank: number; nick: string; score: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
-/** 순위 한 줄 — 대난투 순위와 같은 방식(우측 아바타 얼굴 확대 + 등수색·암막 그라데이션 두 겹, 11-13 사용자). */
-function rankTint(rank: number, me: boolean): string {
-  if (rank === 1) return 'from-amber-400/35 via-amber-500/10';
-  if (rank === 2) return 'from-slate-300/30 via-slate-300/8';
-  if (rank === 3) return 'from-orange-600/30 via-orange-700/8';
-  return me ? 'from-violet-500/30 via-violet-500/8' : 'from-zinc-400/10 via-transparent';
-}
 function rankText(rank: number, me: boolean): string {
   if (rank === 1) return 'text-amber-200';
   if (rank === 2) return 'text-slate-100';
@@ -336,37 +409,37 @@ function barColor(rank: number, me: boolean): string {
   if (rank === 1) return 'bg-amber-400';
   if (rank === 2) return 'bg-slate-200';
   if (rank === 3) return 'bg-orange-500';
-  return me ? 'bg-violet-400' : 'bg-slate-400/70';
+  return me ? 'bg-violet-400' : 'bg-slate-400/60';
 }
-/** 순위 한 줄(A3안) — 왼쪽 순위·아바타 얼굴, 가운데 이름·칭호·길드, 오른쪽 점수, 아래 1위 대비 막대와 순위 보상. */
+/** 순위 한 줄 — 대난투 순위처럼 좌우 여백 없이 줄로 쌓고(44px), 아바타는 오른쪽 배경으로만. 글자 쪽은 단색 바탕에 가깝게 두어 가독성을 지킨다.
+ *  아래 가장자리에 1위 대비 얇은 막대(1~3위 순위색). */
 function Row({ r, lead }: { r: BoardRow; lead: number }) {
   const reward = rankRewardText(r.rank);
-  const pct = lead > 0 ? Math.max(3, Math.min(100, Math.round((r.score / lead) * 100))) : 0;
+  const pct = lead > 0 ? Math.max(2, Math.min(100, Math.round((r.score / lead) * 100))) : 0;
   return (
-    <li className={`relative overflow-hidden rounded-lg px-2 py-1.5 ${r.me ? 'bg-violet-950/45 ring-1 ring-violet-400/80' : 'bg-zinc-900/70'}`}>
-      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
-      <div className="relative flex items-center gap-2">
-        <span className={`w-6 shrink-0 text-center font-mono text-[14px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
-        <span className={`relative h-10 w-10 flex-none overflow-hidden rounded-md bg-zinc-800 ${r.rank === 1 ? 'ring-1 ring-amber-400/70' : r.rank === 2 ? 'ring-1 ring-slate-300/60' : r.rank === 3 ? 'ring-1 ring-orange-500/60' : 'ring-1 ring-white/10'}`}>
+    <li className={`relative flex h-[46px] items-center overflow-hidden border-b border-zinc-800/80 px-3 ${r.me ? 'bg-violet-950/60' : 'bg-zinc-950'}`}>
+      {r.avatar ? (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {r.avatar ? <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={faceCropStyle(r.faceBox)} /> : null}
-        </span>
-        <div className="min-w-0 flex-1 leading-tight">
-          <div className="flex min-w-0 items-center gap-1">
-            <b className="truncate text-[12.5px] font-extrabold text-zinc-50">{r.nick}</b>
-            {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
-            {r.title ? <TitleTag code={r.title} className="min-w-0 text-[10.5px]" /> : null}
-          </div>
-          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className="mt-0.5 min-w-0 text-[9.5px] text-zinc-400" /> : <span className="mt-0.5 block text-[9.5px] text-zinc-600">무소속</span>}
+          <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full opacity-70" style={meleeFaceCropStyle(r.faceBox)} />
         </div>
-        <b className="flex-none font-mono text-[13.5px] font-black text-zinc-50 tabular-nums">{n(r.score)}</b>
-      </div>
-      <div className="relative mt-1 flex items-center gap-2 pl-8">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/50">
-          <div className={`h-full rounded-full ${barColor(r.rank, r.me)}`} style={{ width: `${pct}%` }} />
+      ) : null}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${r.me ? 'from-violet-950 from-50%' : 'from-zinc-950 from-50%'} to-transparent`} />
+      <span className={`relative w-7 shrink-0 text-center font-mono text-[13.5px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
+      <div className="relative ml-1.5 min-w-0 flex-1 leading-tight">
+        <div className="flex min-w-0 items-center gap-1">
+          <b className="truncate text-[12.5px] font-extrabold text-zinc-50">{r.nick}</b>
+          {r.title ? <TitleTag code={r.title} still className="min-w-0 text-[10.5px]" /> : null}
         </div>
-        <span className="w-[88px] flex-none text-right text-[9.5px] text-zinc-400">{reward}</span>
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9.5px] text-zinc-400">
+          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={10} className="min-w-0 truncate" /> : <span className="text-zinc-600">무소속</span>}
+          {reward ? <span className="flex-none text-zinc-500">{reward}</span> : null}
+        </div>
       </div>
+      <b className="relative flex-none font-mono text-[13.5px] font-black text-zinc-50 tabular-nums [text-shadow:0_1px_3px_#000]">{n(r.score)}</b>
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-black/40">
+        <span className={`block h-full ${barColor(r.rank, r.me)}`} style={{ width: `${pct}%` }} />
+      </span>
     </li>
   );
 }
@@ -376,25 +449,25 @@ function Board({ d }: { d: SoloDetail }) {
   const meInTop = d.top.some((r) => r.me);
   const lead = d.top[0]?.best ?? 0;
   return (
-    <div className="mx-3 mt-2.5">
-      <div className="mb-1.5 flex items-baseline justify-between">
+    <div className="mt-2.5">
+      <div className="mb-1.5 flex items-baseline justify-between px-3">
         <span className="text-[11px] font-bold tracking-widest text-zinc-500">피해 순위</span>
         <span className="text-[10.5px] text-zinc-500">최고 기록 · 30위까지 순위 보상</span>
       </div>
-      <ul className="space-y-1">
-        {d.top.length === 0 ? <li className="flex h-[50px] items-center justify-center rounded-lg bg-zinc-900/60 text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
+      <ul className="border-t border-zinc-800/80">
+        {d.top.length === 0 ? <li className="flex h-[46px] items-center justify-center text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
           <Row key={r.userId} lead={lead} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
-          <>
-            <li className="py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
-            {me.best != null && me.rank != null ? (
+          me.best != null && me.rank != null ? (
+            <>
+              <li className="border-b border-zinc-800/80 py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
               <Row lead={lead} r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
-            ) : (
-              <li className="flex h-[50px] items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[11.5px] text-zinc-400">아직 기록이 없어요</li>
-            )}
-          </>
+            </>
+          ) : (
+            <li className="flex h-[46px] items-center justify-center text-[11.5px] text-zinc-400">아직 내 기록이 없어요</li>
+          )
         ) : null}
       </ul>
     </div>
@@ -446,8 +519,8 @@ function expectRange(power: { weapon: number; armor: number; accessory: number }
   return [xs[Math.floor(xs.length * 0.2)]!, xs[Math.floor(xs.length * 0.8)]!];
 }
 
-function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEquipBest, onGo, pending, runsLeft }: {
-  d: SoloDetail; bgSrc: string; spriteSrc: string; bossName: string; onBack: () => void; onPick: (slot: SoloSlot) => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number;
+function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEquipBest, onAvatar, onGo, pending, runsLeft }: {
+  d: SoloDetail; bgSrc: string; spriteSrc: string; bossName: string; onBack: () => void; onPick: (slot: SoloSlot) => void; onPattern: () => void; onEquipBest: () => void; onAvatar: () => void; onGo: () => void; pending: boolean; runsLeft: number;
 }) {
   const me = d.me!;
   const total = me.power.weapon + me.power.armor + me.power.accessory;
@@ -530,15 +603,14 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
             </button>
           );
         })}
-        <div className="flex w-full items-center gap-2 border-b border-white/[.07] py-1.5 text-[12px]">
+        {/* 아바타 — 무한의 탑처럼 이 자리에서 바로 고른다(고르면 그 아바타 기준 가장 센 장비로 함께 맞춤, 11-13 사용자). */}
+        <button type="button" onClick={onAvatar} className="flex w-full items-center gap-2 border-b border-white/[.07] py-1.5 text-left text-[12px] active:bg-white/5">
           <span className="flex-none text-zinc-400">아바타</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {me.avatarSouth ? <img src={me.avatarSouth} alt="" className="h-8 w-auto" style={PIX} /> : null}
           <span className="text-[10.5px] text-zinc-500">{me.hasAvatar ? '나만의 아바타' : '기본 아바타'}</span>
-          <Link prefetch={false} href="/me/profiles" className="ml-auto font-bold text-amber-300">
-            변경 ›
-          </Link>
-        </div>
+          <span className="ml-auto font-bold text-amber-300">변경 ›</span>
+        </button>
         <div className="flex items-center justify-between gap-2 py-2 text-[12px] tabular-nums">
           {/* 추천 장착 미리 보기 — 바꾸면 오르는 전투력을 버튼에 바로(11-13 사용자 2안). 더 오를 게 없으면 숨긴다. */}
           {me.bestPower != null ? (
@@ -1220,15 +1292,59 @@ function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloF
   );
 }
 
-function RewardSheet({ stage, best, onClose }: { stage: number; best: number | null; onClose: () => void }) {
+function RewardSheet({ stage, best, rank, onClose }: { stage: number; best: number | null; rank: number | null; onClose: () => void }) {
   const bonus = Math.round((soloPhaseBonus(stage) - 1) * 100);
   const myTier = best == null ? undefined : soloTierIndex(best);
+  const myBand = rank == null ? -1 : SOLO_RANK_REWARDS.findIndex((r) => rank >= r.from && rank <= r.to);
   return (
     <ModalShell onClose={onClose} label="보상 안내">
       <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 구간 보상 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
         <div className="space-y-2">
           <SheetTable head={['구간', '보상']} rows={SOLO_TIERS.map((t) => [t.min === 0 ? '참가' : t.label, rewardText(soloTierReward(t.min, stage))])} hi={myTier} />
-          <SheetTable head={['순위', '보상']} rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, rewardText(r)])} />
+          <SheetTable head={['순위', '보상']} rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, rewardText(r)])} hi={myBand >= 0 ? myBand : undefined} />
+        </div>
+      </ModalLayout>
+    </ModalShell>
+  );
+}
+
+/** 아바타 고르기(무한의 탑 '선택 아바타'와 같은 모양) — 고르면 그 아바타 기준 가장 센 장비로 맞췄을 때 전투력 순. */
+function AvatarSheet({ me, onPick, onClose }: { me: SoloMe; onPick: (id: string) => void; onClose: () => void }) {
+  const rows = me.avatars
+    .map((a) => ({ a, lo: loadoutWith(me, a.keys) }))
+    .sort((x, y) => Number(y.a.active) - Number(x.a.active) || y.lo.total - x.lo.total);
+  return (
+    <ModalShell onClose={onClose} label="아바타">
+      <ModalLayout title="아바타" subtitle="고르면 그 아바타에 맞는 장비로 함께 바꿔요" bodyPad="sm" maxBodyClass="max-h-[56vh]" footer={<ModalButton tone="neutral" onClick={onClose}>닫기</ModalButton>}>
+        <div className="flex flex-col gap-1.5">
+          {rows.map(({ a, lo }) => (
+            <button key={a.id} type="button" onClick={() => onPick(a.id)} className={`flex h-[56px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left ${a.active ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
+              <span className="min-w-0 flex-1 leading-tight">
+                <b className="block text-[12px]">{a.isDefault ? '기본 아바타' : '나만의 아바타'}</b>
+                {a.keys ? (
+                  <span className="mt-1 flex gap-1">
+                    {SLOTS.map((sl) => {
+                      const k = a.keys?.[sl];
+                      const on = !!k && lo.pieces.some((p) => p.slot === sl && p.key === k && p.mult === 2);
+                      return (
+                        <span key={sl} className={`relative flex h-6 w-6 flex-none items-center justify-center rounded-[5px] border ${on ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : 'border-zinc-700 bg-zinc-900 opacity-40 grayscale'}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          {k ? <img src={assetUrl(`/sprites/${sl}/${k}.png`)} alt="" className="h-[19px] w-[19px]" style={PIX} /> : null}
+                        </span>
+                      );
+                    })}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-zinc-500">만들 때 입은 장비 없음</span>
+                )}
+              </span>
+              <span className="flex-none text-[10.5px] text-zinc-300 tabular-nums">
+                전투력 <b className="text-amber-300">{n(lo.total)}</b>
+              </span>
+            </button>
+          ))}
         </div>
       </ModalLayout>
     </ModalShell>
@@ -1242,7 +1358,7 @@ function PoolSheet({ d, slot, onSlot, onEquip, pending, onClose }: { d: SoloDeta
   const missing = d.pool[slot].filter((x) => !ownedKeys.has(x.key));
   return (
     <ModalShell onClose={onClose} label="요구 장비">
-      <ModalLayout title="요구 장비" subtitle="장착하면 ×1 · 지금 아바타에도 쓰인 장비면 ×2" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm" maxBodyClass="max-h-[62vh]">
+      <ModalLayout title="요구 장비" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm" maxBodyClass="max-h-[62vh]">
         <div className="grid grid-cols-3 gap-1 p-1">
           {SLOTS.map((s) => (
             <button key={s} type="button" onClick={() => onSlot(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${slot === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>

@@ -149,3 +149,29 @@ export async function bestLoadoutOf(
     pieces: out,
   };
 }
+
+/**
+ * 개인 보스(0253) 아바타 고르기 — 고른 아바타를 대표로 했을 때 탑 규칙으로 가장 센 장착(활성 장비만). 바꿔 낄 장비 id와 대표 전환 여부.
+ * 아바타가 내 것이 아니거나 사라졌으면 null.
+ */
+export async function soloLoadoutForAvatar(serverId: number, userId: string, profileId: string, allowed: ReadonlySet<string>): Promise<{ ueids: string[]; activate: boolean } | null> {
+  const [rows, [av]] = await Promise.all([
+    db.execute(sql`
+      select ue.id::text as ueid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl, ue.equipped_slot is not null as on_
+        from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+       where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid and ci.active`) as unknown as Promise<OwnRow[]>,
+    db.execute(sql`
+      select up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
+        from user_profiles up join characters c on c.user_id = up.user_id and c.server_id = up.server_id
+       where up.id = ${profileId}::uuid and up.user_id = ${userId}::uuid and up.server_id = ${serverId}`) as unknown as Promise<{ snap: unknown; is_default: boolean; active: boolean }[]>,
+  ]);
+  if (!av) return null;
+  const pieces: BestPiece[] = rows.filter((r) => isSlot(r.slot)).map((r) => ({ ueid: r.ueid, slot: r.slot as WeakSlot, code: r.code, cp: Math.round(pieceCombatPower(Number(r.el), Number(r.tl))), on: r.on_ }));
+  const keys = av.is_default ? null : avatarKeysOf(av.snap);
+  const plan = pickBestLoadoutBy(pieces, [{ id: profileId, keys, active: !!av.active }], (p, avMatch) => (allowed.has(p.code) ? p.cp * (avMatch ? TOWER_AVATAR_MULT : 1) : 0));
+  const ueids = WEAK_SLOTS.flatMap((slot) => {
+    const p = plan.picks[slot];
+    return p && !p.on && plan.power > 0 && (allowed.has(p.code) ? true : false) ? [p.ueid] : [];
+  });
+  return { ueids, activate: !av.active };
+}

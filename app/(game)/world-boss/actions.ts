@@ -15,7 +15,7 @@ import { rateLimited } from '@/lib/ratelimit';
 import { WorldBossError, type WorldBossErrorCode } from '@/lib/game/world-boss/errors';
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, kickMember, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, getWorldBossStatus } from '@/lib/game/world-boss/queries';
-import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
+import { bestLoadoutOf, knownWeakOf, soloLoadoutForAvatar } from '@/lib/game/world-boss/loadout';
 import { runSolo } from '@/lib/game/world-boss/solo-server';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
@@ -343,6 +343,36 @@ export async function soloEquipAction(bossId: string, ueid: string) {
   } catch (e) {
     if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
     return fail(e, 'soloEquip');
+  }
+}
+
+/** 아바타 고르기(무한의 탑처럼) — 그 아바타를 대표로 하고, 그 아바타 기준 가장 센 요구 장비 조합으로 함께 맞춘다(한 트랜잭션). */
+export async function soloPickAvatarAction(bossId: string, profileId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId) || !isUuid(profileId)) return err('BOSS_NOT_FOUND');
+  try {
+    const [b] = (await db.execute(sql`select server_id, status, pool, (leave_at > now()) as alive from world_bosses where id = ${bossId}::bigint`)) as unknown as {
+      server_id: number; status: string; pool: { weapon: string[]; armor: string[]; accessory: string[] } | null; alive: boolean;
+    }[];
+    if (!b || b.server_id !== g.sid || b.status === 'scheduled') return err('BOSS_NOT_FOUND');
+    if (!b.pool) return err('NOT_SOLO');
+    if (b.status !== 'active' || !b.alive) return err('BOSS_NOT_ACTIVE');
+    const allowed = new Set([...b.pool.weapon, ...b.pool.armor, ...b.pool.accessory]);
+    const plan = await soloLoadoutForAvatar(g.sid, g.u, profileId, allowed);
+    if (!plan) { rev(bossId); return err('AVATAR_GONE'); }
+    await equipItems(g.u, plan.ueids.map((id) => BigInt(id)), g.sid, plan.activate
+      ? async (tx) => { if (!(await activateProfile(g.u, g.sid, profileId, tx))) throw new AvatarGoneError(); }
+      : undefined);
+    after(() => grantEquipmentTitles(g.u, g.sid));
+    revalidatePath('/me');
+    revalidatePath('/me/profiles');
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof AvatarGoneError) { rev(bossId); return err('AVATAR_GONE'); }
+    if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
+    return fail(e, 'soloPickAvatar');
   }
 }
 
