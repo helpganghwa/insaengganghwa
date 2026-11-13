@@ -394,48 +394,57 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
 
 type BoardRow = { rank: number; nick: string; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
-function rankText(rank: number, me: boolean): string {
-  if (rank === 1) return 'text-amber-200';
-  if (rank === 2) return 'text-slate-100';
-  if (rank === 3) return 'text-orange-200';
-  return me ? 'text-violet-200' : 'text-zinc-400';
+/** 등수별 배경 틴트 — 대난투 순위와 같은 방식(금·은·동, 나는 보라). 좌→우라 오른쪽 아바타를 덮지 않는다. */
+function rankTint(rank: number, me: boolean): string {
+  if (rank === 1) return 'from-amber-400/35 via-amber-500/10';
+  if (rank === 2) return 'from-slate-300/30 via-slate-300/8';
+  if (rank === 3) return 'from-orange-600/30 via-orange-700/8';
+  return me ? 'from-violet-500/30 via-violet-500/8' : 'from-zinc-400/10 via-transparent';
 }
-/** 피해 몫 막대색 — 1~3위는 순위색, 나는 보라(11-13 사용자 A3안). */
-function barColor(rank: number, me: boolean): string {
-  if (rank === 1) return 'bg-amber-400';
-  if (rank === 2) return 'bg-slate-200';
-  if (rank === 3) return 'bg-orange-500';
-  return me ? 'bg-violet-400' : 'bg-slate-400/60';
+/** 등수 숫자·구분선·게이지 색 — 틴트와 같은 계열. */
+function rankAccent(rank: number, me: boolean): { text: string; line: string; bar: string } {
+  if (rank === 1) return { text: 'text-amber-200', line: 'bg-amber-400/60', bar: 'bg-amber-400' };
+  if (rank === 2) return { text: 'text-slate-100', line: 'bg-slate-300/50', bar: 'bg-slate-200' };
+  if (rank === 3) return { text: 'text-orange-200', line: 'bg-orange-500/55', bar: 'bg-orange-500' };
+  return me
+    ? { text: 'text-violet-200', line: 'bg-violet-500/60', bar: 'bg-violet-400' }
+    : { text: 'text-zinc-300', line: 'bg-zinc-700/60', bar: 'bg-slate-400/60' };
 }
-/** 순위 한 줄 — 대난투 순위처럼 좌우 여백 없이 줄로 쌓고, 아바타는 오른쪽 배경으로만. 글자 쪽은 단색 바탕에 가깝게 두어 가독성을 지킨다.
- *  아래 가장자리에 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
+/** 순위 한 줄 — 대난투 순위와 같은 구성(오른쪽 얼굴 + 좌→우 등수 틴트·암막 2겹, 등수 | 구분선 | 1줄 이름·길드·칭호·'나', 2줄 보상) + 오른쪽 점수.
+ *  글자 그림자는 요소마다 drop-shadow로 — 부모 text-shadow는 칭호 글자(배경 클립)에 상속돼 효과가 뭉개진다.
+ *  아래 가장자리 게이지 = 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
 function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number }) {
-  // 받을 보상 = 구간(지금 페이즈 보너스 포함) + 순위 — 원정이 끝날 때 우편으로 오는 값과 같다(11-14 사용자).
   const tr = soloTierReward(r.score, stage);
   const rr = soloRankReward(r.rank);
   const pct = total > 0 && r.dealt > 0 ? Math.max(1, Math.min(100, (r.dealt / total) * 100)) : 0;
-  // 1줄 이름·길드·칭호, 2줄 보상만, 오른쪽 점수. 아바타는 오른쪽 배경(11-14 사용자).
+  const accent = rankAccent(r.rank, r.me);
+  const sh = 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]';
   return (
-    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/80 bg-zinc-950 px-3">
+    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3">
       {r.avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-44">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
         </div>
       ) : null}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 from-40% via-zinc-950/60 via-60% to-transparent" />
-      <span className={`relative w-7 shrink-0 text-center font-mono text-[14px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
-      <div className="relative ml-1.5 min-w-0 flex-1 leading-tight [text-shadow:0_1px_2px_#000]">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <b className={`min-w-0 shrink truncate text-[13px] font-extrabold ${r.me ? 'text-violet-100' : 'text-zinc-50'}`}>{r.nick}</b>
-          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={10} className="min-w-0 shrink-[2] truncate text-[9.5px] text-zinc-400" /> : null}
-          {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10.5px]" /> : null}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
+      <div className="relative z-10 flex w-full items-center gap-2.5">
+        <span className={`w-8 shrink-0 text-center font-mono text-[14px] font-extrabold ${sh} ${accent.text}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
+        <div className={`w-px shrink-0 self-stretch ${accent.line}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <b className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-zinc-50 ${sh}`}>{r.nick}</b>
+            {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className={`min-w-0 shrink-[2] text-[9.5px] text-zinc-300 ${sh}`} /> : null}
+            {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10px]" /> : null}
+            {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
+          </div>
+          <div className={`truncate text-[9.5px] text-zinc-300 tabular-nums ${sh}`}>{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
         </div>
-        <div className="mt-0.5 text-[9.5px] text-zinc-300 tabular-nums">{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
+        <b className={`flex-none font-mono text-[14px] font-black text-zinc-50 tabular-nums ${sh}`}>{n(r.score)}</b>
       </div>
-      <b className="relative flex-none font-mono text-[14px] font-black text-zinc-50 tabular-nums [text-shadow:0_1px_3px_#000]">{n(r.score)}</b>
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-black/40">
-        <span className={`block h-full ${barColor(r.rank, r.me)}`} style={{ width: `${pct}%` }} />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[2px] bg-black/40">
+        <span className={`block h-full ${accent.bar}`} style={{ width: `${pct}%` }} />
       </span>
     </li>
   );
