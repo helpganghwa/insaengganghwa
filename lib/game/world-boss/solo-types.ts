@@ -16,7 +16,8 @@ export type SoloDetail = {
   total: number;
   /** 넘긴 페이즈 수 — 화면도 이 수를 그대로 'N페이즈'로 보인다(불사조와 같게). */
   stage: number;
-  top: { rank: number; userId: string; nickname: string; best: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null }[];
+  /** dealt = 이 보스에 넣은 피해 전부(모든 도전 합) — 순위 줄 게이지는 dealt / total(11-14 사용자). */
+  top: { rank: number; userId: string; nickname: string; best: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null }[];
   /** 다른 사람들의 최고 기록 상위 40개(큰 순) — 공격 화면 기록 경주. */
   ladder: number[];
   pool: Record<SoloSlot, { key: string; name: string; src: string | null; owned: boolean }[]>;
@@ -30,6 +31,8 @@ export type SoloDetail = {
     resident: boolean;
     homeZoneName: string | null;
     best: number | null;
+    /** 이 보스에 넣은 피해 전부(모든 도전 합). */
+    dealt: number;
     rank: number | null;
     finalRank: number | null;
     reward: { diamond: number; boxes: number } | null;

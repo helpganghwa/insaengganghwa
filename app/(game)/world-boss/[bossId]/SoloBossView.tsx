@@ -196,10 +196,11 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       const ru = r.run;
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
       const meNow = d.me!;
-      const mine = { rank: ru.rank, userId: '__me', nickname: meNow.nickname, best: ru.best, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
+      const dealt = meNow.dealt + ru.score;
+      const mine = { rank: ru.rank, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
       const others = d.top.filter((x) => !x.me);
       const top = ru.rank <= 10 ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, 10).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, 10);
-      patch({ me: { freeLeft: 0, retryLeft: ru.runsLeft, best: ru.best, rank: ru.rank }, total: ru.totalAfter, top, extra: 0 });
+      patch({ me: { freeLeft: 0, retryLeft: ru.runsLeft, best: ru.best, dealt, rank: ru.rank }, total: ru.totalAfter, top, extra: 0 });
       setRun(ru);
       setView('battle');
     });
@@ -391,7 +392,7 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
   );
 }
 
-type BoardRow = { rank: number; nick: string; score: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
+type BoardRow = { rank: number; nick: string; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
 function rankText(rank: number, me: boolean): string {
   if (rank === 1) return 'text-amber-200';
@@ -399,21 +400,21 @@ function rankText(rank: number, me: boolean): string {
   if (rank === 3) return 'text-orange-200';
   return me ? 'text-violet-200' : 'text-zinc-400';
 }
-/** 1위 대비 막대색 — 1~3위는 순위색, 나는 보라(11-13 사용자 A3안). */
+/** 피해 몫 막대색 — 1~3위는 순위색, 나는 보라(11-13 사용자 A3안). */
 function barColor(rank: number, me: boolean): string {
   if (rank === 1) return 'bg-amber-400';
   if (rank === 2) return 'bg-slate-200';
   if (rank === 3) return 'bg-orange-500';
   return me ? 'bg-violet-400' : 'bg-slate-400/60';
 }
-/** 순위 한 줄 — 대난투 순위처럼 좌우 여백 없이 줄로 쌓고(44px), 아바타는 오른쪽 배경으로만. 글자 쪽은 단색 바탕에 가깝게 두어 가독성을 지킨다.
- *  아래 가장자리에 1위 대비 얇은 막대(1~3위 순위색). */
-function Row({ r, lead, stage }: { r: BoardRow; lead: number; stage: number }) {
+/** 순위 한 줄 — 대난투 순위처럼 좌우 여백 없이 줄로 쌓고, 아바타는 오른쪽 배경으로만. 글자 쪽은 단색 바탕에 가깝게 두어 가독성을 지킨다.
+ *  아래 가장자리에 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
+function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number }) {
   // 받을 보상 = 구간(지금 페이즈 보너스 포함) + 순위 — 원정이 끝날 때 우편으로 오는 값과 같다(11-14 사용자).
   const tr = soloTierReward(r.score, stage);
   const rr = soloRankReward(r.rank);
-  const pct = lead > 0 ? Math.max(2, Math.min(100, Math.round((r.score / lead) * 100))) : 0;
-  // 구도는 L6(1줄 이름·칭호, 2줄 길드·보상, 오른쪽 점수), 아바타는 L1(오른쪽 얼굴 크게, 글자 쪽만 어둡게), 내 줄은 '내 순위' 라벨(11-14 사용자).
+  const pct = total > 0 && r.dealt > 0 ? Math.max(1, Math.min(100, (r.dealt / total) * 100)) : 0;
+  // 1줄 이름·길드·칭호, 2줄 보상만, 오른쪽 점수. 아바타는 오른쪽 배경(11-14 사용자).
   return (
     <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/80 bg-zinc-950 px-3">
       {r.avatar ? (
@@ -425,15 +426,12 @@ function Row({ r, lead, stage }: { r: BoardRow; lead: number; stage: number }) {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 from-40% via-zinc-950/60 via-60% to-transparent" />
       <span className={`relative w-7 shrink-0 text-center font-mono text-[14px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
       <div className="relative ml-1.5 min-w-0 flex-1 leading-tight [text-shadow:0_1px_2px_#000]">
-        <div className="flex min-w-0 items-center gap-1">
-          {r.me ? <span className="shrink-0 rounded bg-violet-600 px-1 text-[9px] font-black text-white [text-shadow:none]">내 순위</span> : null}
-          <b className="truncate text-[13px] font-extrabold text-zinc-50">{r.nick}</b>
-          {r.title ? <TitleTag code={r.title} still className="min-w-0 text-[10.5px]" /> : null}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <b className={`min-w-0 shrink truncate text-[13px] font-extrabold ${r.me ? 'text-violet-100' : 'text-zinc-50'}`}>{r.nick}</b>
+          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={10} className="min-w-0 shrink-[2] truncate text-[9.5px] text-zinc-400" /> : null}
+          {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10.5px]" /> : null}
         </div>
-        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9.5px] text-zinc-400">
-          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={10} className="min-w-0 truncate" /> : <span className="text-zinc-600">무소속</span>}
-          <span className="flex-none text-zinc-300 tabular-nums">{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</span>
-        </div>
+        <div className="mt-0.5 text-[9.5px] text-zinc-300 tabular-nums">{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
       </div>
       <b className="relative flex-none font-mono text-[14px] font-black text-zinc-50 tabular-nums [text-shadow:0_1px_3px_#000]">{n(r.score)}</b>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-black/40">
@@ -446,23 +444,22 @@ function Row({ r, lead, stage }: { r: BoardRow; lead: number; stage: number }) {
 function Board({ d, stage }: { d: SoloDetail; stage: number }) {
   const me = d.me;
   const meInTop = d.top.some((r) => r.me);
-  const lead = d.top[0]?.best ?? 0;
+  const total = d.total;
   return (
     <div className="mt-2.5">
-      <div className="mb-1.5 flex items-baseline justify-between px-3">
+      <div className="mb-1.5 px-3">
         <span className="text-[11px] font-bold tracking-widest text-zinc-500">피해 순위</span>
-        <span className="text-[10.5px] text-zinc-500">최고 기록 · 30위까지 순위 보상</span>
       </div>
       <ul className="border-t border-zinc-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
-          <Row key={r.userId} lead={lead} stage={stage} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
+          <Row key={r.userId} total={total} stage={stage} r={{ rank: r.rank, nick: r.nickname, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
           me.best != null && me.rank != null ? (
             <>
               <li className="border-b border-zinc-800/80 py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
-              <Row lead={lead} stage={stage} r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
+              <Row total={total} stage={stage} r={{ rank: me.rank, nick: me.nickname, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             </>
           ) : (
             <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-400">아직 내 기록이 없어요</li>
@@ -937,8 +934,8 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
             <div data-hpbar className={phaseBarClass(startPhase.stage)} style={{ width: `${Math.max(2, (startPhase.into / startPhase.need) * 100)}%` }} />
           </div>
         </div>
-        {/* 이번 기록 — 무대 위 반투명 판(11-14 사용자: 아래 섹션 대신 배경 위 오버레이). 이번 피해·최고 기록·기록 경주 막대는 그대로. */}
-        <div className="absolute inset-x-3 top-[34px] z-10 rounded-xl bg-black/55 px-3 py-2 ring-1 ring-white/10">
+        {/* 이번 기록 — 무대 위 반투명 판. 판이 끝나면 결과 카드가 이 자리(무대 위)에 대신 뜬다(11-14 사용자). */}
+        <div className={`absolute inset-x-3 top-[34px] z-10 rounded-xl bg-black/55 px-3 py-2 ring-1 ring-white/10 ${done ? 'hidden' : ''}`}>
           <div className="flex items-end justify-between">
             <div>
               <div className="text-[10px] text-zinc-400">이번 피해</div>
@@ -974,6 +971,11 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         {/* 가운데 정렬은 margin으로 — Tailwind v4의 -translate-*는 translate 속성이라 거미줄 타기 오르내림(translate keyframes)과 겹쳐 튄다. */}
         <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[64%] left-1/2 z-[1] -mt-[84px] -ml-[84px] h-[168px] w-[168px]" style={bossVars} />
         <div data-fx className="pointer-events-none absolute inset-0 z-[5]" />
+        {done ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 px-3">
+            <ResultCard run={run} />
+          </div>
+        ) : null}
       </div>
 
       {!done ? (
@@ -1006,7 +1008,6 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
 
       {done ? (
         <>
-          <ResultCard run={run} />
           <div className="px-3 pt-3 pb-1">
             <div className="flex h-11 gap-2">
               {retry ? <div className="flex flex-1 [&>*]:flex-1">{retry}</div> : null}
@@ -1128,7 +1129,7 @@ function ResultCard({ run }: { run: Run }) {
   const rankBand = band ? (band.from === band.to ? `${band.from}위` : `${band.from}~${band.to}위`) : '';
   const rankUp = run.prevRank != null && run.prevRank > run.rank ? run.prevRank - run.rank : 0;
   return (
-    <div ref={reveal} className="relative mx-3 mt-3 overflow-hidden rounded-2xl border border-amber-400/60 bg-amber-950/30 px-3.5 py-3 shadow-[0_0_18px_rgba(251,191,36,.18)]">
+    <div ref={reveal} className="relative w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-[#1c1206]/90 px-3.5 py-3 shadow-[0_0_18px_rgba(251,191,36,.18)] backdrop-blur-[2px]">
       <div data-shine className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-amber-200/20 to-transparent" style={{ translate: '-150% 0' }} />
       <div className="text-center text-[11px] font-bold text-amber-300">{run.prevBest == null ? '첫 기록' : updated ? '기록 갱신' : '이번 기록'}</div>
       <b data-rscore className="block text-center font-mono text-[30px] leading-tight font-black text-amber-100 tabular-nums">

@@ -29,13 +29,14 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     }[]>,
     db.execute(sql`
       select r.user_id::text as uid, c.nickname, r.best::text as best, r.final_rank, c.representative_title_code as title,
+             (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id) as dealt,
              up.rotations->>'south' as avatar, up.options->'faceBox' as fb, g.name as gname, g.emblem_url as gemblem
         from world_boss_solo_records r left join characters c on c.user_id = r.user_id and c.server_id = r.server_id
         left join user_profiles up on up.id = c.active_profile_id
         left join guild_members gm on gm.user_id = r.user_id and gm.server_id = r.server_id
         left join guilds g on g.id = gm.guild_id
        where r.boss_id = ${bossId}::bigint order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{
-      uid: string; nickname: string | null; best: string; final_rank: number | null; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
+      uid: string; nickname: string | null; best: string; dealt: string; final_rank: number | null; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
     }[]>,
     // 기록 경주(공격 화면) — 다른 사람들의 최고 기록 상위 40개(내 기록 제외). 판 도중 '지금 N위권·다음 순위까지'를 화면이 계산한다.
     db.execute(sql`
@@ -51,6 +52,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                     select r.best::text as best, r.best_at, r.final_rank, r.reward_diamond, r.reward_boxes,
                            (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at))) as rank
                       from world_boss_solo_records r where r.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid) x) as rec,
+                 (select coalesce(sum(score), 0)::text from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid) as dealt,
                  (select count(*) filter (where not paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as free_used,
                  (select count(*) filter (where paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as paid_used,
                  (select coalesce(sum(count), 0)::int from point_extra_buys where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = 'wb_retry') as bought,
@@ -72,7 +74,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
           {
             nickname: string | null; home: number | null; home_name: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
             rec: { best: string; best_at: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; rank: number } | null;
-            free_used: number; paid_used: number; bought: number;
+            dealt: string | null; free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
             eq: { key: string; name: string; slot: SoloSlot; level: number; transcend: number }[];
             owned: { ueid: string; key: string; name: string; slot: SoloSlot; level: number; transcend: number; on: boolean }[];
@@ -136,6 +138,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       resident: m.home !== null && Number(m.home) === Number(b.zone_id),
       homeZoneName: m.home_name,
       best: m.rec ? Number(m.rec.best) : null,
+      dealt: Number(m.dealt ?? 0),
       rank: m.rec ? Number(m.rec.rank) : null,
       finalRank: m.rec?.final_rank ?? null,
       reward: m.rec && m.rec.final_rank ? { diamond: Number(m.rec.reward_diamond), boxes: Number(m.rec.reward_boxes) } : null,
@@ -164,7 +167,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     stage: Number(b.stage),
     ladder: ladderRows.map((r) => Number(r.best)),
     top: top.map((r, i) => ({
-      rank: i + 1, userId: r.uid, nickname: r.nickname ?? '알 수 없음', best: Number(r.best), me: r.uid === userId,
+      rank: i + 1, userId: r.uid, nickname: r.nickname ?? '알 수 없음', best: Number(r.best), dealt: Number(r.dealt), me: r.uid === userId,
       avatar: r.avatar, faceBox: parseFaceBox(r.fb), guildName: r.gname, guildEmblem: r.gemblem, title: r.title,
     })),
     pool: Object.fromEntries(
