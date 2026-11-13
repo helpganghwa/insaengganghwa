@@ -389,7 +389,7 @@ html {
   opacity: 0.45;
 }
 .wb-banner-swiper .swiper-pagination-bullet-active {
-  background-color: rgb(196 181 253); /* violet-300 */
+  background-color: rgb(255 255 255); /* 보스 색과 무관하게 흰 점(불사조·여왕이 섞여 넘어간다) */
   opacity: 1;
 }
 .home-banner-swiper {

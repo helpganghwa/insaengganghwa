@@ -313,7 +313,7 @@ export function TitleTag({
       {def.style.pt ? (
         <span className={`pt pt-${def.style.pt}`}>
           {inner}
-          {PT_PRESETS[def.style.pt] ? <PresetParticles preset={PT_PRESETS[def.style.pt]!} /> : def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
+          {def.style.pt && Object.hasOwn(PT_PRESETS, def.style.pt) ? <PresetParticles preset={PT_PRESETS[def.style.pt]!} /> : def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
         </span>
       ) : (
         inner

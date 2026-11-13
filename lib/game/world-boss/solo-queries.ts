@@ -19,14 +19,16 @@ const iso = (v: Date | string) => new Date(v).toISOString();
 export async function getSoloBossDetail(bossId: string, serverId: number, userId: string | null): Promise<SoloDetail | null> {
   if (!/^\d{1,18}$/.test(bossId)) return null;
   const day = kstDateString();
-  const [[b], top, ladderRows, mineRows] = await Promise.all([
-    db.execute(sql`
+  // 보스 행부터 — 원정대 보스 상세(이 함수를 먼저 거친다)에서 쓰지 않을 순위·내 정보 쿼리가 돌지 않게(11-14 검수).
+  const [b] = (await db.execute(sql`
       select b.id::text as id, b.server_id, b.zone_id, z.name as zone_name, b.boss_code, b.status, b.leave_at, b.total_damage::text as total, b.stage, b.pool,
              (b.status = 'active' and b.leave_at > now()) as open
-        from world_bosses b join zones z on z.id = b.zone_id where b.id = ${bossId}::bigint`) as unknown as Promise<{
+        from world_bosses b join zones z on z.id = b.zone_id where b.id = ${bossId}::bigint`)) as unknown as {
       id: string; server_id: number; zone_id: number; zone_name: string; boss_code: string; status: string; leave_at: Date | string; total: string; stage: number;
       pool: Record<SoloSlot, string[]> | null; open: boolean;
-    }[]>,
+    }[];
+  if (!b || b.server_id !== serverId || b.status === 'scheduled' || !b.pool) return null;
+  const [top, ladderRows, mineRows] = await Promise.all([
     db.execute(sql`
       select r.user_id::text as uid, c.nickname, r.best::text as best, r.final_rank, c.representative_title_code as title,
              (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id) as dealt,
@@ -83,7 +85,6 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
         >)
       : Promise.resolve(null),
   ]);
-  if (!b || b.server_id !== serverId || b.status === 'scheduled' || !b.pool) return null;
   const pool = b.pool;
   const allowed = new Set(SLOTS.flatMap((s) => pool[s] ?? []));
   const status: SoloDetail['status'] = b.open ? 'active' : b.status === 'left' ? 'left' : 'settling';

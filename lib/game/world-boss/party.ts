@@ -45,6 +45,9 @@ async function lockTimeout(tx: Tx): Promise<void> {
 }
 async function lockActiveBoss(tx: Tx, bossId: string, mode: 'update' | 'share' = 'update', requireActive = true): Promise<BossRow> {
   await lockTimeout(tx);
+  // 개인 보스(0253)는 잠그기 전에 거른다 — 원정대 액션을 개인 보스 id로 반복해 불러 보스 행을 FOR UPDATE로 잡으면 거주자들의 도전(KEY SHARE)이 멈춘다(11-14 검수).
+  const [pre] = (await tx.execute(sql`select (pool is not null) as solo from world_bosses where id = ${bossId}::bigint`)) as unknown as { solo: boolean }[];
+  if (pre?.solo) throw new WorldBossError('NOT_FOUND');
   const lock = mode === 'share' ? sql`for share of b` : sql`for update of b`;
   const [b] = (await tx.execute(sql`
     select b.id::text as id, b.server_id, b.zone_id, b.region::text as region, b.status, b.leave_at, (b.leave_at > now()) as alive, z.owner_guild_id::text as owner, z.name as zone_name, (b.pool is not null) as solo

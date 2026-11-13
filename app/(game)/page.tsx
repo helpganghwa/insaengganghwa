@@ -316,7 +316,9 @@ export default async function HomePage() {
                (case when b.status = 'active' then 0 else 1 end) as o1,
                (case when og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId})
                      then 0 else 1 end) as o2,
-               (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid) then 1 else 0 end) as o3,
+               (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid)
+                       or exists (select 1 from world_boss_solo_records r where r.boss_id = b.id and r.user_id = ${userId}::uuid and r.server_id = ${serverId})
+                     then 1 else 0 end) as o3,
                b.spawn_at as at
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id left join guilds sg on sg.id = b.settled_guild_id
               where b.server_id = ${serverId}
