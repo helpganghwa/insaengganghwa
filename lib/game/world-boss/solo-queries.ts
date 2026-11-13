@@ -37,14 +37,15 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
         left join user_profiles up on up.id = c.active_profile_id
         left join guild_members gm on gm.user_id = r.user_id and gm.server_id = r.server_id
         left join guilds g on g.id = gm.guild_id
-       where r.boss_id = ${bossId}::bigint order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{
+       where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
+       order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{
       uid: string; nickname: string | null; best: string; dealt: string; final_rank: number | null; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
     }[]>,
     // 기록 경주(공격 화면) — 다른 사람들의 최고 기록 상위 40개(내 기록 제외). 판 도중 '지금 N위권·다음 순위까지'를 화면이 계산한다.
     db.execute(sql`
-      select best::text as best from world_boss_solo_records
-       where boss_id = ${bossId}::bigint ${userId ? sql`and user_id <> ${userId}::uuid` : sql``}
-       order by best desc limit 40`) as unknown as Promise<{ best: string }[]>,
+      select r.best::text as best from world_boss_solo_records r
+       where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null) ${userId ? sql`and r.user_id <> ${userId}::uuid` : sql``}
+       order by r.best desc limit 40`) as unknown as Promise<{ best: string }[]>,
     userId
       ? (db.execute(sql`
           select c.nickname, c.residence_zone_id as home, hz.name as home_name, c.representative_title_code as title,
@@ -52,7 +53,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                  (select json_build_object('name', g.name, 'emblem', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id where gm.user_id = c.user_id and gm.server_id = c.server_id) as guild,
                  (select row_to_json(x) from (
                     select r.best::text as best, r.best_at, r.final_rank, r.reward_diamond, r.reward_boxes,
-                           (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at))) as rank
+                           (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at)) and not exists (select 1 from profiles p where p.id = o.user_id and p.withdrawn_at is not null)) as rank
                       from world_boss_solo_records r where r.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid) x) as rec,
                  (select coalesce(sum(score), 0)::text from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid) as dealt,
                  (select count(*) filter (where not paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as free_used,

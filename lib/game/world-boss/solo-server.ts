@@ -94,8 +94,9 @@ export async function wbRetrySlot(tx: Tx, userId: string, serverId: number): Pro
 /** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */
 async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, bestAt: string): Promise<number> {
   const [r] = (await tx.execute(sql`
-    select count(*)::int + 1 as rank from world_boss_solo_records
-     where boss_id = ${bossId}::bigint and server_id = ${serverId} and (best > ${best}::bigint or (best = ${best}::bigint and best_at < ${bestAt}::timestamptz))`)) as unknown as { rank: number }[];
+    select count(*)::int + 1 as rank from world_boss_solo_records o
+     where o.boss_id = ${bossId}::bigint and o.server_id = ${serverId} and (o.best > ${best}::bigint or (o.best = ${best}::bigint and o.best_at < ${bestAt}::timestamptz))
+       and not exists (select 1 from profiles p where p.id = o.user_id and p.withdrawn_at is not null)`)) as unknown as { rank: number }[];
   return Number(r?.rank ?? 1);
 }
 

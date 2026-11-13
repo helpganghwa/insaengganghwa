@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { josa } from 'josa';
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -22,6 +22,7 @@ import { Ticker } from '@/components/Ticker';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
+import { modalHistory } from '@/lib/ui/modal-history';
 import {
   SOLO_PATTERN_LABEL,
   SOLO_RANK_REWARDS,
@@ -168,6 +169,35 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | 'avatar' | null>(null);
   const [poolSlot, setPoolSlot] = useState<SoloSlot>('weapon');
   const [pending, start] = useTransition();
+  // 휴대폰 뒤로가기(11-14 결정) — 준비·전투 화면에 있는 동안 기록 한 칸을 쌓아 둔다. 준비 → 순위표,
+  // 전투 중 → 연출을 건너뛰어 결과 카드(칸을 다시 쌓는다), 결과 → 순위표. 준비↔전투 오갈 때는 같은 칸을 그대로 쓴다.
+  const battleCtl = useRef<{ skip: () => boolean } | null>(null);
+  const onHardBack = useRef<() => boolean>(() => false);
+  useEffect(() => {
+    onHardBack.current = () => {
+      if (view === 'battle' && battleCtl.current?.skip()) return true;
+      setRun(null);
+      setView('board');
+      return false;
+    };
+  }, [view]);
+  const inSub = view !== 'board';
+  useEffect(() => {
+    if (!inSub) return;
+    let h: ReturnType<typeof modalHistory.open> | null = null;
+    let alive = true;
+    const arm = () => {
+      h = modalHistory.open(() => {
+        // 팝 처리 중에 바로 쌓지 않는다 — 다음 틱에(이 popstate 처리가 끝난 뒤).
+        if (onHardBack.current()) setTimeout(() => alive && arm(), 0);
+      });
+    };
+    arm();
+    return () => {
+      alive = false;
+      h?.release();
+    };
+  }, [inSub]);
   const keyRef = useRef<string | null>(null);
   // 낙관적 화면(11-13 사용자) — 서버 응답 전에 먼저 바꿔 보여 주고, 실패하면 되돌린다. 새 데이터(router.refresh)가 오면 base가 달라져 자연히 버려진다.
   const [opt, setOpt] = useState<{ base: SoloDetail; me: Partial<SoloMe>; total?: number; top?: SoloDetail['top']; extra: number } | null>(null);
@@ -279,6 +309,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
               </Link>
             </p>
           ) : null}
+          {!active && me && me.best != null ? <FinalCard d={d} /> : null}
           <FloatingBar>{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</FloatingBar>
         </>
       )}
@@ -316,6 +347,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
             setView('prep');
           }, '재도전')}
           onDone={closeBattle}
+          ctl={battleCtl}
         />
       )}
 
@@ -388,6 +420,33 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
           )}
         </span>
       </div>
+    </div>
+  );
+}
+
+/** 원정이 끝난 뒤 내 최종 결과(11-14 사용자 결정) — 정산 중이면 안내만, 끝나면 최종 순위와 받은 보상(우편으로 간 것과 같은 값). */
+function FinalCard({ d }: { d: SoloDetail }) {
+  const me = d.me!;
+  const done = d.status === 'left' && me.finalRank != null && me.reward != null;
+  return (
+    <div className="mx-3 mt-2.5 rounded-xl border border-violet-500/40 bg-gradient-to-b from-violet-950/60 to-slate-950 px-3 py-2.5">
+      <div className="text-[10.5px] font-bold tracking-widest text-violet-300">내 최종 결과</div>
+      {done ? (
+        <>
+          <div className="mt-1 flex items-baseline justify-between gap-2">
+            <b className="text-[20px] leading-none font-black text-slate-50">{n(me.finalRank!)}위</b>
+            <span className="font-mono text-[12.5px] font-bold text-slate-100 tabular-nums">{rewardText(me.reward!)}</span>
+          </div>
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-[10.5px] text-slate-400">
+            <span>최고 기록 {n(me.best!)}</span>
+            <Link prefetch={false} href="/mail" className="font-bold text-violet-200 underline">
+              우편함에서 받기
+            </Link>
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-[11.5px] leading-snug text-slate-300">순위를 정리하고 있어요. 곧 결과 우편이 도착해요.</p>
+      )}
     </div>
   );
 }
@@ -649,7 +708,7 @@ const PHASE_BAR = [
 ];
 const phaseBarClass = (stage: number) => `h-full rounded-full shadow-[0_0_10px] ${PHASE_BAR[stage % PHASE_BAR.length]}`;
 
-function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
+function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void; ctl: React.RefObject<{ skip: () => boolean } | null> }) {
   const me = d.me!;
   const root = useRef<HTMLDivElement>(null);
   const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, shown: soloPhaseFor(run.totalBefore).stage, chain: Promise.resolve(), timers: [] as ReturnType<typeof setTimeout>[] });
@@ -906,6 +965,14 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
       }, 900);
     }, 300);
   }
+
+  // 뒤로가기 — 아직 공격이 남았으면 건너뛰고 true, 다 끝났으면 false(부모가 순위표로).
+  useEffect(() => {
+    ctl.current = { skip: () => (st.current.i >= 10 ? false : (skip(), true)) };
+    return () => {
+      ctl.current = null;
+    };
+  });
 
   function skip() {
     const s = st.current;

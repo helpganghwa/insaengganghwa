@@ -3,6 +3,7 @@ import 'server-only';
 /**
  * 개인 월드보스(0253) 정산 — 보스가 사라질 때(settleOne 안, 보스 행을 잠근 트랜잭션) 최고 기록으로 순위를 매기고
  * 구간(+ 최종 페이즈 보너스) + 순위 보상을 기록 행에 적은 뒤 참가자 모두에게 결과 우편을 보낸다. 동점은 먼저 세운 사람이 위.
+ * 탈퇴한 계정은 순위·보상에서 빼고 아래 순위가 이어받는다(11-14 결정, 추석·할로윈 순위와 같게). 누적 피해(페이즈)는 그대로.
  */
 import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
@@ -28,8 +29,9 @@ export function soloSettleLines(rows: { userId: string; best: number }[], stage:
 
 export async function settleSoloBoss(tx: Tx, input: { serverId: number; bossId: string; bossName: string; zoneName: string; stage: number; leavePolite: string }): Promise<number> {
   const rows = (await tx.execute(sql`
-    select user_id::text as uid, best::text as best from world_boss_solo_records
-     where boss_id = ${input.bossId}::bigint order by best desc, best_at asc, user_id`)) as unknown as { uid: string; best: string }[];
+    select r.user_id::text as uid, r.best::text as best from world_boss_solo_records r
+     where r.boss_id = ${input.bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
+     order by r.best desc, r.best_at asc, r.user_id`)) as unknown as { uid: string; best: string }[];
   if (rows.length === 0) return 0;
   const lines = soloSettleLines(rows.map((r) => ({ userId: r.uid, best: Number(r.best) })), input.stage);
   const bonusPct = Math.round((soloPhaseBonus(input.stage) - 1) * 100);
