@@ -46,6 +46,8 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   world_bosses: '월드보스 엔티티(서버 단위, 유저 축 없음, 0228)',
   world_boss_parties: '원정대 기록 — 대장이 탈퇴해도 다른 원정대원의 전투 기록·보상 근거(레이드와 같은 원칙). 모집 중이던 것은 탈퇴 훅이 해산 처리, 표시는 "탈퇴한 대장장이"',
   world_boss_party_members: '원정대 참가·피해 기록 — 보스 누적 피해·원정대 보상의 원천. PII 없음',
+  world_boss_solo_runs: '개인 월드보스 도전 기록(0253) — 보스 누적 피해(공동 페이즈)의 원천. PII 없음',
+  world_boss_solo_records: '개인 월드보스 최고 기록·순위·보상(0253) — 다른 참가자의 순위와 정산 근거(원정대 기록과 같은 원칙). PII 없음',
   world_boss_weak_reveals: '약점 공개 기록 — 보스별 공개 상태의 원천(0230). finder_user_id·닉네임은 탈퇴 때 비운다(함수 내 update)',
   // 아래 둘은 이 브랜치 스키마에 없는 스테이징 전용 표(다른 브랜치 마이그레이션) — 그 기능을 머지할 때 삭제/보존을 다시 분류한다(10-11 3차 감사에서 탈퇴 분류 테스트가 스테이징 표 목록으로 돌아 걸렸다).
   familiars: '패밀리어 P1(0188, feat/familiar) — 스테이징 전용, 머지 때 재분류',

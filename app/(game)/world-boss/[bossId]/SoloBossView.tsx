@@ -305,7 +305,7 @@ function MyLine({ d, stage }: { d: SoloDetail; stage: number }) {
 
 // ── 도전 준비 ───────────────────────────────────────────────────────────────
 
-export function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLeft }: { d: SoloDetail; onBack: () => void; onPool: () => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number }) {
+function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLeft }: { d: SoloDetail; onBack: () => void; onPool: () => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number }) {
   const me = d.me!;
   const total = me.power.weapon + me.power.armor + me.power.accessory;
   const required = d.pool.weapon.length + d.pool.armor.length + d.pool.accessory.length;
@@ -425,7 +425,7 @@ const LAND: Partial<Record<string, number>> = { crouch: 520, weapon: 880, armor:
 const PC: Partial<Record<string, string>> = { crouch: 'wbq-crouch', dodge: 'wbq-climb', weapon: 'wbq-bind', armor: 'wbq-bind', accessory: 'wbq-bind', expose: 'wbq-expose' };
 const SIL = 'drop-shadow(0 0 10px rgba(139,92,246,.4))';
 
-export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
+function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
   const me = d.me!;
   const root = useRef<HTMLDivElement>(null);
   const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, timers: [] as ReturnType<typeof setTimeout>[] });

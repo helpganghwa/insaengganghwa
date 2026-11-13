@@ -14,8 +14,6 @@ import { REGION_META, type Region } from '@/lib/game/guild/region-meta';
 import type { ConquestFinale } from './simulate';
 import { factIssues, headlineIssues, type FactCheckContext } from './chronicle-facts';
 import { acquireChronicleLock } from './chronicle-lock';
-import { worldBossDigestLines } from '@/lib/game/world-boss/chronicle-facts';
-import { worldBossesAtConquestReveal } from '@/lib/game/world-boss/queries';
 import { daysBetween, holdingSince, koDate, lastWipeDay, ownersBefore, replayOwnership, sweepPeriods, type OwnershipEvent } from './chronicle-history';
 import { CHRONICLE_FEEDBACK, type ChronicleFeedbackKey, type ChronicleImproveModel, type ChronicleReviewNote } from './chronicle-options';
 
@@ -1416,13 +1414,7 @@ async function buildChronicleFactPack(kstDay: string, serverId: number) {
   if (summary.captures.length > 0) digestSections.push(`■ 신규 점령(길드별 — 보유 기간 표현은 이야기에 꼭 필요한 두세 곳에만):\n${capLines}`);
   if (summary.defenses.length > 0)
     digestSections.push(`■ 방어(점령 아님 — 소유 길드가 위 공격을 막아냄):\n${defLines}`);
-  // 월드보스(docs/WORLD-BOSS.md §8, 2026-10-08) — 보스가 머무는 구역이 점령·방어되면 전리품의 주인이 걸린 싸움이 된다.
-  // 실패해도 연대기는 그대로 만든다(보조 사실).
-  const wbLines = worldBossDigestLines(summary.captures, summary.defenses, await worldBossesAtConquestReveal(serverId, kstDay).catch(() => []));
-  if (wbLines.length > 0)
-    digestSections.push(
-      `■ 월드보스가 머무는 구역(보스는 페이즈마다 전리품을 쌓고, 원정이 종료되는 순간 그 구역 주인 길드의 길드 세금으로 들어간다. 이 항목의 구역에만 보스·전리품을 한 문장으로 덧붙일 수 있다. 보스와의 싸움은 점령전 전투가 아니니 점령전 전투처럼 쓰지 말고, 페이즈·전리품 수치는 이 값만 쓸 것):\n${wbLines.join('\n')}`,
-    );
+  // 월드보스는 연대기에 넣지 않는다(2026-11-13 사용자: 역사 위키에 월드보스 X — 기존 보스 포함).
   if (quietText)
     digestSections.push(
       `■ 자동으로 덧붙는 방어 문단(아래 구역들은 본문에 쓰지 말 것 — 코드가 이 문단을 마지막 '이번 점령전으로' 문단 바로 앞에 그대로 붙인다. 이 구역들은 이야기 장면으로도 쓰지 않는다):\n${quiet.map((d) => `「${d.zone}」`).join(', ')}`,
