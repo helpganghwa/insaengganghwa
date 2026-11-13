@@ -410,7 +410,7 @@ function rankAccent(rank: number, me: boolean): { text: string; line: string; ba
     ? { text: 'text-violet-200', line: 'bg-violet-500/60', bar: 'bg-violet-400' }
     : { text: 'text-slate-300', line: 'bg-slate-700/60', bar: 'bg-slate-400/60' };
 }
-/** 순위 한 줄 — 대난투 순위와 같은 구성(오른쪽 얼굴 + 좌→우 등수 틴트·암막 2겹, 등수 | 구분선 | 1줄 이름·길드·칭호·'나', 2줄 보상) + 오른쪽 점수.
+/** 순위 한 줄 — 대난투 순위와 같은 구성(오른쪽 얼굴 + 좌→우 등수 틴트·암막 2겹, 등수 | 구분선 | 1줄 이름·길드·칭호·'나', 2줄 작은 점수 · 보상).
  *  글자 그림자는 요소마다 drop-shadow로 — 부모 text-shadow는 칭호 글자(배경 클립)에 상속돼 효과가 뭉개진다.
  *  아래 가장자리 게이지 = 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
 function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number }) {
@@ -439,9 +439,10 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
             {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10px]" /> : null}
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           </div>
-          <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
+          <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>
+            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · {rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}
+          </div>
         </div>
-        <b className={`flex-none font-mono text-[14px] font-black text-slate-50 tabular-nums ${sh}`}>{n(r.score)}</b>
       </div>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[2px] bg-black/40">
         <span className={`block h-full ${accent.bar}`} style={{ width: `${pct}%` }} />
@@ -858,7 +859,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
       const rn = q<HTMLElement>('[data-race-note]');
       if (rn) {
         rn.textContent = race.note;
-        rn.className = `text-[10.5px] ${race.beat ? 'text-emerald-300' : 'text-slate-300'}`;
+        rn.className = `text-[10.5px] ${race.beat ? 'text-emerald-300' : 'text-slate-400'}`;
       }
       const rg = q<HTMLElement>('[data-race-goal]');
       if (rg) rg.textContent = race.goal;
@@ -917,7 +918,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
 
   return (
     <div ref={root} className="relative">
-      <div className="relative h-[320px] overflow-hidden bg-slate-950">
+      <div className="relative h-[280px] overflow-hidden bg-slate-950">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" style={PIX} />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgba(76,29,149,.12),rgba(2,6,23,.8)_85%)]" />
@@ -943,34 +944,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
             <div data-hpbar className={phaseBarClass(startPhase.stage)} style={{ width: `${Math.max(2, (startPhase.into / startPhase.need) * 100)}%` }} />
           </div>
         </div>
-        {/* 이번 기록 — 무대 위 반투명 판(11-14 사용자: 아래 섹션 대신 배경 위 오버레이). 이번 피해·최고 기록·기록 경주 막대는 그대로. */}
-        <div className="absolute inset-x-3 top-[34px] z-10 rounded-xl bg-black/55 px-3 py-2 ring-1 ring-white/10">
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-[10px] text-slate-400">이번 피해</div>
-              <b data-total className="font-mono text-[24px] leading-none font-black text-violet-100 tabular-nums [text-shadow:0_1px_3px_#000]">
-                0
-              </b>
-            </div>
-            <div className="text-right text-[10px] leading-snug text-slate-400">
-              최고 기록{' '}
-              <b data-best className="font-mono text-[11px] text-slate-200 transition-colors">
-                {run.prevBest == null ? '-' : n(run.prevBest)}
-              </b>
-              <br />
-              <b data-race-note className="text-[10.5px] text-slate-300">
-                {raceAt(0).note}
-              </b>
-            </div>
-          </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/60">
-            <div data-race-bar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-200 transition-[width] duration-300" style={{ width: '0%' }} />
-          </div>
-          <div className="mt-0.5 text-right text-[9.5px] text-slate-400">
-            <span data-race-goal>{raceAt(0).goal}</span>
-          </div>
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 top-[112px] z-10 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 top-[38px] z-10 flex justify-center">
         <div data-pat className="rounded-xl bg-black/60 px-3 py-1 text-center leading-tight whitespace-nowrap text-slate-300 opacity-0 ring-1 ring-white/10 transition-opacity duration-150">
           <b data-pname className="block text-[12px] font-extrabold" />
           <span data-pdesc className="block text-[10px] text-slate-300/90" />
@@ -978,7 +952,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         </div>
         <div data-thread className="pointer-events-none absolute top-0 left-1/2 z-[1] w-px -translate-x-1/2 bg-slate-200/70" style={{ height: 0, transition: 'height .3s ease-out' }} />
         {/* 가운데 정렬은 margin으로 — Tailwind v4의 -translate-*는 translate 속성이라 거미줄 타기 오르내림(translate keyframes)과 겹쳐 튄다. */}
-        <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[64%] left-1/2 z-[1] -mt-[84px] -ml-[84px] h-[168px] w-[168px]" style={bossVars} />
+        <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[56%] left-1/2 z-[1] -mt-[89.5px] -ml-[89.5px] h-[179px] w-[179px]" style={bossVars} />
         <div data-fx className="pointer-events-none absolute inset-0 z-[5]" />
       </div>
 
@@ -1002,6 +976,34 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         </div>
       ) : null}
 
+      <div className="mx-3 mt-2.5 flex items-end justify-between">
+        <div>
+          <div className="text-[10.5px] text-slate-500">이번 피해</div>
+          <b data-total className="font-mono text-[26px] leading-none font-black text-violet-100 tabular-nums">
+            0
+          </b>
+        </div>
+        <div className="text-right text-[10.5px] leading-snug text-slate-500">
+          최고 기록{' '}
+          <b data-best className="font-mono text-[11.5px] text-slate-300 transition-colors">
+            {run.prevBest == null ? '-' : n(run.prevBest)}
+          </b>
+          <br />
+          <b data-race-note className="text-[10.5px] text-slate-400">
+            {raceAt(0).note}
+          </b>
+        </div>
+      </div>
+      {/* 기록 경주 막대(11-13 사용자 A안) — 최고 기록까지, 넘으면 다음 순위까지 차오른다. */}
+      <div className="mx-3 mt-1.5">
+        <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+          <div data-race-bar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-200 transition-[width] duration-300" style={{ width: '0%' }} />
+        </div>
+        <div className="mt-0.5 flex justify-between text-[9.5px] text-slate-500">
+          <span>0</span>
+          <span data-race-goal>{raceAt(0).goal}</span>
+        </div>
+      </div>
       <div data-cells className="mx-3 mt-2 grid grid-cols-5 gap-1">
         {Array.from({ length: 10 }, (_, k) => (
           <span key={k} className="relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-800 text-[10px] text-slate-700">
