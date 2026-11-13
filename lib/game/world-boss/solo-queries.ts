@@ -57,7 +57,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                  (select coalesce(sum(score), 0)::text from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid) as dealt,
                  (select count(*) filter (where not paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as free_used,
                  (select count(*) filter (where paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as paid_used,
-                 (select coalesce(sum(count), 0)::int from point_extra_buys where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = 'wb_retry') as bought,
+                 (select coalesce(sum(count), 0)::int from point_extra_buys where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = 'wb_retry' and slot = ${b.zone_id}) as bought,
                  (select json_build_object('south', up.rotations->>'south', 'snap', up.equipment_snapshot, 'isDefault', coalesce((up.options->>'isDefault')::boolean, false))
                     from user_profiles up where up.id = c.active_profile_id) as avatar,
                  coalesce((select json_agg(e) from (

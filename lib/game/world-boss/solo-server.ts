@@ -63,7 +63,9 @@ async function todayRuns(tx: Tx, userId: string, serverId: number, bossId: strin
   const [r] = (await tx.execute(sql`
     select count(*) filter (where not paid)::int as free, count(*) filter (where paid)::int as paid
       from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date`)) as unknown as { free: number; paid: number }[];
-  const bought = await extrasToday(tx, userId, serverId, 'wb_retry', undefined, day);
+  // 산 재도전은 보스별(11-14 결정) — point_extra_buys.slot = 그 보스의 구역 id(구역마다 개인 보스는 한 번에 하나).
+  const [z] = (await tx.execute(sql`select zone_id from world_bosses where id = ${bossId}::bigint`)) as unknown as { zone_id: number }[];
+  const bought = z ? await extrasToday(tx, userId, serverId, 'wb_retry', Number(z.zone_id), day) : 0;
   return { free: Number(r?.free ?? 0), paid: Number(r?.paid ?? 0), bought };
 }
 function runsLeftOf(t: { free: number; paid: number; bought: number }) {
@@ -74,12 +76,19 @@ function runsLeftOf(t: { free: number; paid: number; bought: number }) {
  * 재도전 구매(buyExtra 'wb_retry')의 콘텐츠 잠금 — 거주 구역에 개인 보스가 있고, 오늘 무료 판을 썼고, 사 둔 재도전을 다 썼을 때만 산다
  * (쓰지 않은 재도전이 남았는데 또 사면 자정에 사라질 포인트만 나간다).
  */
-export async function wbRetryLock(tx: Tx, userId: string, serverId: number): Promise<void> {
+export async function wbRetryLock(tx: Tx, userId: string, serverId: number): Promise<number> {
   await lockUser(tx, userId);
   const boss = await soloBossOfResident(tx, userId, serverId);
   if (!boss) throw new PointShopError('NOT_NEEDED');
   const t = await todayRuns(tx, userId, serverId, boss.id, kstDateString());
   if (runsLeftOf(t) > 0) throw new PointShopError('NOT_NEEDED');
+  return Number(boss.zone_id);
+}
+
+/** 재도전 구매 행의 slot — 거주 구역에 개인 보스가 있으면 그 구역 id, 없으면 null(재전송 응답의 횟수 계산용). */
+export async function wbRetrySlot(tx: Tx, userId: string, serverId: number): Promise<number | null> {
+  const boss = await soloBossOfResident(tx, userId, serverId);
+  return boss ? Number(boss.zone_id) : null;
 }
 
 /** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */

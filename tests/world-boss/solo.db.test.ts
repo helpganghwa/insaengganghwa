@@ -69,6 +69,18 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     expect(again.runId).toBe(r.runId);
     expect(await code(runSolo(T, S, bossId, crypto.randomUUID()))).toBe('NO_RUNS');
     expect(await code(runSolo(G, S, bossId, crypto.randomUUID()))).toBe('NOT_RESIDENT');
+    // 재도전은 보스별(slot = 구역 id) — 다른 구역 여왕에서 산 재도전으로는 이 여왕에 못 들어온다.
+    const day = (await q<{ d: string }>(sql`select (now() at time zone 'Asia/Seoul')::date::text as d`))[0]!.d;
+    const before = await q<{ slot: number; count: number }>(sql`select slot, count from point_extra_buys where user_id=${T}::uuid and server_id=${S} and kst_date=${day}::date and item='wb_retry'`);
+    try {
+      await testDb.execute(sql`delete from point_extra_buys where user_id=${T}::uuid and server_id=${S} and kst_date=${day}::date and item='wb_retry'`);
+      await testDb.execute(sql`insert into point_extra_buys (user_id, server_id, kst_date, item, slot, count) values (${T}::uuid, ${S}, ${day}::date, 'wb_retry', ${ZONE + 1}, 1)`);
+      expect(await code(runSolo(T, S, bossId, crypto.randomUUID()))).toBe('NO_RUNS');
+      expect((await getSoloBossDetail(bossId, S, T))?.me).toMatchObject({ retryLeft: 0 });
+    } finally {
+      await testDb.execute(sql`delete from point_extra_buys where user_id=${T}::uuid and server_id=${S} and kst_date=${day}::date and item='wb_retry'`);
+      for (const r of before) await testDb.execute(sql`insert into point_extra_buys (user_id, server_id, kst_date, item, slot, count) values (${T}::uuid, ${S}, ${day}::date, 'wb_retry', ${r.slot}, ${r.count})`);
+    }
     const [b] = await q<{ total: string }>(sql`select total_damage::text as total from world_bosses where id=${bossId}::bigint`);
     expect(Number(b!.total)).toBe(r.score);
 

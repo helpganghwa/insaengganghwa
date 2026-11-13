@@ -7,7 +7,7 @@ import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/
 import { expeditionExtraLock, expeditionExtraOpen } from '@/lib/game/expedition/service';
 import { raidExtraLock } from '@/lib/game/raid/open';
 import { towerExtraLock, towerRerollFloor, towerRerollOf, towerRerollableFloor } from '@/lib/game/tower/service';
-import { wbRetryLock } from '@/lib/game/world-boss/solo-server';
+import { wbRetryLock, wbRetrySlot } from '@/lib/game/world-boss/solo-server';
 import type { SlotKeys } from '@/lib/game/tower/engine';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -72,8 +72,10 @@ export async function buyExtra(
   if (item === 'tower_reroll' && (floor === null || !towerRerollableFloor(floor))) throw new PointShopError('BAD_REQUEST');
   // 화면이 본 주와 다르면(월요일 0시를 넘긴 옛 화면) 사지 않는다 — 보지도 않은 새 주 풀을 바꾸게 되므로(검수 10-16).
   if (item === 'tower_reroll' && input.week !== undefined && input.week !== kstWeekStartString()) throw new PointShopError('WEEK_CHANGED');
-  // point_extra_buys의 slot — 파견 '다시 보내기' 시절(10-06~10-10) 칸별로 세던 자리. 지금은 셋 다 0(가격은 상품 전체 횟수로).
-  const slot = 0;
+  // point_extra_buys의 slot — 파견 '다시 보내기' 시절(10-06~10-10) 칸별로 세던 자리. 지금은 0(가격은 상품 전체 횟수로).
+  // 월드보스 재도전만 보스별(11-14) — slot = 그 보스의 구역 id(콘텐츠 잠금이 정한다).
+  let slot = 0;
+  const slotOf = () => (item === 'wb_retry' ? slot : undefined);
   const day = kstDateString();
 
   const ref = `extra:${userId}:${input.key}`;
@@ -88,7 +90,8 @@ export async function buyExtra(
         sql`select 1 from point_ledger where kind in ('melee', 'mileage') and ref = ${ref} limit 1`,
       )) as unknown as unknown[];
       if (!prev) return null;
-      const bought = await extrasToday(tx, userId, serverId, item, undefined, day);
+      if (item === 'wb_retry' && slot === 0) slot = (await wbRetrySlot(tx, userId, serverId)) ?? 0;
+      const bought = await extrasToday(tx, userId, serverId, item, slotOf(), day);
       // 다시 뽑기의 재전송 — 그 층에 저장된 요구 장비를 돌려줘 화면이 같은 것을 보게 한다.
       const pool = floor !== null ? await towerRerollOf(tx, userId, serverId, floor) : undefined;
       return { item, qty: 0, slots: [], kind, spent: 0, bought, next: pointExtraPrice(item, bought), duplicate: true, ...(floor !== null ? { floor, pool } : {}) } satisfies ExtraBuyResult;
@@ -104,7 +107,7 @@ export async function buyExtra(
         await raidExtraLock(tx, userId, serverId, day);
       } else if (item === 'wb_retry') {
         // 개인 월드보스 재도전(0253) — 거주 구역 보스가 있고 남은 판이 0일 때만.
-        await wbRetryLock(tx, userId, serverId);
+        slot = await wbRetryLock(tx, userId, serverId);
       } else {
         // 탑 추가 도전·요구 장비 다시 뽑기 — 진행도 행을 잠가 전투 판정과 직렬화한다(다시 뽑은 요구 장비로 싸우는 판과 겹치지 않게).
         await towerExtraLock(tx, userId, serverId);
@@ -127,6 +130,7 @@ export async function buyExtra(
     const rows = (await tx.execute(sql`
       select count from point_extra_buys
       where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = ${item}
+        ${item === 'wb_retry' ? sql`and slot = ${slot}` : sql``}
       for update
     `)) as unknown as { count: number }[];
     const bought = rows.reduce((a, r) => a + Number(r.count), 0);

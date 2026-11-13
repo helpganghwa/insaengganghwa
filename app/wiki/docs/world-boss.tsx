@@ -162,7 +162,7 @@ export default function Doc() {
         <LI>보스가 나타난 구역에 거주하는 사람만 도전할 수 있다. 거주지는 세계지도에서 바로 옮길 수 있다.</LI>
         <LI>
           한 번 도전하면 공격 {fmtInt(SOLO_HITS_PER_RUN)}번을 하고, {fmtInt(SOLO_HITS_PER_RUN)}번 피해의 합이 그 판의 기록이 된다. 하루(0시 기준) {fmtInt(SOLO_FREE_RUNS_PER_DAY)}번은 무료이고, 대난투
-          포인트나 마일리지로 하루 {fmtInt(POINT_EXTRA_PRICES.wb_retry.length)}번까지 더 도전할 수 있다({POINT_EXTRA_PRICES.wb_retry.join(' · ')}포인트, 마일리지는 {fmtInt(MILEAGE_PER_MELEE_POINT)}배).
+          포인트나 마일리지로 보스마다 하루 {fmtInt(POINT_EXTRA_PRICES.wb_retry.length)}번까지 더 도전할 수 있다({POINT_EXTRA_PRICES.wb_retry.join(' · ')}포인트, 마일리지는 {fmtInt(MILEAGE_PER_MELEE_POINT)}배).
         </LI>
         <LI>순위는 가장 높은 기록 하나로 정한다. 같은 기록이면 먼저 세운 사람이 위다. 모든 도전의 피해는 함께 쌓여 페이즈를 올린다.</LI>
         <LI>
