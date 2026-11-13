@@ -374,6 +374,24 @@ html {
 @media (prefers-reduced-motion: reduce) { .tdc-sym, .tdc-bar { animation: none; } }
 
 /* swiper 페이지네이션 — 홈 배너 carousel용 dot. outer h-16 안 우하단에 작게. */
+.wb-banner-swiper .swiper-pagination {
+  bottom: 3px !important;
+  right: 10px !important;
+  left: auto !important;
+  width: auto !important;
+  text-align: right;
+}
+.wb-banner-swiper .swiper-pagination-bullet {
+  width: 5px;
+  height: 5px;
+  margin: 0 2px !important;
+  background-color: rgb(255 255 255);
+  opacity: 0.45;
+}
+.wb-banner-swiper .swiper-pagination-bullet-active {
+  background-color: rgb(196 181 253); /* violet-300 */
+  opacity: 1;
+}
 .home-banner-swiper {
   width: 100% !important;
   max-width: 100% !important;

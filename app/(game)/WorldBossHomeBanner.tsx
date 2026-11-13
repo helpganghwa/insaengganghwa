@@ -2,6 +2,11 @@
 
 import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Pagination } from 'swiper/modules';
+
+import 'swiper/css';
+import 'swiper/css/pagination';
 
 import { REGION_COLOR } from '@/components/ExecutorTag';
 import { GuildBadge } from '@/components/GuildBadge';
@@ -44,14 +49,38 @@ const subscribe = (cb: () => void) => {
   window.addEventListener(CLOSED_EVENT, cb);
   return () => window.removeEventListener(CLOSED_EVENT, cb);
 };
-const isClosed = (id: string) => {
+const closedIds = (): string[] => {
   try {
     const raw = document.cookie.split('; ').find((c) => c.startsWith(`${WORLD_BOSS_BANNER_COOKIE}=`))?.slice(WORLD_BOSS_BANNER_COOKIE.length + 1);
-    return parseClosedBossIds(decodeURIComponent(raw ?? '')).includes(id);
+    return parseClosedBossIds(decodeURIComponent(raw ?? ''));
   } catch {
-    return false;
+    return [];
   }
 };
+const isClosed = (id: string) => closedIds().includes(id);
+
+/**
+ * 보스가 둘 이상이면 배너를 좌우로 넘긴다(11-14 사용자) — 홈 캐러셀과 같은 Swiper·점 표시, 자동 넘김 없음.
+ * 하나를 닫으면 그 슬라이드만 빠지고 나머지는 남는다. ✕가 모서리 밖에 걸치므로 슬라이드 안쪽에 그만큼 여백을 두고 바깥으로 당긴다.
+ */
+export function WorldBossHomeBanners({ list }: { list: WorldBossHomeBannerData[] }) {
+  const closedKey = useSyncExternalStore(subscribe, () => closedIds().join(','), () => '');
+  const closed = new Set(closedKey ? closedKey.split(',') : []);
+  const shown = list.filter((b) => !closed.has(b.id));
+  if (shown.length === 0) return null;
+  if (shown.length === 1) return <WorldBossHomeBanner b={shown[0]!} />;
+  return (
+    <div className="-mt-[13px] -ml-[13px] w-[calc(100%+13px)] min-w-0">
+      <Swiper modules={[Pagination]} pagination={{ clickable: true }} spaceBetween={13} slidesPerView={1} className="wb-banner-swiper">
+        {shown.map((b) => (
+          <SwiperSlide key={b.id} className="pt-[13px] pl-[13px]">
+            <WorldBossHomeBanner b={b} />
+          </SwiperSlide>
+        ))}
+      </Swiper>
+    </div>
+  );
+}
 
 export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
   // 개인 보스(0253) — 보라·은빛, 원정대·전리품·주인 길드 줄은 없다(문구는 불사조와 같게, 11-13 사용자).
