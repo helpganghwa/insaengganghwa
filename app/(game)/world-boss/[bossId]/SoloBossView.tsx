@@ -11,7 +11,8 @@ import { useMemo, useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
-import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { faceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { TitleTag } from '@/components/TitleTag';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
 import { Ticker } from '@/components/Ticker';
@@ -315,7 +316,7 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
   );
 }
 
-type BoardRow = { rank: number; nick: string; score: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null };
+type BoardRow = { rank: number; nick: string; score: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
 /** 순위 한 줄 — 대난투 순위와 같은 방식(우측 아바타 얼굴 확대 + 등수색·암막 그라데이션 두 겹, 11-13 사용자). */
 function rankTint(rank: number, me: boolean): string {
@@ -330,33 +331,41 @@ function rankText(rank: number, me: boolean): string {
   if (rank === 3) return 'text-orange-200';
   return me ? 'text-violet-200' : 'text-zinc-400';
 }
-function Row({ r }: { r: BoardRow }) {
+/** 1위 대비 막대색 — 1~3위는 순위색, 나는 보라(11-13 사용자 A3안). */
+function barColor(rank: number, me: boolean): string {
+  if (rank === 1) return 'bg-amber-400';
+  if (rank === 2) return 'bg-slate-200';
+  if (rank === 3) return 'bg-orange-500';
+  return me ? 'bg-violet-400' : 'bg-slate-400/70';
+}
+/** 순위 한 줄(A3안) — 왼쪽 순위·아바타 얼굴, 가운데 이름·칭호·길드, 오른쪽 점수, 아래 1위 대비 막대와 순위 보상. */
+function Row({ r, lead }: { r: BoardRow; lead: number }) {
   const reward = rankRewardText(r.rank);
+  const pct = lead > 0 ? Math.max(3, Math.min(100, Math.round((r.score / lead) * 100))) : 0;
   return (
-    <li className={`relative flex h-[50px] items-center overflow-hidden rounded-lg bg-zinc-900/70 px-2.5 ${r.me ? 'ring-1 ring-violet-400/80 shadow-[0_0_12px_rgba(139,92,246,.35)]' : ''}`}>
-      {r.avatar ? (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-32">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
-        </div>
-      ) : null}
+    <li className={`relative overflow-hidden rounded-lg px-2 py-1.5 ${r.me ? 'bg-violet-950/45 ring-1 ring-violet-400/80' : 'bg-zinc-900/70'}`}>
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
-      <div className="relative z-10 flex w-full min-w-0 items-center gap-2.5">
-        <span className={`w-7 shrink-0 text-center font-mono text-[14px] font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${rankText(r.rank, r.me)}`}>
-          {r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}
+      <div className="relative flex items-center gap-2">
+        <span className={`w-6 shrink-0 text-center font-mono text-[14px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
+        <span className={`relative h-10 w-10 flex-none overflow-hidden rounded-md bg-zinc-800 ${r.rank === 1 ? 'ring-1 ring-amber-400/70' : r.rank === 2 ? 'ring-1 ring-slate-300/60' : r.rank === 3 ? 'ring-1 ring-orange-500/60' : 'ring-1 ring-white/10'}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {r.avatar ? <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={faceCropStyle(r.faceBox)} /> : null}
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 leading-tight">
           <div className="flex min-w-0 items-center gap-1">
-            <b className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nick}</b>
+            <b className="truncate text-[12.5px] font-extrabold text-zinc-50">{r.nick}</b>
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
-            {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className="min-w-0 shrink text-[9.5px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" /> : null}
+            {r.title ? <TitleTag code={r.title} className="min-w-0 text-[10.5px]" /> : null}
           </div>
-          <div className="mt-0.5 flex items-baseline gap-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            <span className="font-mono text-[13px] font-black text-zinc-50 tabular-nums">{n(r.score)}</span>
-            {reward ? <span className="text-[9.5px] text-zinc-400">{reward}</span> : null}
-          </div>
+          {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className="mt-0.5 min-w-0 text-[9.5px] text-zinc-400" /> : <span className="mt-0.5 block text-[9.5px] text-zinc-600">무소속</span>}
         </div>
+        <b className="flex-none font-mono text-[13.5px] font-black text-zinc-50 tabular-nums">{n(r.score)}</b>
+      </div>
+      <div className="relative mt-1 flex items-center gap-2 pl-8">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-black/50">
+          <div className={`h-full rounded-full ${barColor(r.rank, r.me)}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="w-[88px] flex-none text-right text-[9.5px] text-zinc-400">{reward}</span>
       </div>
     </li>
   );
@@ -365,6 +374,7 @@ function Row({ r }: { r: BoardRow }) {
 function Board({ d }: { d: SoloDetail }) {
   const me = d.me;
   const meInTop = d.top.some((r) => r.me);
+  const lead = d.top[0]?.best ?? 0;
   return (
     <div className="mx-3 mt-2.5">
       <div className="mb-1.5 flex items-baseline justify-between">
@@ -374,13 +384,13 @@ function Board({ d }: { d: SoloDetail }) {
       <ul className="space-y-1">
         {d.top.length === 0 ? <li className="flex h-[50px] items-center justify-center rounded-lg bg-zinc-900/60 text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
-          <Row key={r.userId} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem }} />
+          <Row key={r.userId} lead={lead} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
           <>
             <li className="py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
             {me.best != null && me.rank != null ? (
-              <Row r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem }} />
+              <Row lead={lead} r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             ) : (
               <li className="flex h-[50px] items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[11.5px] text-zinc-400">아직 기록이 없어요</li>
             )}
@@ -601,6 +611,18 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
   const startPhase = soloPhaseFor(run.totalBefore);
   const bossVars = { '--wbq-idle': `url(${fx.idle})`, '--wbq-crouch': `url(${fx.crouch})`, '--wbq-climb': `url(${fx.climb})`, '--wbq-bind': `url(${fx.bind})`, '--wbq-expose': `url(${fx.expose})` } as React.CSSProperties;
 
+  /** 기록 경주 — 지금 합(sum)으로 목표(최고 기록 → 다음 순위)와 막대 %, 설명 한 줄. ladder = 다른 사람들 최고 기록(큰 순). */
+  const raceAt = (sum: number): { pct: number; note: string; goal: string; beat: boolean } => {
+    const others = d.ladder;
+    const estRank = 1 + others.filter((x) => x > sum).length;
+    const rankWord = others.length >= 40 && estRank > 40 ? '' : ` · ${estRank}위권`;
+    if (run.prevBest != null && sum <= run.prevBest) {
+      return { pct: run.prevBest > 0 ? (sum / run.prevBest) * 100 : 0, note: `최고 기록까지 ${man(run.prevBest - sum)}`, goal: `최고 기록 ${man(run.prevBest)}`, beat: false };
+    }
+    const next = [...others].reverse().find((x) => x > sum);
+    if (next == null) return { pct: 100, note: `${run.prevBest == null ? '첫 기록' : '기록 갱신 중'} · 1위권`, goal: '1위', beat: true };
+    return { pct: (sum / next) * 100, note: `${run.prevBest == null ? '첫 기록' : '기록 갱신 중'}${rankWord}`, goal: `${estRank - 1}위 ${man(next)}`, beat: true };
+  };
   const q = <T extends Element = HTMLElement>(s: string) => root.current?.querySelector<T>(s) ?? null;
   const reduce = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const later = (fn: () => void, ms: number) => {
@@ -784,11 +806,27 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         if (!s.fast) tot?.animate([{ textShadow: '0 0 16px rgba(251,191,36,.9)' }, { textShadow: '0 0 0 transparent' }], { duration: 900 });
       }
       if (tot) rollNumber(tot, was, s.sum, s.fast || reduce() ? 0 : 420);
+      const race = raceAt(s.sum);
+      const rb = q<HTMLElement>('[data-race-bar]');
+      if (rb) rb.style.width = `${race.pct}%`;
+      const rn = q<HTMLElement>('[data-race-note]');
+      if (rn) {
+        rn.textContent = race.note;
+        rn.className = `text-[10.5px] ${race.beat ? 'text-emerald-300' : 'text-zinc-400'}`;
+      }
+      const rg = q<HTMLElement>('[data-race-goal]');
+      if (rg) rg.textContent = race.goal;
       const cell = q('[data-cells]')?.children[s.i] as HTMLElement | undefined;
       if (cell) {
-        cell.className = 'relative flex h-[38px] flex-col items-center justify-center overflow-hidden rounded-md bg-zinc-900 ring-1 ring-white/[.06]';
+        // 칸(11-13 사용자 H1안) — 위 색 띠 + 패턴 짧은 이름(없으면 번호) + 치명 금테·약점 분홍테, 숫자는 굴러 올라간다.
+        const ring = h.c ? 'ring-1 ring-amber-400/80' : h.p === 'expose' ? 'ring-1 ring-rose-400/70' : 'ring-1 ring-white/[.06]';
+        cell.className = `relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md bg-zinc-900 ${ring}`;
         const band = h.p === 'none' ? (h.c ? 'bg-amber-300' : 'bg-zinc-700') : h.p === 'dodge' ? 'border border-zinc-600 bg-transparent' : h.p === 'expose' ? 'bg-rose-400' : h.p === 'crouch' ? 'bg-sky-400/60' : 'bg-violet-400/50';
-        cell.innerHTML = `<span class="absolute inset-x-0 top-0 h-[3px] ${band}"></span><span class="text-[9px] leading-none text-zinc-500">${s.i + 1}${h.c ? ' <b class="text-amber-300">치명</b>' : ''}</span><b class="mt-1 font-mono text-[11.5px] leading-none tabular-nums ${h.d === 0 ? 'text-zinc-500' : h.p === 'expose' ? 'text-rose-200' : h.c ? 'text-amber-200' : 'text-zinc-100'}">${h.d === 0 ? '빗나감' : n(h.d)}</b>`;
+        const short = h.c ? '<b class="text-amber-300">치명</b>' : h.p === 'none' ? String(s.i + 1) : SOLO_PATTERN_LABEL[h.p].name.replace(' 옭아매기', '');
+        const tone = h.c ? '' : PATTERN_TONE[h.p] ?? 'text-zinc-500';
+        cell.innerHTML = `<span class="absolute inset-x-0 top-0 h-[3px] ${band}"></span><span class="text-[9px] leading-none ${tone || 'text-zinc-500'}">${short}</span><b data-v class="mt-1 font-mono text-[11.5px] leading-none tabular-nums ${h.d === 0 ? 'text-zinc-500' : h.p === 'expose' ? 'text-rose-200' : h.c ? 'text-amber-200' : 'text-zinc-100'}">${h.d === 0 ? '빗나감' : '0'}</b>`;
+        const v = cell.querySelector<HTMLElement>('[data-v]');
+        if (v && h.d > 0) rollNumber(v, 0, h.d, s.fast || reduce() ? 0 : 380);
         if (!s.fast) cell.animate([{ transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 220 });
       }
       s.i++;
@@ -898,17 +936,30 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
             0
           </b>
         </div>
-        <div className="text-right text-[10.5px] text-zinc-500">
-          최고 기록
-          <br />
-          <b data-best className="font-mono text-[12px] text-zinc-300 transition-colors">
+        <div className="text-right text-[10.5px] leading-snug text-zinc-500">
+          최고 기록{' '}
+          <b data-best className="font-mono text-[11.5px] text-zinc-300 transition-colors">
             {run.prevBest == null ? '-' : n(run.prevBest)}
           </b>
+          <br />
+          <b data-race-note className="text-[10.5px] text-zinc-400">
+            {raceAt(0).note}
+          </b>
+        </div>
+      </div>
+      {/* 기록 경주 막대(11-13 사용자 A안) — 최고 기록까지, 넘으면 다음 순위까지 차오른다. */}
+      <div className="mx-3 mt-1.5">
+        <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+          <div data-race-bar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-amber-300 transition-[width] duration-300" style={{ width: '0%' }} />
+        </div>
+        <div className="mt-0.5 flex justify-between text-[9.5px] text-zinc-500">
+          <span>0</span>
+          <span data-race-goal>{raceAt(0).goal}</span>
         </div>
       </div>
       <div data-cells className="mx-3 mt-2 grid grid-cols-5 gap-1">
         {Array.from({ length: 10 }, (_, k) => (
-          <span key={k} className="relative flex h-[38px] flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-zinc-800 text-[10px] text-zinc-700">
+          <span key={k} className="relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-zinc-800 text-[10px] text-zinc-700">
             {k + 1}
           </span>
         ))}

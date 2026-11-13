@@ -16,11 +16,15 @@ export type SoloDetail = {
   total: number;
   /** 넘긴 페이즈 수 — 화면도 이 수를 그대로 'N페이즈'로 보인다(불사조와 같게). */
   stage: number;
-  top: { rank: number; userId: string; nickname: string; best: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null }[];
+  top: { rank: number; userId: string; nickname: string; best: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null }[];
+  /** 다른 사람들의 최고 기록 상위 40개(큰 순) — 공격 화면 기록 경주. */
+  ladder: number[];
   pool: Record<SoloSlot, { key: string; name: string; src: string | null; owned: boolean }[]>;
   me: {
     nickname: string;
     faceBox: FaceBox | null;
+    /** 대표 칭호 코드. */
+    title: string | null;
     guildName: string | null;
     guildEmblem: string | null;
     resident: boolean;
