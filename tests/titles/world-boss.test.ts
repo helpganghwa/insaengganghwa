@@ -4,7 +4,7 @@ import { TITLE_BY_CODE } from '@/lib/game/titles/defs';
 import { TITLE_SECRET_BY_CODE } from '@/lib/game/titles/defs.server';
 import { GUILD_COLLECTIVE_CODES } from '@/lib/game/titles/guild-facts';
 
-/** 월드보스 칭호 11종(2026-10-11 사용자 제출·효과 고르기 확정) — 정의(생성물) 스모크. */
+/** 월드보스 칭호 17종(2026-10-11 잿불 11종 + 2026-11-14 그림자 거미 여왕 6종) — 정의(생성물) 스모크. */
 const WB: [code: string, label: string, fx: string, pt: string | null, kind: 'permanent' | 'conditional'][] = [
   ['wb_first', '첫 토벌', 'rimlight', null, 'permanent'],
   ['wb_50', '산전수전', 'pyrevert', null, 'permanent'],
@@ -17,9 +17,16 @@ const WB: [code: string, label: string, fx: string, pt: string | null, kind: 'pe
   ['wb_merc', '떠돌이 용병', 'linenflow', null, 'permanent'],
   ['wb_kind_ember_phoenix', '잿불 원정대', 'ashdrift', 'ashfeather', 'permanent'],
   ['guild_wb_loot_5', '잿빛 금고', 'ashgoldvault', null, 'conditional'],
+  // 그림자 거미 여왕(2026-11-14 검토 폼 확정)
+  ['wb_kind_shadow_queen', '달빛 안뜰', 'qshade', null, 'permanent'],
+  ['wbq_rank1', '흑요석 왕관', 'qcrown', 'qtwinkle', 'permanent'],
+  ['wbq_top10', '은빛 거미줄', 'qweb', null, 'permanent'],
+  ['wbq_8m', '심연의 일격', 'qabyss', null, 'permanent'],
+  ['wbq_dodge3', '허공 베기', 'qmiss', null, 'permanent'],
+  ['wbq_crit4', '칼날 폭풍', 'qstorm', 'qglide', 'permanent'],
 ];
 
-describe('월드보스 칭호 11종', () => {
+describe('월드보스 칭호 17종', () => {
   it('전부 공개, 이름 8자 이내, 카테고리 월드보스, 고른 효과·파티클 그대로', () => {
     for (const [code, label, fx, pt, kind] of WB) {
       const d = TITLE_BY_CODE.get(code)!;
@@ -39,6 +46,9 @@ describe('월드보스 칭호 11종', () => {
     const labels = new Map<string, string[]>();
     for (const d of TITLE_BY_CODE.values()) labels.set(d.label, [...(labels.get(d.label) ?? []), d.code]);
     for (const [code, label] of WB) expect(labels.get(label), label).toEqual([code]);
+  });
+  it('첫 토벌은 그림자 거미 여왕 도전으로도 받는다(조건 글)', () => {
+    expect(TITLE_SECRET_BY_CODE.get('wb_first')!.cond).toContain('그림자 거미 여왕');
   });
   it('잿빛 금고는 길드 집합 조건부(guild-facts)에 등록', () => {
     expect(GUILD_COLLECTIVE_CODES.has('guild_wb_loot_5')).toBe(true);

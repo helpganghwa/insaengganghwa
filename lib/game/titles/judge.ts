@@ -185,7 +185,7 @@ async function loadJudgeBase(
 export const METRIC_QUERY_NAMES = [
   'enh', 'streaks', 'levels', 'supply', 'transcend', 'daily', 'social', 'money', 'lg', 'gh', 'f3', 'melee', 'raid',
   'avatar', 'misc', 'ranks', 'wallet', 'guildx', 'chatx', 'social2', 'streak2', 'enh3', 'flawless', 'supply3', 'melee3',
-  'cross3', 'conquest', 'exped', 'tower', 'firsts', 'wbx', 'chron',
+  'cross3', 'conquest', 'exped', 'tower', 'firsts', 'wbx', 'chron', 'wbq',
 ] as const;
 type MetricQueryName = (typeof METRIC_QUERY_NAMES)[number];
 
@@ -292,6 +292,11 @@ export const SKIPPABLE_QUERIES: Readonly<Partial<Record<MetricQueryName, { feeds
     cols: ['wb_departs', 'wb_leads', 'wb_reveals', 'wb_lucky', 'wb_alliance', 'wb_last', 'wb_shield', 'wb_merc', 'wb_kind_ember'],
   },
   chron: { feeds: ['chron_10', 'chron_20', 'chron_head'], cols: ['chron_n', 'chron_head'] },
+  // 그림자 거미 여왕(개인 월드보스, 2026-11-14) — 첫 토벌도 이 쿼리의 도전 수를 함께 읽는다.
+  wbq: {
+    feeds: ['wb_first', 'wb_kind_shadow_queen', 'wbq_rank1', 'wbq_top10', 'wbq_8m', 'wbq_dodge3', 'wbq_crit4'],
+    cols: ['wbq_runs', 'wbq_rank1', 'wbq_top10', 'wbq_best', 'wbq_dodge_max', 'wbq_crit_max'],
+  },
 };
 
 /** 같은 컬럼의 0 행(firsts처럼 컬럼이 없으면 0행). */
@@ -923,12 +928,31 @@ async function collectMetrics(
       console.warn('[titles] 연대기 조회 실패 — 연대기 칭호 0으로 판정', (e as Error).message);
       return [];
     }),
+    // 그림자 거미 여왕(개인 월드보스 0253, 2026-11-14 6종) — 도전 기록(판마다 10타 jsonb)과 정산된 최종 순위에서 센다. 지금 캐릭터 생성 이후만.
+    //  - wbq_runs 도전 수(첫 토벌·달빛 안뜰) · wbq_rank1/top10 최종 1위·10위 이내 횟수(정산 뒤 final_rank) · wbq_best 한 판 최고 피해
+    //  - wbq_dodge_max / wbq_crit_max 한 판 안에서 빗나감(거미줄 타기)·치명타가 나온 최대 횟수
+    //  표가 없으면(0253 적용 전) 0으로 본다 — 원정대 쿼리(wbx)와 따로 두어 서로를 멈추지 않는다.
+    () => db.execute(sql`
+      with mine as (
+        select r.score, r.hits from world_boss_solo_runs r
+         where r.user_id=${u} and r.server_id=${s} and r.created_at >= ${cAt}
+      )
+      select (select count(*) from mine)::int as wbq_runs,
+             (select count(*) from world_boss_solo_records x where x.user_id=${u} and x.server_id=${s} and x.final_rank = 1 and x.best_at >= ${cAt})::int as wbq_rank1,
+             (select count(*) from world_boss_solo_records x where x.user_id=${u} and x.server_id=${s} and x.final_rank <= 10 and x.best_at >= ${cAt})::int as wbq_top10,
+             coalesce((select max(score) from mine), 0)::float8 as wbq_best,
+             coalesce((select max((select count(*) from jsonb_array_elements(mine.hits) h where h->>'p' = 'dodge')) from mine), 0)::int as wbq_dodge_max,
+             coalesce((select max((select count(*) from jsonb_array_elements(mine.hits) h where h->>'c' = 'true')) from mine), 0)::int as wbq_crit_max
+    `).catch((e: unknown) => {
+      console.warn('[titles] 그림자 거미 여왕 조회 실패 — 개인 월드보스 칭호 0으로 판정', (e as Error).message);
+      return [];
+    }),
   ];
   if (thunks.length !== METRIC_QUERY_NAMES.length) {
     throw new Error(`[titles] 지표 쿼리 ${thunks.length}개 ≠ 이름 ${METRIC_QUERY_NAMES.length}개 — METRIC_QUERY_NAMES를 쿼리 배열과 맞출 것`);
   }
   // 보유 칭호로 건너뛰는 쿼리는 같은 컬럼의 0 행으로 채운다(SKIPPABLE_QUERIES 주석).
-  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx, chron] = await runLimited(
+  const [enh, streaks, levels, supply, transcend, daily, social, money, lg, gh, f3, melee, raid, avatar, misc, ranks, wallet, guildx, chatx, social2, streak2, enh3, flawless, supply3, melee3, cross3, conquest, exped, tower, firsts, wbx, chron, wbq] = await runLimited(
     thunks.map((t, i) => {
       const name = METRIC_QUERY_NAMES[i]!;
       return skip.has(name) ? async () => neutralRows(name) : t;
@@ -945,7 +969,7 @@ async function collectMetrics(
     so = g(social), mo = g(money), me = g(melee), ra = g(raid), av = g(avatar), mi = g(misc),
     wa = g(wallet), gx = g(guildx), cx = g(chatx), s2 = g(social2), k2 = g(streak2),
     e3 = g(enh3), fl = g(flawless), s3 = g(supply3), m3 = g(melee3), c3 = g(cross3), cq = g(conquest), ex = g(exped), tw = g(tower),
-    lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx), ch = g(chron);
+    lgr = g(lg), ghs = g(gh), ft = g(f3), wb = g(wbx), ch = g(chron), wq = g(wbq);
   // 랭킹 — 행 없는 지표는 순위 밖(9999)
   const pos: Record<string, number> = { max: 9999, sum: 9999, combat: 9999, raid: 9999, melee: 9999, tower: 9999, titles: 9999 };
   let combatValue = 0;
@@ -987,6 +1011,9 @@ async function collectMetrics(
     wb_alliance: n(wb.wb_alliance), wb_last: n(wb.wb_last), wb_shield: n(wb.wb_shield), wb_merc: n(wb.wb_merc), wb_kind_ember: n(wb.wb_kind_ember),
     // 점령전 연대기(2026-11-04)
     chron_n: n(ch.chron_n), chron_head: n(ch.chron_head),
+    // 그림자 거미 여왕(2026-11-14)
+    wbq_runs: n(wq.wbq_runs), wbq_rank1: n(wq.wbq_rank1), wbq_top10: n(wq.wbq_top10), wbq_best: n(wq.wbq_best),
+    wbq_dodge_max: n(wq.wbq_dodge_max), wbq_crit_max: n(wq.wbq_crit_max),
     // 최초 이정표(2026-09-26) — fr_enh500 · fr_sum20k · fr_t30 · fr_combat10m
     ...firstRanksFrom(firsts as unknown as { milestone: string; rank: unknown }[]),
     // ── 판정 5차(2026-08-21) — 0166 이력 컬럼으로 열린 지표(PENDING 12종 해소) ──
@@ -1058,7 +1085,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   tower_f60: (m) => m.tw_best >= 60,
   tower_f100: (m) => m.tw_best >= 100,
   // 월드보스(2026-10-11) — 10종 영구. 길드 칭호 잿빛 금고(guild_wb_loot_5)는 guild-facts의 조건부.
-  wb_first: (m) => m.wb_departs >= 1,
+  wb_first: (m) => m.wb_departs >= 1 || m.wbq_runs >= 1, // 2026-11-14: 그림자 거미 여왕 도전도 첫 토벌로 센다
   wb_50: (m) => m.wb_departs >= 50,
   wb_lead_10: (m) => m.wb_leads >= 10,
   wb_reveal: (m) => m.wb_reveals >= 1,
@@ -1068,6 +1095,13 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   wb_shield: (m) => m.wb_shield >= 1,
   wb_merc: (m) => m.wb_merc >= 10,
   wb_kind_ember_phoenix: (m) => m.wb_kind_ember >= 1,
+  // 그림자 거미 여왕(2026-11-14, 6종 영구)
+  wb_kind_shadow_queen: (m) => m.wbq_runs >= 1,
+  wbq_rank1: (m) => m.wbq_rank1 >= 1,
+  wbq_top10: (m) => m.wbq_top10 >= 1,
+  wbq_8m: (m) => m.wbq_best >= 8_000_000,
+  wbq_dodge3: (m) => m.wbq_dodge_max >= 3,
+  wbq_crit4: (m) => m.wbq_crit_max >= 4,
   // 최초 이정표(2026-09-26) — 서버에서 처음 넘은 세 사람(금·은·동). 순위는 milestone_firsts(정본), 영구.
   first_enh500_1: (m) => m.fr_enh500 === 1,
   first_enh500_2: (m) => m.fr_enh500 === 2,

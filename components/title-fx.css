@@ -483,3 +483,27 @@
 @keyframes t17glB{0%,84%,100%{opacity:0;transform:none}85%{opacity:.8;transform:translate(1.5px,0);clip-path:inset(45% 0 0 0)}88%{opacity:.8;transform:translate(-1px,0);clip-path:inset(0 0 60% 0)}91%{opacity:0}}
 /* 신데렐라 — 유리빛 흐름만(후광 없음). */
 .ttag .fx-glassflow{background:linear-gradient(90deg,#bfe3ff,#ffffff,#9fc6f0,#e6f4ff,#bfe3ff);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+
+/* 그림자 거미 여왕(개인 월드보스) 칭호 6종 — 2026-11-14 확정(검토 아티팩트 5KT7WdMhRzdoY7fDwCifBz 8차). 보라·은빛 팔레트. */
+/* 달빛 안뜰(참가) — 은빛에서 보라로 내려앉는 세로 그라데이션, 정적 */
+.fx-qshade{background:linear-gradient(180deg,#f4f2ff 0%,#cdc3f0 32%,#8f7fc9 64%,#5d4c93 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 1px rgba(10,6,24,.9))}
+/* 흑요석 왕관(1위) — 채도 높은 보라 단색 + 글자에 붙어 차례로 반짝이는 별(pt-qtwinkle, 위치·크기·박자는 TitleTag 프리셋) */
+.fx-qcrown{color:#b061ff;text-shadow:0 0 3px rgba(176,97,255,.45)}
+.ttag .pt-qtwinkle>i{top:var(--y);left:var(--x)!important;width:var(--s);height:var(--s);background:radial-gradient(circle,#fff 0 16%,transparent 22%),linear-gradient(0deg,transparent 46%,rgba(245,236,255,.95) 46% 54%,transparent 54%),linear-gradient(90deg,transparent 46%,rgba(245,236,255,.95) 46% 54%,transparent 54%);opacity:0;animation:p-qtw 4.2s ease-in-out infinite;animation-delay:var(--d)!important;filter:drop-shadow(0 0 2px rgba(216,180,254,.9))}
+@keyframes p-qtw{0%,20%,100%{opacity:0;transform:scale(.2) rotate(0)}8%{opacity:1;transform:scale(1) rotate(45deg)}}
+/* 은빛 거미줄(10위) — 글자 윗선 사이 처진 실·짧은 당김실·이슬 실(움직임 없음) */
+.ttag .fx-qweb{position:relative;display:inline-block;color:#e6eaf2;text-shadow:0 1px 2px rgba(0,0,0,.85);isolation:isolate}
+.ttag .fx-qweb::before{content:'';position:absolute;z-index:-1;inset:-.16em -.12em -.22em -.12em;opacity:.45;pointer-events:none;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%20200%2060%27%20preserveAspectRatio%3D%27none%27%20fill%3D%27none%27%20stroke%3D%27%23dbe2ee%27%20stroke-width%3D%271%27%20vector-effect%3D%27non-scaling-stroke%27%3E%3Cpath%20d%3D%27M30%2016Q52%2026%2074%2016Q96%2026%20118%2016Q140%2026%20162%2016M30%2016L22%206M162%2016L170%206M96%2021L96%2044%27%20vector-effect%3D%27non-scaling-stroke%27/%3E%3Ccircle%20cx%3D%2796%27%20cy%3D%2745%27%20r%3D%271.5%27%20fill%3D%27%23f8fafc%27%20stroke%3D%27none%27/%3E%3C/svg%3E") 0 0/100% 100% no-repeat}
+/* 심연의 일격(800만) — 깊은 보라, 4초마다 한 번 짧게 번쩍 */
+.fx-qabyss{color:#9278d8;text-shadow:0 0 4px rgba(76,29,149,.75),0 0 1px rgba(237,233,254,.45);animation:qabyss 4s ease-in-out infinite}
+@keyframes qabyss{0%,86%,100%{filter:brightness(.98)}90%{filter:brightness(1.85) drop-shadow(0 0 5px rgba(196,181,253,.95))}94%{filter:brightness(1)}}
+/* 허공 베기(빗나감 3번) — 칼선이 글자 정중앙을 1.8초마다 가르고, 글자는 1px 비켜섬 */
+.ttag .fx-qmiss{position:relative;display:inline-block;color:#cfd6e2;animation:qmiss 1.8s ease-out infinite}
+.ttag .fx-qmiss::after{content:'';position:absolute;left:-6%;right:-6%;top:50%;height:1.5px;margin-top:-.75px;background:linear-gradient(90deg,transparent,rgba(241,245,251,.95) 40%,#fff 50%,rgba(241,245,251,.95) 60%,transparent);transform:rotate(-12deg);clip-path:inset(0 100% 0 0);opacity:0;animation:qslash 1.8s linear infinite}
+@keyframes qslash{0%,6%{clip-path:inset(0 100% 0 0);opacity:1}14%{clip-path:inset(0 0 0 0);opacity:1}26%,100%{clip-path:inset(0 0 0 0);opacity:0}}
+@keyframes qmiss{0%,12%{transform:translateX(0);opacity:1}18%{transform:translateX(1px);opacity:.75}30%,100%{transform:translateX(0);opacity:1}}
+/* 칼날 폭풍(치명 4번) — 푸른 강철빛 결 + 글자 사이를 높이 바꿔 지나가는 빛 조각(pt-qglide, TitleTag 프리셋) */
+.fx-qstorm{background:linear-gradient(90deg,#8fb3d9,#eaf4ff,#a9c4e2,#eaf4ff,#8fb3d9);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+.ttag .pt-qglide>i{top:var(--y);width:.9em;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9) 60%,#fff);box-shadow:0 0 4px rgba(255,248,220,.8);opacity:0;animation:p-qgl var(--t) cubic-bezier(.45,0,.55,1) infinite;animation-delay:var(--d)!important}
+@keyframes p-qgl{0%{opacity:0;left:-4%}14%{opacity:.9}78%{opacity:.9}100%{opacity:0;left:88%}}
+@media (prefers-reduced-motion: reduce){.ttag .fx-qmiss::after{display:none}}

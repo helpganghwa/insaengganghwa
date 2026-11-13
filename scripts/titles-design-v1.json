@@ -717,6 +717,26 @@
     },
     "rank_titles": {
       "fx": "blazerose"
+    },
+    "wb_kind_shadow_queen": {
+      "fx": "qshade"
+    },
+    "wbq_rank1": {
+      "fx": "qcrown",
+      "pt": "qtwinkle"
+    },
+    "wbq_top10": {
+      "fx": "qweb"
+    },
+    "wbq_8m": {
+      "fx": "qabyss"
+    },
+    "wbq_dodge3": {
+      "fx": "qmiss"
+    },
+    "wbq_crit4": {
+      "fx": "qstorm",
+      "pt": "qglide"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

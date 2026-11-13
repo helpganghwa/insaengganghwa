@@ -5894,7 +5894,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "wb_first",
   cat: "월드보스",
-  cond: "월드보스 원정 1회 출발",
+  cond: "월드보스 원정 1회 출발 또는 그림자 거미 여왕 1회 도전",
   diff: "쉬움"
  },
  {
@@ -5956,6 +5956,42 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "월드보스",
   cond: "소속 길드가 월드보스 전리품을 5번 이상 받은 동안",
   diff: "중간"
+ },
+ {
+  code: "wb_kind_shadow_queen",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 1회 도전",
+  diff: "쉬움"
+ },
+ {
+  code: "wbq_rank1",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 최종 1위",
+  diff: "어려움"
+ },
+ {
+  code: "wbq_top10",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 최종 10위 이내",
+  diff: "중간"
+ },
+ {
+  code: "wbq_8m",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 한 번 도전에서 피해 800만 이상",
+  diff: "어려움"
+ },
+ {
+  code: "wbq_dodge3",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 한 번 도전에서 공격 3번 이상 빗나감",
+  diff: "중간"
+ },
+ {
+  code: "wbq_crit4",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 한 번 도전에서 치명타 4번 이상",
+  diff: "어려움"
  },
  {
   code: "set_hw_smith",

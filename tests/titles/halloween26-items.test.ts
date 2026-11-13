@@ -35,11 +35,11 @@ describe('할로윈 장비 칭호 10종(2026-10-29)', () => {
     }
   });
 
-  it('새 이름 10개는 다른 칭호와 겹치지 않고 총수는 623', () => {
+  it('새 이름 10개는 다른 칭호와 겹치지 않고 총수는 629', () => {
     // 전체 유일성은 지역 주인({지역} 주인 6코드)처럼 같은 라벨을 쓰는 기존 칭호가 있어 성립하지 않는다 — 새 10종만 본다.
     const count = new Map<string, number>();
     for (const d of TITLE_DEFS) count.set(d.label, (count.get(d.label) ?? 0) + 1);
     for (const [, label] of EXPECT) expect(count.get(label), label).toBe(1);
-    expect(TITLE_DEFS).toHaveLength(623);
+    expect(TITLE_DEFS).toHaveLength(629);
   });
 });

@@ -296,6 +296,8 @@ const FX_OG: Record<string, string> = {
   hwphantom: '#e6ebf3', hwnosferatu: '#e01f43', hwpumpkin: '#f39a2e', hwstarcandy: '#ff8fc0', hwwitch: '#a35cff',
   // 월드보스(2026-10-11) — 잿불 팔레트 강등색
   pyreglow: '#ff9d4d', pyrevert: '#ff9d4d', ashdrift: '#b9b0a8', allianceflow: '#ff9d4d', ashgoldvault: '#e5c07b',
+  // 그림자 거미 여왕(2026-11-14) — 보라·은빛 강등색
+  qshade: '#b9a7e6', qcrown: '#b061ff', qweb: '#e6eaf2', qabyss: '#9278d8', qmiss: '#cfd6e2', qstorm: '#a9c4e2',
   // 길드 칭호(2026-09-01)
   legendstatic: '#e05252', verdantstatic: '#7fce8a', treasury: '#f5d76e', solarcrown: '#f5d76e',
   noblesseflow: '#6ea8e0', blaze: '#ff6a1a', blazegreen: '#3fc25a', blazegold: '#f5c33a',

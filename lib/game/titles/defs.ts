@@ -6464,6 +6464,71 @@ export const TITLE_DEFS: TitleDef[] = [
   }
  },
  {
+  code: "wb_kind_shadow_queen",
+  kind: "permanent",
+  label: "달빛 안뜰",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qshade"
+  }
+ },
+ {
+  code: "wbq_rank1",
+  kind: "permanent",
+  label: "흑요석 왕관",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qcrown",
+   pt: "qtwinkle",
+   glow: true
+  }
+ },
+ {
+  code: "wbq_top10",
+  kind: "permanent",
+  label: "은빛 거미줄",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qweb"
+  }
+ },
+ {
+  code: "wbq_8m",
+  kind: "permanent",
+  label: "심연의 일격",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qabyss",
+   glow: true
+  }
+ },
+ {
+  code: "wbq_dodge3",
+  kind: "permanent",
+  label: "허공 베기",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qmiss"
+  }
+ },
+ {
+  code: "wbq_crit4",
+  kind: "permanent",
+  label: "칼날 폭풍",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "qstorm",
+   pt: "qglide",
+   glow: true
+  }
+ },
+ {
   code: "set_hw_smith",
   kind: "permanent",
   label: "모루의 계승자",

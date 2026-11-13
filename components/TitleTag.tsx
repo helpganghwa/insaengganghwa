@@ -19,6 +19,25 @@ function Particles() {
 }
 
 /**
+ * 위치·크기·박자가 제각각인 파티클 프리셋(2026-11-14 그림자 거미 여왕) — CSS가 --x·--y·--s·--t·--d 변수를 읽는다(title-fx.css pt-qtwinkle·pt-qglide).
+ * qtwinkle: 별 6개가 0.7초 간격으로 차례로 반짝(늘 하나쯤, 겹침 거의 없음) · qglide: 빛 조각 4개가 높이를 바꿔 글자 사이를 지나감.
+ */
+const PT_PRESETS: Record<string, string[]> = {
+  qtwinkle: ['--x:2%;--y:2%;--s:4px;--d:0s', '--x:56%;--y:60%;--s:3px;--d:-.7s', '--x:28%;--y:-6%;--s:3px;--d:-1.4s', '--x:90%;--y:8%;--s:4px;--d:-2.1s', '--x:14%;--y:58%;--s:3px;--d:-2.8s', '--x:72%;--y:-4%;--s:4px;--d:-3.5s'],
+  qglide: ['--y:22%;--t:2.8s;--d:0s', '--y:58%;--t:3.4s;--d:-1.2s', '--y:38%;--t:3.1s;--d:-2.1s', '--y:74%;--t:3.8s;--d:-.6s'],
+};
+const cssVars = (decl: string) => Object.fromEntries(decl.split(';').map((kv) => kv.split(':') as [string, string])) as React.CSSProperties;
+function PresetParticles({ preset }: { preset: string[] }) {
+  return (
+    <>
+      {preset.map((v, i) => (
+        <i key={i} style={cssVars(v)} />
+      ))}
+    </>
+  );
+}
+
+/**
  * 퍼짐 파티클(후원 칭호, style.pc) — 글자 위 등간격 지점(8~92%)에서 생성돼 바깥으로 퍼진다.
  * 방향은 가장자리일수록 멀리·위아래 교대, 위상차는 주기(4.8s)/개수로 균등 — 개수가 몇이든
  * 항상 1~2개가 살아 있고 0%=100%(원점·투명)라 루프 이음새가 없다(2026-08-26 확정).
@@ -294,7 +313,7 @@ export function TitleTag({
       {def.style.pt ? (
         <span className={`pt pt-${def.style.pt}`}>
           {inner}
-          {def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
+          {PT_PRESETS[def.style.pt] ? <PresetParticles preset={PT_PRESETS[def.style.pt]!} /> : def.style.pc ? <SpreadParticles count={def.style.pc} /> : <Particles />}
         </span>
       ) : (
         inner
