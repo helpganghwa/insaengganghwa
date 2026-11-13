@@ -62,12 +62,17 @@ async function soloBossOfResident(tx: Tx, userId: string, serverId: number): Pro
 
 /** 오늘 쓴 판(무료·유료)과 산 재도전 수. */
 async function todayRuns(tx: Tx, userId: string, serverId: number, bossId: string, day: string) {
-  const [r] = (await tx.execute(sql`
-    select count(*) filter (where not paid)::int as free, count(*) filter (where paid)::int as paid
-      from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date`)) as unknown as { free: number; paid: number }[];
   // 산 재도전은 보스별(11-14 결정) — point_extra_buys.slot = 그 보스의 구역 id(구역마다 개인 보스는 한 번에 하나).
-  const [z] = (await tx.execute(sql`select zone_id from world_bosses where id = ${bossId}::bigint`)) as unknown as { zone_id: number }[];
-  const bought = z ? await extrasToday(tx, userId, serverId, 'wb_retry', Number(z.zone_id), day) : 0;
+  // 같은 구역에 같은 날 여왕이 연달아 나오면 산 횟수(구역·날짜)가 이어지므로, 쓴 유료 판도 그 구역의 오늘 보스 전부로 센다
+  // (앞 여왕에서 산 재도전을 다음 여왕에서 공짜로 쓰지 않게, 11-14 검수). 무료 판은 보스마다.
+  const [r] = (await tx.execute(sql`
+    select count(*) filter (where not u.paid and u.boss_id = ${bossId}::bigint)::int as free, count(*) filter (where u.paid)::int as paid, b.zone_id
+      from world_bosses b
+      left join world_bosses z on z.server_id = b.server_id and z.zone_id = b.zone_id
+      left join world_boss_solo_runs u on u.boss_id = z.id and u.user_id = ${userId}::uuid and u.server_id = ${serverId} and u.kst_date = ${day}::date
+     where b.id = ${bossId}::bigint
+     group by b.zone_id`)) as unknown as { free: number; paid: number; zone_id: number }[];
+  const bought = r ? await extrasToday(tx, userId, serverId, 'wb_retry', Number(r.zone_id), day) : 0;
   return { free: Number(r?.free ?? 0), paid: Number(r?.paid ?? 0), bought };
 }
 function runsLeftOf(t: { free: number; paid: number; bought: number }) {
@@ -93,12 +98,13 @@ export async function wbRetrySlot(tx: Tx, userId: string, serverId: number): Pro
   return boss ? Number(boss.zone_id) : null;
 }
 
-/** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */
+/** 이 보스에 내가 넣은 누적 피해(모든 판). */
 async function dealtOf(tx: Tx, userId: string, bossId: string): Promise<number> {
   const [r] = (await tx.execute(sql`select coalesce(sum(score), 0)::text as s from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid`)) as unknown as { s: string }[];
   return Number(r?.s ?? 0);
 }
 
+/** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */
 async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, bestAt: string): Promise<number> {
   const [r] = (await tx.execute(sql`
     select count(*)::int + 1 as rank from world_boss_solo_records o

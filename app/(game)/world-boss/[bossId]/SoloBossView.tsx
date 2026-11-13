@@ -178,11 +178,14 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   useEffect(() => {
     onHardBack.current = () => {
       if (view === 'battle' && battleCtl.current?.skip()) return true;
+      const fromBattle = view === 'battle';
       setRun(null);
       setView('board');
+      // 결과 화면 버튼(closeBattle)과 같게 — 다른 사람 기록까지 다시 읽는다.
+      if (fromBattle) router.refresh();
       return false;
     };
-  }, [view]);
+  }, [view, router]);
   const inSub = view !== 'board';
   useEffect(() => {
     if (!inSub) return;
@@ -232,7 +235,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
       const meNow = d.me!;
       const dealt = ru.dealt;
-      const mine = { rank: ru.rank, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
+      const mine = { rank: ru.rank, reward: null, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
       const others = d.top.filter((x) => !x.me);
       const top = ru.rank <= 10 ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, 10).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, 10);
       patch({ me: { freeLeft: 0, retryLeft: ru.runsLeft, best: ru.best, dealt, rank: ru.rank }, total: ru.totalAfter, top, extra: 0 });
@@ -455,7 +458,7 @@ function FinalCard({ d }: { d: SoloDetail }) {
   );
 }
 
-type BoardRow = { rank: number; nick: string; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
+type BoardRow = { rank: number; reward?: { diamond: number; boxes: number } | null; nick: string; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
 /** 등수별 배경 틴트 — 대난투 순위와 같은 방식(금·은·동, 나는 보라). 좌→우라 오른쪽 아바타를 덮지 않는다. */
 function rankTint(rank: number, me: boolean): string {
@@ -480,6 +483,8 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
   const share = soloShareOf(r.dealt, total);
   const tr = soloShareReward(share, stage);
   const rr = soloRankReward(r.rank);
+  // 정산된 줄은 실제 지급값(우편과 같은 값), 머무는 동안은 지금 기준 예상값.
+  const shown = r.reward ?? { diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes };
   const pct = share > 0 ? Math.max(1, Math.min(100, share * 100)) : 0;
   const accent = rankAccent(r.rank, r.me);
   const sh = 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]';
@@ -504,7 +509,7 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           </div>
           <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>
-            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}
+            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText(shown)}
           </div>
         </div>
       </div>
@@ -528,13 +533,13 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
       <ul className="border-t border-slate-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
-          <Row key={r.userId} total={total} stage={stage} r={{ rank: r.rank, nick: r.nickname, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
+          <Row key={r.userId} total={total} stage={stage} r={{ rank: r.rank, reward: r.reward, nick: r.nickname, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
           me.best != null && me.rank != null ? (
             <>
               <li className="border-b border-slate-800/80 py-0.5 text-center text-[10px] leading-none text-slate-600">⋮</li>
-              <Row total={total} stage={stage} r={{ rank: me.rank, nick: me.nickname, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
+              <Row total={total} stage={stage} r={{ rank: me.finalRank ?? me.rank, reward: me.reward, nick: me.nickname, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             </>
           ) : (
             <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-400">아직 내 기록이 없어요</li>
@@ -1279,7 +1284,7 @@ function ResultCard({ run }: { run: Run }) {
         <p className="mt-1.5 text-center text-[10.5px] leading-snug text-slate-300">
           {detail === 'rank'
             ? `${rankBand} 순위 보상이에요. 보스가 사라질 때 최종 순위로 정해져요.`
-            : `참가 ${rewardText(SOLO_JOIN_REWARD)}와 기여도 ${soloSharePct(share)} 몫에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더한 지금 값이에요. 다른 사람이 도전하면 기여도가 바뀌고, 보스가 사라질 때 정해져요.`}
+            : josa(`참가 ${rewardText(SOLO_JOIN_REWARD)}#{와} 기여도 ${soloSharePct(share)} 몫에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더한 지금 값이에요. 다른 사람이 도전하면 기여도가 바뀌고, 보스가 사라질 때 정해져요.`)}
         </p>
       ) : null}
       <span data-step style={hide} />

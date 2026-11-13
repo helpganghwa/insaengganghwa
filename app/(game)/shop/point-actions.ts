@@ -26,7 +26,13 @@ export async function extraQuoteAction(item: PointExtraItem) {
     select coalesce((select melee_points from characters where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as mp,
            coalesce((select balance from mileage_wallets where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as ml,
            (select coalesce(sum(count), 0)::int from point_extra_buys
-             where user_id = ${u}::uuid and server_id = ${serverId} and kst_date = ${kstDateString()}::date and item = ${item}) as bought
+             where user_id = ${u}::uuid and server_id = ${serverId} and kst_date = ${kstDateString()}::date and item = ${item}
+               -- 월드보스 재도전은 보스별(slot = 거주 구역의 개인 보스 구역 id, 11-14) — 구매·도전과 같은 기준으로 센다.
+               ${item === 'wb_retry'
+                 ? sql`and slot = (select b.zone_id from characters c join world_bosses b on b.zone_id = c.residence_zone_id and b.server_id = c.server_id
+                                    where c.user_id = ${u}::uuid and c.server_id = ${serverId} and b.pool is not null and b.status = 'active' and b.leave_at > now()
+                                    order by b.spawn_at desc limit 1)`
+                 : sql``}) as bought
   `)) as unknown as { mp: string; ml: string; bought: number }[];
   const bought = Number(row?.bought ?? 0);
   return {

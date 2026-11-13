@@ -77,6 +77,19 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
       await testDb.execute(sql`insert into point_extra_buys (user_id, server_id, kst_date, item, slot, count) values (${T}::uuid, ${S}, ${day}::date, 'wb_retry', ${ZONE + 1}, 1)`);
       expect(await code(runSolo(T, S, bossId, crypto.randomUUID()))).toBe('NO_RUNS');
       expect((await getSoloBossDetail(bossId, S, T))?.me).toMatchObject({ retryLeft: 0 });
+      // 같은 구역에 오늘 먼저 떠난 여왕에서 산 재도전을 이미 썼다면 이 여왕에서 다시 쓰지 못한다(산 횟수·쓴 횟수 모두 구역·날짜 기준).
+      await testDb.execute(sql`insert into point_extra_buys (user_id, server_id, kst_date, item, slot, count) values (${T}::uuid, ${S}, ${day}::date, 'wb_retry', ${ZONE}, 1)`);
+      const [prevBoss] = await q<{ id: string }>(sql`
+        insert into world_bosses (server_id, zone_id, region, boss_code, kst_day, spawn_at, leave_at, status, pool)
+        values (${S}, ${ZONE}, 'volcano', 'shadow_queen', '2000-01-06'::date, now() - interval '3 days', now() - interval '1 day', 'left', '{}'::jsonb) returning id::text as id`);
+      try {
+        await testDb.execute(sql`insert into world_boss_solo_runs (boss_id, user_id, server_id, kst_date, paid, score, hits, power, idem_key)
+          values (${prevBoss!.id}::bigint, ${T}::uuid, ${S}, ${day}::date, true, 1, '[]'::jsonb, '{}'::jsonb, gen_random_uuid())`);
+        expect(await code(runSolo(T, S, bossId, crypto.randomUUID()))).toBe('NO_RUNS');
+        expect((await getSoloBossDetail(bossId, S, T))?.me).toMatchObject({ retryLeft: 0 });
+      } finally {
+        await testDb.execute(sql`delete from world_bosses where id=${prevBoss!.id}::bigint`);
+      }
     } finally {
       await testDb.execute(sql`delete from point_extra_buys where user_id=${T}::uuid and server_id=${S} and kst_date=${day}::date and item='wb_retry'`);
       for (const r of before) await testDb.execute(sql`insert into point_extra_buys (user_id, server_id, kst_date, item, slot, count) values (${T}::uuid, ${S}, ${day}::date, 'wb_retry', ${r.slot}, ${r.count})`);
