@@ -96,8 +96,8 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     const [rec] = await q<{ final_rank: number; reward_diamond: number; reward_boxes: number }>(sql`
       select final_rank, reward_diamond, reward_boxes from world_boss_solo_records where boss_id=${bossId}::bigint and user_id=${T}::uuid`);
     expect(rec!.final_rank).toBe(1);
-    // 혼자 친 보스 — 기여도 100%: (참가 30 + 기여 15,000) × 페이즈 보너스 + 1위 2,000.
-    expect(rec!.reward_diamond).toBeGreaterThanOrEqual(2000 + 15_030);
+    // 혼자 친 보스 — 기여도 100%: (참가 80 + 기여 9,000) × 페이즈 보너스 + 1위 2,500.
+    expect(rec!.reward_diamond).toBeGreaterThanOrEqual(2500 + 9_080);
     expect(rec!.reward_boxes % 3).toBe(0);
     const mails = await q<{ title: string; body: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`
       select title, body, payload from mailbox where user_id=${T}::uuid and type='world_boss' and created_at >= ${t0.toISOString()}::timestamptz`);

@@ -1347,7 +1347,7 @@ function RewardSheet({ stage, share, rank, onClose }: { stage: number; share: nu
   const myBand = rank == null ? -1 : SOLO_RANK_REWARDS.findIndex((r) => rank >= r.from && rank <= r.to);
   const per1 = { diamond: Math.round(SOLO_SHARE_POOL.diamond * 0.01 * m), boxes: Math.round(SOLO_SHARE_POOL.boxes * 0.01 * m) };
   const rows: [string, string][] = [
-    ['참가 보상', rewardText({ diamond: Math.round(SOLO_JOIN_REWARD.diamond * m), boxes: Math.round(SOLO_JOIN_REWARD.boxes * m) })],
+    ['참가 보상', rewardText(soloShareReward(0, stage))],
     ['기여도 1%마다', rewardText(per1)],
   ];
   if (share != null) rows.push([`내 기여도 ${soloSharePct(share)}`, rewardText(soloShareReward(share, stage))]);

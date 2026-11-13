@@ -6,8 +6,8 @@
  *   · 거미줄 타기 5%(빗나감) · 약점 노출 5%(×2).
  * - 효과가 없는 패턴(평소, 전투력 0인 부위를 묶음)은 'none'으로 적는다 — 화면이 이름표를 띄우지 않는다.
  * - 공동 페이즈: n페이즈 체력 = 1,000만 × 1.1^(n-1). 모든 판의 점수가 쌓인다.
- * - 보상(11-14): 참가 💎30 📦6 + 기여도 보상(💎15,000·📦2,000 × 내 누적 피해 ÷ 보스 누적 피해), 둘 다 × 최종 페이즈 보너스(2%씩, 상한 60%)
- *   + 순위(최고 기록 1~30위, 페이즈 보너스 없음).
+ * - 보상(11-14 확정): 참가 💎80 📦9 + 기여도 보상(💎9,000·📦1,200 × 내 누적 피해 ÷ 보스 누적 피해, 개인 상한 없음), 둘 다 × 최종 페이즈 보너스(2%씩, 상한 60%)
+ *   + 순위(최고 기록 1~100위, 페이즈 보너스 없음).
  */
 
 export type SoloPattern = 'none' | 'crouch' | 'weapon' | 'armor' | 'accessory' | 'dodge' | 'expose';
@@ -111,15 +111,17 @@ export function soloPhaseFor(totalDamage: number): { stage: number; into: number
 // ── 보상(11-14 확정: 구간 보상 → 기여도 보상) ───────────────────────────────
 export type SoloReward = { diamond: number; boxes: number };
 /** 참가 보상 — 한 판이라도 도전한 사람 모두. */
-export const SOLO_JOIN_REWARD: SoloReward = { diamond: 30, boxes: 6 };
+export const SOLO_JOIN_REWARD: SoloReward = { diamond: 80, boxes: 9 };
 /** 기여도 보상 총량 — 보스가 받은 전체 피해 중 내가 넣은 몫(모든 판 합)만큼 나눠 받는다. */
-export const SOLO_SHARE_POOL: SoloReward = { diamond: 15_000, boxes: 2_000 };
+export const SOLO_SHARE_POOL: SoloReward = { diamond: 9_000, boxes: 1_200 };
 export const SOLO_RANK_REWARDS: readonly ({ from: number; to: number } & SoloReward)[] = [
-  { from: 1, to: 1, diamond: 2000, boxes: 90 },
-  { from: 2, to: 2, diamond: 1500, boxes: 66 },
-  { from: 3, to: 3, diamond: 1000, boxes: 45 },
-  { from: 4, to: 10, diamond: 500, boxes: 24 },
-  { from: 11, to: 30, diamond: 150, boxes: 9 },
+  { from: 1, to: 1, diamond: 2500, boxes: 105 },
+  { from: 2, to: 2, diamond: 1800, boxes: 78 },
+  { from: 3, to: 3, diamond: 1300, boxes: 57 },
+  { from: 4, to: 10, diamond: 700, boxes: 30 },
+  { from: 11, to: 30, diamond: 300, boxes: 15 },
+  { from: 31, to: 50, diamond: 150, boxes: 9 },
+  { from: 51, to: 100, diamond: 80, boxes: 6 },
 ];
 export const SOLO_PHASE_BONUS_PER_STAGE = 0.02;
 export const SOLO_PHASE_BONUS_CAP = 0.6;

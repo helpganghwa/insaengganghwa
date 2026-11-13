@@ -114,7 +114,7 @@ async function settleOne(serverId: number, id: string): Promise<SettledBoss | nu
       `)) as unknown as { id: string; zone_id: number; region: string; boss_code: string; stage: number; loot_diamond: string; loot_boxes: number; solo: boolean; zone_name: string; owner: string | null; owner_name: string | null }[];
       if (!b) return null; // 다른 틱이 먼저 정산
       if (b.solo) {
-        // 개인 보스(0253) — 길드 전리품 없음. 최고 기록 순위로 구간·순위 보상을 우편으로(참가자 모두).
+        // 개인 보스(0253) — 길드 전리품 없음. 참가·기여도·순위(최고 기록) 보상을 우편으로(참가자 모두).
         const leaveS = worldBossKind(b.boss_code).lines.leave;
         await settleSoloBoss(tx, { serverId, bossId: b.id, bossName: worldBossName(b.boss_code), zoneName: b.zone_name, stage: Number(b.stage), leavePolite: leaveS.pastPolite });
         await tx.execute(sql`update world_bosses set status = 'left', settled_at = now() where id = ${id}::bigint`);

@@ -47,19 +47,21 @@ describe('개인 월드보스 규칙', () => {
     expect(soloPhaseFor(21_000_000).stage).toBe(2);
   });
 
-  it('참가·기여도 보상 + 페이즈 보너스(상자 3의 배수), 순위 보상', () => {
-    expect(soloShareReward(0, 0)).toEqual({ diamond: 30, boxes: 6 });
-    expect(soloShareReward(0.1, 0)).toEqual({ diamond: 1530, boxes: 207 });
-    expect(soloShareReward(0.01, 25)).toEqual({ diamond: Math.round(180 * 1.5), boxes: Math.round((26 * 1.5) / 3) * 3 }); // +50%
-    expect(soloShareReward(1, 100).diamond).toBe(Math.round(15_030 * 1.6)); // 상한 +60%
+  it('참가·기여도 보상 + 페이즈 보너스(상자 3의 배수), 순위 보상 100위까지', () => {
+    expect(soloShareReward(0, 0)).toEqual({ diamond: 80, boxes: 9 });
+    expect(soloShareReward(0.1, 0)).toEqual({ diamond: 980, boxes: 129 });
+    expect(soloShareReward(0.01, 25)).toEqual({ diamond: Math.round(170 * 1.5), boxes: Math.round((21 * 1.5) / 3) * 3 }); // +50%
+    expect(soloShareReward(1, 100).diamond).toBe(Math.round(9_080 * 1.6)); // 상한 +60%
     for (let st = 0; st < 40; st++) for (const sh of [0, 0.0003, 0.004, 0.02, 0.07, 0.15, 0.33, 1]) expect(soloShareReward(sh, st).boxes % 3).toBe(0);
     expect(soloShareOf(5, 0)).toBe(0);
     expect(soloShareOf(25, 100)).toBe(0.25);
     expect(soloSharePct(0.0005)).toBe('0.1% 미만');
     expect(soloSharePct(0.123)).toBe('12.3%');
-    expect(soloRankReward(1)).toEqual({ diamond: 2000, boxes: 90 });
-    expect(soloRankReward(7)).toEqual({ diamond: 500, boxes: 24 });
-    expect(soloRankReward(30)).toEqual({ diamond: 150, boxes: 9 });
-    expect(soloRankReward(31)).toEqual({ diamond: 0, boxes: 0 });
+    expect(soloRankReward(1)).toEqual({ diamond: 2500, boxes: 105 });
+    expect(soloRankReward(7)).toEqual({ diamond: 700, boxes: 30 });
+    expect(soloRankReward(30)).toEqual({ diamond: 300, boxes: 15 });
+    expect(soloRankReward(50)).toEqual({ diamond: 150, boxes: 9 });
+    expect(soloRankReward(100)).toEqual({ diamond: 80, boxes: 6 });
+    expect(soloRankReward(101)).toEqual({ diamond: 0, boxes: 0 });
   });
 });
