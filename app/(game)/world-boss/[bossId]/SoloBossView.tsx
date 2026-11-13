@@ -146,7 +146,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
         <>
           <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} bossName={bossName} leftText={leftText} phase={phase} />
           <Board d={d} />
-          <MyLine d={d} />
+          <MyLine d={d} stage={phase.stage} />
           {me && !me.resident && active ? (
             <p className="mx-3 mt-2 rounded-lg border border-violet-500/30 bg-violet-950/40 px-2.5 py-2 text-[11.5px] leading-snug text-zinc-300">
               {d.zoneName}에 거주하면 도전할 수 있어요.{me.homeZoneName ? ` 지금 거주지는 ${me.homeZoneName}이에요.` : ''}{' '}
@@ -185,7 +185,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
       )}
 
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
-      {sheet === 'reward' && <RewardSheet stage={d.stage} onClose={() => setSheet(null)} />}
+      {sheet === 'reward' && <RewardSheet stage={phase.stage} onClose={() => setSheet(null)} />}
       {sheet === 'pool' && <PoolSheet d={d} onClose={() => setSheet(null)} />}
     </div>
   );
@@ -195,7 +195,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
 
 function Hero({ d, bgSrc, spriteSrc, bossName, leftText, phase }: { d: SoloDetail; bgSrc: string; spriteSrc: string; bossName: string; leftText: string; phase: ReturnType<typeof soloPhaseFor> }) {
   const router = useRouter();
-  const bonus = Math.round((soloPhaseBonus(d.stage) - 1) * 100);
+  const bonus = Math.round((soloPhaseBonus(phase.stage) - 1) * 100);
   return (
     <div className="relative h-[168px] overflow-hidden bg-slate-950">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -205,7 +205,7 @@ function Hero({ d, bgSrc, spriteSrc, bossName, leftText, phase }: { d: SoloDetai
         ‹
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={spriteSrc} alt="" className={`absolute top-1/2 left-1/2 z-[1] h-[120px] w-[120px] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,.4)] ${d.status === 'left' ? 'opacity-50 grayscale' : ''}`} style={PIX} />
+      <img src={spriteSrc} alt="" className={`absolute top-[60%] left-1/2 z-[1] h-[112px] w-[112px] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,.4)] ${d.status === 'left' ? 'opacity-50 grayscale' : ''}`} style={PIX} />
       <div className="absolute top-3 right-3 left-[52px] z-[2] flex flex-col">
         <span className="flex items-center gap-1.5">
           <span className="rounded-[4px] bg-violet-700/90 px-1 text-[9px] leading-[1.5] font-extrabold text-violet-50">월드보스</span>
@@ -271,7 +271,7 @@ function Board({ d }: { d: SoloDetail }) {
   );
 }
 
-function MyLine({ d }: { d: SoloDetail }) {
+function MyLine({ d, stage }: { d: SoloDetail; stage: number }) {
   const me = d.me;
   if (!me) return null;
   if (d.status === 'left' && me.reward) {
@@ -288,7 +288,7 @@ function MyLine({ d }: { d: SoloDetail }) {
   const t = soloTierIndex(me.best);
   const tier = SOLO_TIERS[t]!;
   const next = SOLO_TIERS[t + 1];
-  const r = soloTierReward(me.best, d.stage);
+  const r = soloTierReward(me.best, stage);
   return (
     <div className="mx-3 mt-2 flex items-center justify-between rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px]">
       <span className="text-zinc-400">
@@ -305,7 +305,7 @@ function MyLine({ d }: { d: SoloDetail }) {
 
 // ── 도전 준비 ───────────────────────────────────────────────────────────────
 
-function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLeft }: { d: SoloDetail; onBack: () => void; onPool: () => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number }) {
+export function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLeft }: { d: SoloDetail; onBack: () => void; onPool: () => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number }) {
   const me = d.me!;
   const total = me.power.weapon + me.power.armor + me.power.accessory;
   const required = d.pool.weapon.length + d.pool.armor.length + d.pool.accessory.length;
@@ -425,7 +425,7 @@ const LAND: Partial<Record<string, number>> = { crouch: 520, weapon: 880, armor:
 const PC: Partial<Record<string, string>> = { crouch: 'wbq-crouch', dodge: 'wbq-climb', weapon: 'wbq-bind', armor: 'wbq-bind', accessory: 'wbq-bind', expose: 'wbq-expose' };
 const SIL = 'drop-shadow(0 0 10px rgba(139,92,246,.4))';
 
-function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
+export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
   const me = d.me!;
   const root = useRef<HTMLDivElement>(null);
   const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, timers: [] as ReturnType<typeof setTimeout>[] });
@@ -680,7 +680,8 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
           <span data-pdesc className="block text-[10px] text-zinc-300/90" />
         </div>
         <div data-thread className="pointer-events-none absolute top-0 left-1/2 z-[1] w-px -translate-x-1/2 bg-slate-200/70" style={{ height: 0, transition: 'height .3s ease-out' }} />
-        <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[56%] left-1/2 z-[1] h-[179px] w-[179px] -translate-x-1/2 -translate-y-1/2" style={bossVars} />
+        {/* 가운데 정렬은 margin으로 — Tailwind v4의 -translate-*는 translate 속성이라 거미줄 타기 오르내림(translate keyframes)과 겹쳐 튄다. */}
+        <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[56%] left-1/2 z-[1] -mt-[89.5px] -ml-[89.5px] h-[179px] w-[179px]" style={bossVars} />
         <div data-fx className="pointer-events-none absolute inset-0 z-[5]" />
       </div>
 

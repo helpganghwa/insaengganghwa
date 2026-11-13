@@ -17,7 +17,7 @@ import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { WorldBossZoneCard } from './WorldBossZoneCard';
 import { assetUrl } from '@/lib/asset-versions';
 import { kstStartOfDay } from '@/lib/kst';
-import { worldBossKind, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
+import { worldBossIsSolo, worldBossKind, worldBossSpriteUrl } from '@/lib/game/world-boss/bosses';
 import type { WorldBossMapBoss, WorldBossMapLeft, WorldBossMapState } from '@/lib/game/world-boss/map-types';
 import { GUILD_EXECUTOR_TAX_CUT, TAX_COLLECT_COOLDOWN_MIN } from '@/lib/game/guild/balance';
 
@@ -374,7 +374,7 @@ const WorldMap = memo(function WorldMap({
               aria-label={z.name}
               // p-2: 시각 노드(17px)는 그대로 두고 투명 패딩으로 터치 히트영역 확대(~33px, 오탭 완화).
               // 보스 구역의 불꽃 테두리는 버튼의 ::before 층(.wb-zone-host)이 맡는다 — 칸(span)은 overflow-hidden이라 바깥 그림자를 못 그리고, opacity만 맥동시켜 합성기만 쓴다(10-11 사용자).
-              className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 ${boss ? 'wb-zone-host' : ''}`}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 p-2 ${boss ? `wb-zone-host${worldBossIsSolo(boss.bossCode) ? ' wb-solo' : ''}` : ''}`}
               style={{
                 left: `${z.mapX}%`,
                 top: `${z.mapY}%`,
@@ -440,7 +440,7 @@ const WorldMap = memo(function WorldMap({
               {/* 노드 라벨 — 구역명(역사 모드) / 점령 길드명(중립은 라벨 없음). 네모칸 바로 아래(p-2 보정), 클릭 통과.
                   월드보스 구역(세계지도 탭)은 '월드보스 출현'으로 고정 — 칸 안의 문양만 3초씩 보스 그림과 번갈아 바뀌고, 보스 그림 구간엔 라벨 테두리도 칸과 같은 호박색으로 발광(.wb-zone-label, 10-11). */}
               {boss ? (
-                <span className="wb-zone-label pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border bg-[#1a0f07] px-[3px] text-[5.5px] font-extrabold leading-[1.45] text-orange-300">
+                <span className={`wb-zone-label pointer-events-none absolute left-1/2 top-full -mt-1.5 -translate-x-1/2 whitespace-nowrap rounded-sm border px-[3px] text-[5.5px] font-extrabold leading-[1.45] ${worldBossIsSolo(boss.bossCode) ? 'wb-solo bg-[#120b24] text-violet-200' : 'bg-[#1a0f07] text-orange-300'}`}>
                   월드보스 출현
                 </span>
               ) : (

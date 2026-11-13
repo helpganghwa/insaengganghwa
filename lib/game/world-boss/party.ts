@@ -47,10 +47,11 @@ async function lockActiveBoss(tx: Tx, bossId: string, mode: 'update' | 'share' =
   await lockTimeout(tx);
   const lock = mode === 'share' ? sql`for share of b` : sql`for update of b`;
   const [b] = (await tx.execute(sql`
-    select b.id::text as id, b.server_id, b.zone_id, b.region::text as region, b.status, b.leave_at, (b.leave_at > now()) as alive, z.owner_guild_id::text as owner, z.name as zone_name
+    select b.id::text as id, b.server_id, b.zone_id, b.region::text as region, b.status, b.leave_at, (b.leave_at > now()) as alive, z.owner_guild_id::text as owner, z.name as zone_name, (b.pool is not null) as solo
       from world_bosses b join zones z on z.id = b.zone_id where b.id = ${bossId}::bigint ${lock}
-  `)) as unknown as (BossRow & { alive: boolean })[];
+  `)) as unknown as (BossRow & { alive: boolean; solo: boolean })[];
   if (!b || b.status === 'scheduled') throw new WorldBossError('NOT_FOUND'); // 예정 보스는 없는 것처럼(존재 노출 방지, 10-11 3차 감사)
+  if (b.solo) throw new WorldBossError('NOT_FOUND'); // 개인 보스(0253)엔 원정대가 없다 — 액션을 직접 불러도 만들 수 없게
   if (requireActive && (b.status !== 'active' || !b.alive)) throw new WorldBossError('BOSS_NOT_ACTIVE');
   return b;
 }
