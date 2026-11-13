@@ -103,6 +103,10 @@ export function RouteTransitionOverlay() {
         return;
       const a = (e.target as Element | null)?.closest?.('a');
       if (!a) return;
+      // 슬라이드(Swiper)를 끌어 넘긴 끝의 클릭 — Swiper가 자기 요소에서 이 클릭을 막아 이동은 없는데, 여기(document 캡처)가
+      // 먼저 돌아 로딩만 떠 있던 것(11-14 사용자, 홈 월드보스 배너). 끌기 중이면 allowClick이 false다.
+      const sw = (a.closest('.swiper') as (Element & { swiper?: { allowClick?: boolean } }) | null)?.swiper;
+      if (sw && sw.allowClick === false) return;
       const href = a.getAttribute('href');
       if (!href || a.target === '_blank' || a.hasAttribute('download')) return;
       let url: URL;
