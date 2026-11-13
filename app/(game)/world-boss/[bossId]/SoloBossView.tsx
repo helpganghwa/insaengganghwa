@@ -20,7 +20,6 @@ import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
 import {
   SOLO_PATTERN_LABEL,
-  SOLO_PATTERN_TABLE,
   SOLO_RANK_REWARDS,
   SOLO_TIERS,
   soloPhaseBonus,
@@ -82,6 +81,20 @@ function rollNumber(el: HTMLElement, from: number, to: number, ms: number) {
   rolling.set(el, requestAnimationFrame(step));
 }
 const PATTERN_TONE: Record<string, string> = { crouch: 'text-sky-300', weapon: 'text-violet-300', armor: 'text-violet-300', accessory: 'text-violet-300', dodge: 'text-zinc-300', expose: 'text-rose-300' };
+
+/** 채팅 미니바 위에 떠 있는 버튼 줄(11-13 사용자) — 길드 생성 버튼과 같은 자리 계산(--chat-dock-h). 아래 빈칸이 내용이 가려지지 않게 받친다. */
+function FloatingBar({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <div aria-hidden className="h-24" />
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 mx-auto max-w-[390px]">
+        <div className="bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent px-3 pt-6 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
+          <div className="pointer-events-auto flex h-12 gap-2 [&>*]:shadow-[0_6px_18px_rgba(0,0,0,.55)]">{children}</div>
+        </div>
+      </div>
+    </>
+  );
+}
 
 function PrimaryButton({ children, className = '', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
@@ -189,9 +202,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
               </Link>
             </p>
           ) : null}
-          <div className="px-3 pt-3 pb-1">
-            <div className="flex h-11 flex-none gap-2">{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</div>
-          </div>
+          <FloatingBar>{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</FloatingBar>
         </>
       )}
 
@@ -554,14 +565,12 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
           ))}
         </div>
       </div>
-      <div className="px-3 pt-3 pb-1">
-        <div className="flex h-11 flex-none gap-2">
-          <SecondaryButton onClick={onPattern}>패턴 안내</SecondaryButton>
-          <PrimaryButton onClick={onGo} disabled={pending || total <= 0 || runsLeft <= 0}>
-            {pending ? '준비 중' : total <= 0 ? '요구 장비 필요' : '출발'}
-          </PrimaryButton>
-        </div>
-      </div>
+      <FloatingBar>
+        <SecondaryButton onClick={onPattern}>패턴 안내</SecondaryButton>
+        <PrimaryButton onClick={onGo} disabled={pending || total <= 0 || runsLeft <= 0}>
+          {pending ? '준비 중' : total <= 0 ? '요구 장비 필요' : '출발'}
+        </PrimaryButton>
+      </FloatingBar>
     </>
   );
 }
@@ -1101,9 +1110,7 @@ function ResultCard({ run }: { run: Run }) {
             : `${tierLabel(tierAfter)} ${tierAfter === 0 ? '' : '구간 '}${rewardText(SOLO_TIERS[tierAfter]!)}에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더했어요. 페이즈가 오를수록 늘어나요.`}
         </p>
       ) : null}
-      <p data-step style={hide} className="mt-1.5 text-center text-[10px] text-zinc-500">
-        보상은 보스가 사라질 때 우편으로 받아요 · 칩을 누르면 설명
-      </p>
+      <span data-step style={hide} />
       {/* 시안과 같은 6단계 — 칩이 하나면 빈 자리를 채운다. */}
       {rr.diamond > 0 ? null : <span data-step style={hide} />}
     </div>
@@ -1112,54 +1119,51 @@ function ResultCard({ run }: { run: Run }) {
 
 // ── 안내 시트 ───────────────────────────────────────────────────────────────
 
-const PATTERN_GROUPS: { title: string; keys: string[] }[] = [
-  { title: '피해 그대로', keys: ['normal'] },
-  { title: '피해가 줄어요', keys: ['crouch', 'weapon', 'armor', 'accessory', 'dodge'] },
-  { title: '피해가 늘어요', keys: ['expose'] },
-];
-
-/** 안내 팝업 공통 — 본문 카드(bodyPad sm) 안에서 소제목 + 구분선 목록. 줄 여백은 px-3 py-2.5로 통일. */
-function SheetSection({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+/** 안내 팝업 공통 표 — 머리줄 + 줄(px-3 py-2), 본문 카드(bodyPad sm) 안에 바로. */
+function SheetTable({ head, rows, hi }: { head: [string, string]; rows: [string, string][]; hi?: number }) {
   return (
-    <section className="mt-3 first:mt-0">
-      <div className="flex items-baseline justify-between px-3 pb-1.5">
-        <h3 className="text-[11.5px] font-bold text-zinc-400">{title}</h3>
-        {aside ? <span className="text-[11px] text-zinc-500">{aside}</span> : null}
-      </div>
-      <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800">{children}</ul>
-    </section>
+    <table className="w-full overflow-hidden rounded-xl text-[12.5px]">
+      <thead>
+        <tr className="bg-zinc-950/80 text-[11px] text-zinc-500">
+          <th className="px-3 py-1.5 text-left font-bold">{head[0]}</th>
+          <th className="px-3 py-1.5 text-right font-bold">{head[1]}</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-zinc-800">
+        {rows.map(([a, b], i) => (
+          <tr key={a} className={i === hi ? 'bg-violet-500/15' : ''}>
+            <td className={`px-3 py-2 font-bold ${i === hi ? 'text-violet-200' : 'text-zinc-200'}`}>{a}</td>
+            <td className="px-3 py-2 text-right font-bold text-zinc-100 tabular-nums">{b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
+
+const PATTERN_ORDER = ['crouch', 'weapon', 'armor', 'accessory', 'dodge', 'expose'] as const;
 
 function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloFx; onClose: () => void }) {
   return (
     <ModalShell onClose={onClose} label="여왕의 패턴">
-      <ModalLayout title="여왕의 패턴" subtitle="공격할 때마다 하나 · 치명타 10%(×1.5)는 따로" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
-        <div className="py-1">
-          {PATTERN_GROUPS.map((g) => (
-            <SheetSection key={g.title} title={g.title}>
-              {g.keys.map((k) => {
-                const row = SOLO_PATTERN_TABLE.find((x) => x.p === k)!;
-                const label = k === 'normal' ? null : SOLO_PATTERN_LABEL[k as keyof typeof SOLO_PATTERN_LABEL];
-                return (
-                  <li key={k} className="flex items-center gap-3 px-3 py-2.5">
-                    <span className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-900 ring-1 ring-violet-500/25">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={spriteSrc} alt="" className="h-9 w-9 drop-shadow-[0_0_6px_rgba(139,92,246,.4)]" style={PIX} />
-                      {k === 'weapon' || k === 'armor' || k === 'accessory' ? <span className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated' }} /> : null}
-                      {k === 'expose' ? <span className="absolute inset-0 bg-[radial-gradient(circle,rgba(251,113,133,.45),transparent_65%)]" /> : null}
-                    </span>
-                    <span className="min-w-0 flex-1 leading-tight">
-                      <b className={`block text-[13px] font-extrabold ${label ? PATTERN_TONE[k] : 'text-zinc-200'}`}>{label?.name ?? '패턴 없음'}</b>
-                      <span className="mt-0.5 block text-[11.5px] text-zinc-400">{label?.desc ?? '이름표 없이 그대로 맞아요'}</span>
-                    </span>
-                    <b className="flex-none font-mono text-[13px] text-zinc-200 tabular-nums">{Math.round(row.w * 100)}%</b>
-                  </li>
-                );
-              })}
-            </SheetSection>
-          ))}
-        </div>
+      <ModalLayout title="여왕의 패턴" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+        <ul className="divide-y divide-zinc-800">
+          {PATTERN_ORDER.map((k) => {
+            const label = SOLO_PATTERN_LABEL[k];
+            return (
+              <li key={k} className="flex items-center gap-3 px-2 py-2">
+                <span className="relative flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-900 ring-1 ring-violet-500/25">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={spriteSrc} alt="" className="h-8 w-8" style={PIX} />
+                  {k === 'weapon' || k === 'armor' || k === 'accessory' ? <span className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated' }} /> : null}
+                  {k === 'expose' ? <span className="absolute inset-0 bg-[radial-gradient(circle,rgba(251,113,133,.45),transparent_65%)]" /> : null}
+                </span>
+                <b className={`flex-1 text-[13px] font-extrabold ${PATTERN_TONE[k]}`}>{label.name}</b>
+                <span className="flex-none text-[12px] text-zinc-300">{label.desc}</span>
+              </li>
+            );
+          })}
+        </ul>
       </ModalLayout>
     </ModalShell>
   );
@@ -1167,41 +1171,13 @@ function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloF
 
 function RewardSheet({ stage, best, onClose }: { stage: number; best: number | null; onClose: () => void }) {
   const bonus = Math.round((soloPhaseBonus(stage) - 1) * 100);
-  const myTier = best == null ? -1 : soloTierIndex(best);
+  const myTier = best == null ? undefined : soloTierIndex(best);
   return (
     <ModalShell onClose={onClose} label="보상 안내">
-      <ModalLayout title="보상 안내" subtitle="원정이 종료되면 우편으로 받아요" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
-        <div className="py-1">
-          <div className="mx-1 flex items-center justify-between rounded-xl bg-violet-950/50 px-3 py-2.5 ring-1 ring-violet-500/30">
-            <span className="text-[12px] leading-snug text-zinc-300">
-              지금 {stage}페이즈
-              <span className="block text-[10.5px] text-zinc-500">페이즈마다 +2% · 최대 +60%</span>
-            </span>
-            <b className="text-[18px] font-black text-violet-200">+{bonus}%</b>
-          </div>
-          <SheetSection title="구간 보상" aside="최고 기록 하나로">
-            {SOLO_TIERS.map((t, i) => {
-              const now = soloTierReward(t.min, stage);
-              const mine = i === myTier;
-              return (
-                <li key={t.min} className={`flex items-center gap-2 px-3 py-2 text-[12px] ${mine ? 'bg-violet-500/10' : ''}`}>
-                  <span className={`w-12 flex-none font-bold ${mine ? 'text-violet-200' : 'text-zinc-200'}`}>{t.min === 0 ? '참가' : t.label}</span>
-                  <span className="flex-1 text-zinc-500 tabular-nums">{rewardText(t)}</span>
-                  <b className="flex-none text-zinc-100 tabular-nums">{rewardText(now)}</b>
-                </li>
-              );
-            })}
-          </SheetSection>
-          <p className="px-3 pt-1 text-right text-[10.5px] text-zinc-500">오른쪽이 지금 페이즈 보너스를 더한 값</p>
-          <SheetSection title="순위 보상" aside="페이즈 보너스 없음">
-            {SOLO_RANK_REWARDS.map((r) => (
-              <li key={r.from} className="flex items-center justify-between px-3 py-2 text-[12px]">
-                <span className="font-bold text-zinc-200">{r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`}</span>
-                <b className="text-zinc-100 tabular-nums">{rewardText(r)}</b>
-              </li>
-            ))}
-          </SheetSection>
-          <p className="px-3 pt-2 text-[11px] leading-relaxed text-zinc-500">구간 보상과 순위 보상을 함께 받아요. 같은 기록이면 먼저 세운 사람이 위예요.</p>
+      <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 구간 보상 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+        <div className="space-y-2">
+          <SheetTable head={['구간', '보상']} rows={SOLO_TIERS.map((t) => [t.min === 0 ? '참가' : t.label, rewardText(soloTierReward(t.min, stage))])} hi={myTier} />
+          <SheetTable head={['순위', '보상']} rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, rewardText(r)])} />
         </div>
       </ModalLayout>
     </ModalShell>
