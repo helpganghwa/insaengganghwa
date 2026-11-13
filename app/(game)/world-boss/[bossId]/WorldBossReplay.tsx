@@ -20,7 +20,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { worldBossStageFor } from '@/lib/game/guild/balance';
 import { sounds } from '@/lib/game/sound';
 import { modalHistory } from '@/lib/ui/modal-history';
-import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
+import { worldBossBgEmberUrl, worldBossBgUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle } from '@/lib/game/world-boss/view-types';
 
@@ -300,7 +300,7 @@ export function WorldBossReplay({
       <>
           {/* 위 — 무대(배경 + 보스 + 일지). 글자는 어두운 바탕 위에만 둬 숲 배경에서도 읽힌다(리뷰 R1). */}
           <div className="relative h-[300px] shrink-0 overflow-hidden text-left">
-            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(battle.bossCode))} className="opacity-85" />
+            <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(battle.bossCode) ?? worldBossBgUrl(battle.bossCode))} className="opacity-85" />
             <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(9,9,11,0.75)_0%,transparent_20%,transparent_55%,#09090b_100%)]" />
             {/* 보스가 칠 때 가장자리만 붉게 물든다(전체를 덮으면 분홍으로 튐 — 2026-10-09) */}
             {struck && <span key={`f${idx}`} className="wb-vignette pointer-events-none absolute inset-0 animate-wb-flash" />}

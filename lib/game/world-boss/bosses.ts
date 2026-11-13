@@ -9,19 +9,24 @@
  * 이름·문장 모음은 💎📦 외 이모지·줄표를 쓰지 않는다(10-11 사용자). josa 표기(#{을} 등)는 호출부가 josa()로 풀어 쓴다.
  */
 
-export type WorldBossKindCode = 'ember_phoenix';
+export type WorldBossKindCode = 'ember_phoenix' | 'shadow_queen';
 
 export type WorldBossKind = {
   code: WorldBossKindCode;
   name: string;
+  /** 개인 보스(0253) — 원정대 대신 거주자가 혼자 10타 도전, 최고 기록 순위(docs/WORLD-BOSS-SOLO.md). 소환 때 요구 장비(pool)를 뽑는다. */
+  solo?: boolean;
+  /** 화면 색 묶음 — 배지·숫자·테두리·바탕(Tailwind 색 이름). 불사조 orange, 거미 여왕 violet. */
+  accent: 'orange' | 'violet';
   /** 정지 그림(256px 정면). */
   sprite: string;
   /** 대기 애니 띠(9프레임, 0번 = 정지 그림)와 같은 박자의 빛 띠. */
   anim: string;
-  ember: string;
+  /** 대기 띠와 같은 박자의 빛 띠 — 없으면 빛 맥동 층을 그리지 않는다. */
+  ember: string | null;
   /** 무대 배경(400×240)과 배경에서 뽑은 빛. */
   bg: string;
-  bgEmber: string;
+  bgEmber: string | null;
   /** 이야기 문장 — 재생 일지·월드 로그·우편·푸시. */
   lines: {
     /** 대원의 공격(무기 이름이 기록된 전투). */
@@ -38,6 +43,7 @@ export type WorldBossKind = {
 const EMBER_PHOENIX: WorldBossKind = {
   code: 'ember_phoenix',
   name: '잿불의 불사조',
+  accent: 'orange',
   sprite: '/sprites/world-boss/boss.webp', // 무손실 webp(10-11: png 58KB → 19KB)
   anim: '/sprites/world-boss/boss__anim.webp',
   ember: '/sprites/world-boss/boss__ember.webp',
@@ -69,7 +75,35 @@ const EMBER_PHOENIX: WorldBossKind = {
   },
 };
 
-export const WORLD_BOSS_KINDS: Record<WorldBossKindCode, WorldBossKind> = { ember_phoenix: EMBER_PHOENIX };
+/** 그림자 거미 여왕(11-13) — 개인 보스. 패턴 애니 띠(웅크리기·거미줄 타기·옭아매기·약점 노출)와 거미줄 그림은 SHADOW_QUEEN_FX. */
+const SHADOW_QUEEN: WorldBossKind = {
+  code: 'shadow_queen',
+  name: '그림자 거미 여왕',
+  solo: true,
+  accent: 'violet',
+  sprite: '/sprites/world-boss/shadow-queen/boss.webp',
+  anim: '/sprites/world-boss/shadow-queen/idle.webp',
+  ember: null,
+  bg: '/sprites/world-boss/shadow-queen/bg.webp',
+  bgEmber: null,
+  lines: {
+    // 원정대 재생용 문장 — 개인 보스는 원정대가 없어 쓰이지 않지만 표의 모양을 맞춘다.
+    attack: [(n, w) => `${n}, ${w}#{을} 휘두른다`],
+    bareAttack: [(n) => `${n}#{이} 일격을 날린다`],
+    strike: [(_, n) => `거미줄이 ${n}#{을} 휘감았다. 쓰러짐`],
+    leave: { linking: '그림자 속으로 사라지며', pastPolite: '그림자 속으로 사라졌어요', pastFormal: '그림자 속으로 사라졌습니다' },
+  },
+};
+export const SHADOW_QUEEN_FX = {
+  crouch: '/sprites/world-boss/shadow-queen/crouch.webp',
+  climb: '/sprites/world-boss/shadow-queen/climb.webp',
+  bind: '/sprites/world-boss/shadow-queen/bind.webp',
+  expose: '/sprites/world-boss/shadow-queen/expose.webp',
+  webshot: '/sprites/world-boss/shadow-queen/webshot.webp',
+  webnet: '/sprites/world-boss/shadow-queen/webnet.webp',
+} as const;
+
+export const WORLD_BOSS_KINDS: Record<WorldBossKindCode, WorldBossKind> = { ember_phoenix: EMBER_PHOENIX, shadow_queen: SHADOW_QUEEN };
 export const DEFAULT_WORLD_BOSS_KIND: WorldBossKindCode = 'ember_phoenix';
 /** 어드민 소환 선택지. */
 export const WORLD_BOSS_KIND_OPTIONS: { code: WorldBossKindCode; name: string }[] = Object.values(WORLD_BOSS_KINDS).map((k) => ({ code: k.code, name: k.name }));
@@ -95,9 +129,12 @@ export function worldBossBgUrl(code?: string | null): string {
 export function worldBossAnimUrl(code?: string | null): string {
   return worldBossKind(code).anim;
 }
-export function worldBossEmberUrl(code?: string | null): string {
+export function worldBossIsSolo(code?: string | null): boolean {
+  return !!worldBossKind(code).solo;
+}
+export function worldBossEmberUrl(code?: string | null): string | null {
   return worldBossKind(code).ember;
 }
-export function worldBossBgEmberUrl(code?: string | null): string {
+export function worldBossBgEmberUrl(code?: string | null): string | null {
   return worldBossKind(code).bgEmber;
 }

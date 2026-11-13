@@ -25,7 +25,7 @@ import { WORLD_BOSS_AVATAR_BONUS, WORLD_BOSS_PARTY_INTRO_MAX, WORLD_BOSS_PARTY_M
 import { profileHref } from '@/lib/game/profile/href';
 import { formatCompactKR } from '@/lib/ui/format-number';
 import type { WorldBossBattle, WorldBossDetail, WorldBossMyParty, WorldBossPartyCard, WorldBossPerson, WorldBossMemberResult } from '@/lib/game/world-boss/view-types';
-import { worldBossBgEmberUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
+import { worldBossBgEmberUrl, worldBossBgUrl, worldBossKind } from '@/lib/game/world-boss/bosses';
 import { assetUrl } from '@/lib/asset-versions';
 
 import {
@@ -353,7 +353,7 @@ export function WorldBossDetailView({
     <div className="flex-1 pb-4">
       {/* 히어로 — 무대(B안, 10-10): 보스 가운데 · 위 이름 · 아래 단계/진행률/전리품/남은 시간. 색은 보스 팔레트(잿빛 + 불씨 주황). */}
       <div className="relative h-[200px] overflow-hidden bg-stone-950">
-        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} className={active ? '' : 'grayscale opacity-70'} paused={!!replay} />
+        <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode) ?? worldBossBgUrl(d.bossCode))} className={active ? '' : 'grayscale opacity-70'} paused={!!replay} />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.6)_0%,transparent_30%,transparent_55%,rgba(12,10,9,0.95)_100%)]" />
         <BackFab fallback="/guild/map" className="absolute left-3 top-3 z-10" />
         {active ? (
@@ -821,7 +821,7 @@ export function WorldBossDetailView({
           >
             {/* 무대(시안 A, 10-10): 보스·단계·특성이 한 장에 — "어떤 보스에게 가는지". */}
             <div className="relative -mx-2 h-[96px] overflow-hidden rounded-xl bg-stone-950">
-              <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode))} />
+              <WorldBossBackdrop bgSrc={bgSrc} emberSrc={assetUrl(worldBossBgEmberUrl(d.bossCode) ?? worldBossBgUrl(d.bossCode))} />
               <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(12,10,9,0.15)_0%,transparent_35%,rgba(12,10,9,0.92)_100%)]" />
               <WorldBossSprite kind={d.bossCode} alt="" className="absolute left-1/2 top-[42%] z-[1] h-[72px] w-[72px] -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-2 left-2.5 z-[2] [text-shadow:0_1px_2px_#000]">

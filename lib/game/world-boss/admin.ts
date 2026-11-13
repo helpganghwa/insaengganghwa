@@ -5,11 +5,13 @@ import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { adminActions } from '@/lib/db/schema/ops';
 import { WORLD_BOSS_STAY_MS, drawWorldBossTraits, worldBossWeakPerSlot } from '@/lib/game/guild/balance';
-import { DEFAULT_WORLD_BOSS_KIND, type WorldBossKindCode, worldBossName } from './bosses';
+import { DEFAULT_WORLD_BOSS_KIND, type WorldBossKindCode, worldBossIsSolo, worldBossName } from './bosses';
+import { TOWER_POOL_PER_SLOT } from '@/lib/game/balance';
+import { drawPool } from '@/lib/game/tower/engine';
 import { kstDateString } from '@/lib/kst';
 
 import { activateDueBosses } from './spawn';
-import { cryptoRand, drawWeakForNewBoss } from './weak-server';
+import { cryptoRand, drawWeakForNewBoss, loadCatalogBySlot } from './weak-server';
 
 /**
  * 관리자 소환(docs/WORLD-BOSS.md §1, 10-11 사용자): 자동 추첨 없이 관리자가 구역을 지정해 **즉시** 또는 **예약**으로 소환한다.
@@ -144,14 +146,18 @@ export async function spawnWorldBossByAdmin(input: {
       };
     }
     // 특성(0~2개)과 약점 묶음은 소환 때 고정(§3) — 약점 수는 특성을 따른다.
-    const traits = drawWorldBossTraits(cryptoRand);
-    const weak = await drawWeakForNewBoss(tx, worldBossWeakPerSlot(traits));
+    // 개인 보스(0253)는 특성·약점 대신 부위별 요구 장비(탑 규칙, 부위당 TOWER_POOL_PER_SLOT개)를 뽑는다.
+    const solo = worldBossIsSolo(input.bossCode);
+    const traits = solo ? [] : drawWorldBossTraits(cryptoRand);
+    const weak = solo ? [] : await drawWeakForNewBoss(tx, worldBossWeakPerSlot(traits));
+    const pool = solo ? drawPool((await loadCatalogBySlot(tx)) as { weapon: string[]; armor: string[]; accessory: string[] }, () => Math.floor(cryptoRand() * 10000), TOWER_POOL_PER_SLOT) : null;
+    if (pool && (pool.weapon.length === 0 || pool.armor.length === 0 || pool.accessory.length === 0)) throw new Error('world boss solo pool empty');
     const [ins] = (await tx.execute(sql`
-      insert into world_bosses (server_id, zone_id, region, boss_code, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits)
+      insert into world_bosses (server_id, zone_id, region, boss_code, kst_day, spawn_at, leave_at, status, spawn_owner_guild_id, weak, traits, pool)
       values (${input.serverId}, ${zone.id}, ${zone.region}, ${input.bossCode ?? DEFAULT_WORLD_BOSS_KIND}, ${kstDateString(spawnAt)}::date,
               ${input.spawnAt ? sql`${spawnAt.toISOString()}::timestamptz` : sql`now()`},
               ${input.spawnAt ? sql`${leaveAt.toISOString()}::timestamptz` : sql`now() + ${WORLD_BOSS_STAY_MS} * interval '1 millisecond'`}, 'scheduled',
-              ${zone.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb)
+              ${zone.owner}::bigint, ${JSON.stringify(weak)}::jsonb, ${JSON.stringify(traits)}::jsonb, ${pool ? JSON.stringify(pool) : null}::jsonb)
       returning id::text as id, spawn_at, leave_at`)) as unknown as { id: string; spawn_at: string | Date; leave_at: string | Date }[]; // 즉시 소환은 DB 시계(now())로 — 앱 시계가 빠르면 바로 이어지는 출현 처리가 못 집었다(10-11 재검사)
     await tx.insert(adminActions).values({
       adminUserId: input.adminUserId,

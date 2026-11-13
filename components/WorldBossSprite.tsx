@@ -26,15 +26,18 @@ export function WorldBossSprite({
   const strip = `url(${assetUrl(worldBossAnimUrl(kind))})`;
   // 안쪽 층이 absolute라 기준 상자가 필요하다 — 호출부가 absolute/fixed로 놓으면 그대로 두고, 아니면 relative를 붙인다.
   const pos = /(^|\s)(absolute|fixed)(\s|$)/.test(className) ? '' : 'relative ';
-  const ember = `url(${assetUrl(worldBossEmberUrl(kind))})`;
+  const emberUrl = worldBossEmberUrl(kind);
+  const ember = emberUrl ? `url(${assetUrl(emberUrl)})` : null;
   return (
     <div role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true} className={`wbs ${pos}${className}`} style={style}>
       <div className="wbs-breath">
         <div key={attack ?? 'idle'} className={`wbs-lunge ${attack != null ? 'wbs-atk' : ''}`}>
           <div className="wbs-strip" style={{ backgroundImage: strip }} />
-          <div className="wbs-pulse">
-            <div className="wbs-strip wbs-ember" style={{ backgroundImage: ember }} />
-          </div>
+          {ember && (
+            <div className="wbs-pulse">
+              <div className="wbs-strip wbs-ember" style={{ backgroundImage: ember }} />
+            </div>
+          )}
         </div>
       </div>
     </div>
