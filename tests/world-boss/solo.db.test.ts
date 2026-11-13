@@ -14,7 +14,7 @@ import { endTestDb, sql, testDb } from '../db';
 const T = process.env.TEST_USER_ID ?? '';
 const G = '9ea03a3c-41f2-4f4b-b793-da16a14402b2'; // 규규 — 다른 구역 거주자
 const S = 1;
-const ZONE = 1;
+const ZONE = 2; // 원정대 생애 테스트(lifecycle, 구역 1)와 동시에 돌아도 겹치지 않게
 const q = async <R,>(s: ReturnType<typeof sql>): Promise<R[]> => (await testDb.execute(s)) as unknown as R[];
 const code = async (p: Promise<unknown>): Promise<string> => {
   try { await p; return 'OK'; } catch (e) { return e instanceof WorldBossError ? e.code : `THROWN:${(e as Error).message}`; }
@@ -33,7 +33,7 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     const [g] = await q<{ home: number | null }>(sql`select residence_zone_id as home from characters where user_id=${G}::uuid and server_id=${S}`);
     gHomeBefore = g?.home ?? null;
     await testDb.execute(sql`update characters set residence_zone_id=${ZONE} where user_id=${T}::uuid and server_id=${S}`);
-    if (gHomeBefore === ZONE) await testDb.execute(sql`update characters set residence_zone_id=2 where user_id=${G}::uuid and server_id=${S}`);
+    if (gHomeBefore === ZONE) await testDb.execute(sql`update characters set residence_zone_id=3 where user_id=${G}::uuid and server_id=${S}`);
     // 요구 장비 = 테스트 계정이 지금 장착한 것(전투력이 0이 아니게).
     const eq = await q<{ code: string; slot: string }>(sql`
       select ci.code, ci.slot::text as slot from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
