@@ -98,14 +98,14 @@ function FloatingBar({ children }: { children: React.ReactNode }) {
 
 function PrimaryButton({ children, className = '', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" {...p} className={`flex-1 rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[14px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:opacity-40 ${className}`}>
+    <button type="button" {...p} className={`flex-1 rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[14px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:cursor-not-allowed disabled:from-zinc-700 disabled:to-zinc-800 disabled:text-zinc-400 disabled:active:scale-100 ${className}`}>
       {children}
     </button>
   );
 }
 function SecondaryButton({ children, className = '', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" {...p} className={`flex-1 rounded-xl border border-[rgba(168,145,107,.4)] bg-[rgba(18,17,16,.7)] text-[13px] font-extrabold text-zinc-200 disabled:opacity-50 ${className}`}>
+    <button type="button" {...p} className={`flex-1 rounded-xl border border-[rgba(168,145,107,.4)] bg-[#141312] text-[13px] font-extrabold text-zinc-200 disabled:text-zinc-500 ${className}`}>
       {children}
     </button>
   );
