@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { rollSoloRun, soloPhaseFor, soloPhaseHp, soloRankReward, soloRunScore, soloTierReward } from '@/lib/game/world-boss/solo';
+import { rollSoloRun, soloPhaseFor, soloPhaseHp, soloRankReward, soloRunScore, soloShareOf, soloSharePct, soloShareReward } from '@/lib/game/world-boss/solo';
 
 function seeded(seed: number) {
   let s = seed;
@@ -47,13 +47,16 @@ describe('개인 월드보스 규칙', () => {
     expect(soloPhaseFor(21_000_000).stage).toBe(2);
   });
 
-  it('구간 보상 + 페이즈 보너스(상자 3의 배수), 순위 보상', () => {
-    expect(soloTierReward(0, 0)).toEqual({ tier: 0, diamond: 20, boxes: 6 });
-    expect(soloTierReward(1_000_000, 0)).toEqual({ tier: 5, diamond: 150, boxes: 24 });
-    const b = soloTierReward(1_200_000, 25); // +50%
-    expect(b).toEqual({ tier: 5, diamond: 225, boxes: 36 });
-    expect(soloTierReward(9_000_000, 100).diamond).toBe(640); // 상한 +60%
-    for (let st = 0; st < 40; st++) for (const best of [0, 2e4, 6e4, 3e5, 6e5, 1.5e6, 3e6, 5e6, 9e6]) expect(soloTierReward(best, st).boxes % 3).toBe(0);
+  it('참가·기여도 보상 + 페이즈 보너스(상자 3의 배수), 순위 보상', () => {
+    expect(soloShareReward(0, 0)).toEqual({ diamond: 30, boxes: 6 });
+    expect(soloShareReward(0.1, 0)).toEqual({ diamond: 1530, boxes: 207 });
+    expect(soloShareReward(0.01, 25)).toEqual({ diamond: Math.round(180 * 1.5), boxes: Math.round((26 * 1.5) / 3) * 3 }); // +50%
+    expect(soloShareReward(1, 100).diamond).toBe(Math.round(15_030 * 1.6)); // 상한 +60%
+    for (let st = 0; st < 40; st++) for (const sh of [0, 0.0003, 0.004, 0.02, 0.07, 0.15, 0.33, 1]) expect(soloShareReward(sh, st).boxes % 3).toBe(0);
+    expect(soloShareOf(5, 0)).toBe(0);
+    expect(soloShareOf(25, 100)).toBe(0.25);
+    expect(soloSharePct(0.0005)).toBe('0.1% 미만');
+    expect(soloSharePct(0.123)).toBe('12.3%');
     expect(soloRankReward(1)).toEqual({ diamond: 2000, boxes: 90 });
     expect(soloRankReward(7)).toEqual({ diamond: 500, boxes: 24 });
     expect(soloRankReward(30)).toEqual({ diamond: 150, boxes: 9 });

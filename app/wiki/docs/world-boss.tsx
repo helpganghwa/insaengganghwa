@@ -24,7 +24,8 @@ import {
   SOLO_PHASE_GROWTH,
   SOLO_RANK_REWARDS,
   SOLO_SPREAD,
-  SOLO_TIERS,
+  SOLO_JOIN_REWARD,
+  SOLO_SHARE_POOL,
 } from '@/lib/game/world-boss/solo';
 
 import type { WikiDocMeta } from '../registry';
@@ -192,11 +193,17 @@ export default function Doc() {
           1페이즈 체력은 {n(SOLO_PHASE_BASE_HP / 10_000)}만이고 페이즈마다 {bpPct((SOLO_PHASE_GROWTH - 1) * 10_000)}씩 늘어난다.
         </LI>
         <LI>
-          원정이 끝나면 최고 기록이 닿은 구간 보상 하나와 순위 보상({SOLO_RANK_REWARDS[SOLO_RANK_REWARDS.length - 1]!.to}위까지)을 함께 우편으로 받는다. 구간 보상에는 최종 페이즈마다 +
-          {bpPct(SOLO_PHASE_BONUS_PER_STAGE * 10_000)}(최대 +{bpPct(SOLO_PHASE_BONUS_CAP * 10_000)})가 더해진다.
+          원정이 끝나면 참가 보상, 기여도 보상, 순위 보상({SOLO_RANK_REWARDS[SOLO_RANK_REWARDS.length - 1]!.to}위까지)을 함께 우편으로 받는다.
         </LI>
+        <LI>
+          기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해(모든 도전의 합)다. 기여도 보상은 💎{n(SOLO_SHARE_POOL.diamond)} 📦{n(SOLO_SHARE_POOL.boxes)}을 기여도만큼 나눈 몫이다.
+        </LI>
+        <LI>
+          참가 보상(💎{n(SOLO_JOIN_REWARD.diamond)} 📦{n(SOLO_JOIN_REWARD.boxes)})과 기여도 보상에는 최종 페이즈마다 +{bpPct(SOLO_PHASE_BONUS_PER_STAGE * 10_000)}(최대 +
+          {bpPct(SOLO_PHASE_BONUS_CAP * 10_000)})가 더해진다. 순위는 최고 기록으로 정한다.
+        </LI>
+        <LI>탈퇴한 계정은 순위와 보상에서 빠지고 아래 순위가 이어받는다. 여왕이 떠난 뒤 상세 화면에서 내 최종 순위와 받은 보상을 볼 수 있다.</LI>
       </UL>
-      <Tbl head={['구간', '보상']} rows={SOLO_TIERS.map((t) => [t.min === 0 ? '참가' : t.label, `💎${n(t.diamond)} 📦${n(t.boxes)}`])} firstColNowrap />
       <Tbl
         head={['순위', '보상']}
         rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, `💎${n(r.diamond)} 📦${n(r.boxes)}`])}

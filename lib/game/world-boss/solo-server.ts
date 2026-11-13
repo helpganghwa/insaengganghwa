@@ -36,6 +36,8 @@ export type SoloRunResult = {
   /** 이 판 전·후 보스 누적 피해(페이즈 막대 연출). */
   totalBefore: number;
   totalAfter: number;
+  /** 이 보스에 내가 넣은 누적 피해(이 판 포함) — 기여도 = dealt ÷ totalAfter(11-14 기여도 보상). */
+  dealt: number;
   /** 오늘 남은 도전(무료 + 산 재도전 중 안 쓴 것). */
   runsLeft: number;
   paid: boolean;
@@ -92,6 +94,11 @@ export async function wbRetrySlot(tx: Tx, userId: string, serverId: number): Pro
 }
 
 /** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */
+async function dealtOf(tx: Tx, userId: string, bossId: string): Promise<number> {
+  const [r] = (await tx.execute(sql`select coalesce(sum(score), 0)::text as s from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid`)) as unknown as { s: string }[];
+  return Number(r?.s ?? 0);
+}
+
 async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, bestAt: string): Promise<number> {
   const [r] = (await tx.execute(sql`
     select count(*)::int + 1 as rank from world_boss_solo_records o
@@ -120,7 +127,9 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
     if (prev) {
       const rank = await rankOf(tx, serverId, bossId, Number(prev.best), prev.best_at);
       const t = await todayRuns(tx, userId, serverId, bossId, day);
+      const dealt = await dealtOf(tx, userId, bossId);
       return {
+        dealt,
         runId: prev.id, hits: prev.hits, score: Number(prev.score), power: prev.power, prevBest: null, prevRank: null,
         best: Number(prev.best), rank, totalBefore: Number(prev.total), totalAfter: Number(prev.total), runsLeft: runsLeftOf(t), paid: prev.paid, replayed: true,
       };
@@ -189,7 +198,9 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
     const stage = soloPhaseFor(totalAfter).stage;
     await tx.execute(sql`update world_bosses set stage = greatest(stage, ${stage}) where id = ${bossId}::bigint and server_id = ${serverId}`);
 
+    const dealt = await dealtOf(tx, userId, bossId);
     return {
+      dealt,
       runId: run!.id, hits, score, power, prevBest, prevRank, best: Number(rec!.best), rank,
       totalBefore: totalAfter - score, totalAfter, runsLeft: runsLeftOf({ ...t, free: t.free + (paid ? 0 : 1), paid: t.paid + (paid ? 1 : 0) }), paid,
     };

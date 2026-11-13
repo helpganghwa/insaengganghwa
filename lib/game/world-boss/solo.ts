@@ -6,7 +6,8 @@
  *   · 거미줄 타기 5%(빗나감) · 약점 노출 5%(×2).
  * - 효과가 없는 패턴(평소, 전투력 0인 부위를 묶음)은 'none'으로 적는다 — 화면이 이름표를 띄우지 않는다.
  * - 공동 페이즈: n페이즈 체력 = 1,000만 × 1.1^(n-1). 모든 판의 점수가 쌓인다.
- * - 보상: 최고 기록이 닿은 구간 하나(+ 최종 페이즈 × 2%, 상한 60%) + 순위(1~30위, 페이즈 보너스 없음).
+ * - 보상(11-14): 참가 💎30 📦6 + 기여도 보상(💎15,000·📦2,000 × 내 누적 피해 ÷ 보스 누적 피해), 둘 다 × 최종 페이즈 보너스(2%씩, 상한 60%)
+ *   + 순위(최고 기록 1~30위, 페이즈 보너스 없음).
  */
 
 export type SoloPattern = 'none' | 'crouch' | 'weapon' | 'armor' | 'accessory' | 'dodge' | 'expose';
@@ -107,20 +108,12 @@ export function soloPhaseFor(totalDamage: number): { stage: number; into: number
   return { stage, into: 0, need: soloPhaseHp(stage + 1) };
 }
 
-// ── 보상(11-13 확정) ─────────────────────────────────────────────────────────
+// ── 보상(11-14 확정: 구간 보상 → 기여도 보상) ───────────────────────────────
 export type SoloReward = { diamond: number; boxes: number };
-/** 구간 — 최고 기록이 닿은 가장 높은 하나. min = 그 구간의 문턱(0 = 참가). */
-export const SOLO_TIERS: readonly ({ min: number; label: string } & SoloReward)[] = [
-  { min: 0, label: '참가', diamond: 20, boxes: 6 },
-  { min: 10_000, label: '1만', diamond: 30, boxes: 6 },
-  { min: 50_000, label: '5만', diamond: 50, boxes: 9 },
-  { min: 200_000, label: '20만', diamond: 70, boxes: 12 },
-  { min: 500_000, label: '50만', diamond: 100, boxes: 18 },
-  { min: 1_000_000, label: '100만', diamond: 150, boxes: 24 },
-  { min: 2_000_000, label: '200만', diamond: 220, boxes: 30 },
-  { min: 4_000_000, label: '400만', diamond: 300, boxes: 39 },
-  { min: 8_000_000, label: '800만', diamond: 400, boxes: 48 },
-];
+/** 참가 보상 — 한 판이라도 도전한 사람 모두. */
+export const SOLO_JOIN_REWARD: SoloReward = { diamond: 30, boxes: 6 };
+/** 기여도 보상 총량 — 보스가 받은 전체 피해 중 내가 넣은 몫(모든 판 합)만큼 나눠 받는다. */
+export const SOLO_SHARE_POOL: SoloReward = { diamond: 15_000, boxes: 2_000 };
 export const SOLO_RANK_REWARDS: readonly ({ from: number; to: number } & SoloReward)[] = [
   { from: 1, to: 1, diamond: 2000, boxes: 90 },
   { from: 2, to: 2, diamond: 1500, boxes: 66 },
@@ -131,23 +124,29 @@ export const SOLO_RANK_REWARDS: readonly ({ from: number; to: number } & SoloRew
 export const SOLO_PHASE_BONUS_PER_STAGE = 0.02;
 export const SOLO_PHASE_BONUS_CAP = 0.6;
 
-export function soloTierIndex(best: number): number {
-  let idx = 0;
-  SOLO_TIERS.forEach((t, i) => {
-    if (best >= t.min) idx = i;
-  });
-  return idx;
-}
 /** 최종 페이즈(넘긴 페이즈 수 stage) 보너스 배율 — 1 + min(60%, 2% × stage). */
 export function soloPhaseBonus(stage: number): number {
   return 1 + Math.min(SOLO_PHASE_BONUS_CAP, Math.max(0, stage) * SOLO_PHASE_BONUS_PER_STAGE);
 }
-export function soloTierReward(best: number, stage: number): SoloReward & { tier: number } {
-  const tier = soloTierIndex(best);
-  const t = SOLO_TIERS[tier]!;
+/** 기여도(0~1) — 내 누적 피해 ÷ 보스 누적 피해. */
+export function soloShareOf(dealt: number, total: number): number {
+  return total > 0 && dealt > 0 ? Math.min(1, dealt / total) : 0;
+}
+/** 참가 + 기여도 보상(× 최종 페이즈 보너스). 상자는 우편에서 세 부위로 똑같이 나눠 주므로 3의 배수(경제 규칙). */
+export function soloShareReward(share: number, stage: number): SoloReward {
   const m = soloPhaseBonus(stage);
-  // 상자는 우편에서 세 부위로 똑같이 나눠 주므로 3의 배수로 맞춘다(경제 규칙 — 상자는 3의 배수).
-  return { tier, diamond: Math.round(t.diamond * m), boxes: Math.round((t.boxes * m) / 3) * 3 };
+  const sh = Math.max(0, Math.min(1, share));
+  return {
+    diamond: Math.round((SOLO_JOIN_REWARD.diamond + SOLO_SHARE_POOL.diamond * sh) * m),
+    boxes: Math.round(((SOLO_JOIN_REWARD.boxes + SOLO_SHARE_POOL.boxes * sh) * m) / 3) * 3,
+  };
+}
+/** 기여도 표시(%) — 0.1% 미만은 '0.1% 미만'으로 화면이 다룬다. */
+export function soloSharePct(share: number): string {
+  const p = share * 100;
+  if (p <= 0) return '0%';
+  if (p < 0.1) return '0.1% 미만';
+  return `${p.toFixed(1)}%`;
 }
 export function soloRankReward(rank: number): SoloReward {
   const r = SOLO_RANK_REWARDS.find((x) => rank >= x.from && rank <= x.to);

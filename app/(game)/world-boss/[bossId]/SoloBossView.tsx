@@ -26,14 +26,16 @@ import { modalHistory } from '@/lib/ui/modal-history';
 import {
   SOLO_PATTERN_LABEL,
   SOLO_RANK_REWARDS,
-  SOLO_TIERS,
   soloPhaseBonus,
   soloPhaseFor,
   rollSoloRun,
   soloRankReward,
   soloRunScore,
-  soloTierIndex,
-  soloTierReward,
+  soloShareOf,
+  soloSharePct,
+  soloShareReward,
+  SOLO_JOIN_REWARD,
+  SOLO_SHARE_POOL,
   type SoloHit,
   type SoloSlot,
 } from '@/lib/game/world-boss/solo';
@@ -229,7 +231,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       const ru = r.run;
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
       const meNow = d.me!;
-      const dealt = meNow.dealt + ru.score;
+      const dealt = ru.dealt;
       const mine = { rank: ru.rank, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
       const others = d.top.filter((x) => !x.me);
       const top = ru.rank <= 10 ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, 10).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, 10);
@@ -352,7 +354,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       )}
 
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
-      {sheet === 'reward' && <RewardSheet stage={phase.stage} best={me?.best ?? null} rank={me?.rank ?? null} onClose={() => setSheet(null)} />}
+      {sheet === 'reward' && <RewardSheet stage={phase.stage} share={me && me.best != null ? soloShareOf(me.dealt, d.total) : null} rank={me?.rank ?? null} onClose={() => setSheet(null)} />}
       {sheet === 'avatar' && me && <AvatarSheet me={me} onPick={pickAvatar} onClose={() => setSheet(null)} />}
       {sheet === 'pool' && <PoolSheet d={d} slot={poolSlot} onSlot={setPoolSlot} onEquip={equipOne} pending={pending} onClose={() => setSheet(null)} />}
     </div>
@@ -412,7 +414,7 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
           ) : null}
         </span>
         <span className="flex flex-col items-end">
-          <b className="text-[13px] font-extrabold text-slate-100 [text-shadow:0_1px_2px_#000]">구간 보상 +{bonus}%</b>
+          <b className="text-[13px] font-extrabold text-slate-100 [text-shadow:0_1px_2px_#000]">페이즈 보너스 +{bonus}%</b>
           {active ? (
             <Ticker intervalMs={60_000}>{(now) => <span className="text-[10.5px] text-slate-300 [text-shadow:0_1px_2px_#000]">{remain(leaveMs - now)}</span>}</Ticker>
           ) : (
@@ -438,7 +440,9 @@ function FinalCard({ d }: { d: SoloDetail }) {
             <span className="font-mono text-[12.5px] font-bold text-slate-100 tabular-nums">{rewardText(me.reward!)}</span>
           </div>
           <div className="mt-1.5 flex items-center justify-between gap-2 text-[10.5px] text-slate-400">
-            <span>최고 기록 {n(me.best!)}</span>
+            <span>
+              최고 기록 {n(me.best!)} · 기여도 {soloSharePct(soloShareOf(me.dealt, d.total))}
+            </span>
             <Link prefetch={false} href="/mail" className="font-bold text-violet-200 underline">
               우편함에서 받기
             </Link>
@@ -473,9 +477,10 @@ function rankAccent(rank: number, me: boolean): { text: string; line: string; ba
  *  글자 그림자는 요소마다 drop-shadow로 — 부모 text-shadow는 칭호 글자(배경 클립)에 상속돼 효과가 뭉개진다.
  *  아래 가장자리 게이지 = 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
 function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number }) {
-  const tr = soloTierReward(r.score, stage);
+  const share = soloShareOf(r.dealt, total);
+  const tr = soloShareReward(share, stage);
   const rr = soloRankReward(r.rank);
-  const pct = total > 0 && r.dealt > 0 ? Math.max(1, Math.min(100, (r.dealt / total) * 100)) : 0;
+  const pct = share > 0 ? Math.max(1, Math.min(100, share * 100)) : 0;
   const accent = rankAccent(r.rank, r.me);
   const sh = 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]';
   return (
@@ -499,7 +504,7 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           </div>
           <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>
-            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · {rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}
+            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}
           </div>
         </div>
       </div>
@@ -759,7 +764,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: So
         const ph = q('[data-phase]');
         if (ph) ph.textContent = `${shown}페이즈`;
         const bo = q('[data-bonus]');
-        if (bo) bo.textContent = `구간 보상 +${Math.round((soloPhaseBonus(shown) - 1) * 100)}%`;
+        if (bo) bo.textContent = `페이즈 보너스 +${Math.round((soloPhaseBonus(shown) - 1) * 100)}%`;
         if (!st.current.fast && !reduce()) {
           ph?.animate([{ transform: 'scale(1.5)', background: '#c084fc' }, { transform: 'none' }], { duration: 650 });
           float(`${shown}페이즈`, 'text-[15px] text-fuchsia-200', 0, 0);
@@ -1008,7 +1013,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: So
               </b>
             </span>
             <b data-bonus className="text-slate-100">
-              구간 보상 +{Math.round((soloPhaseBonus(startPhase.stage) - 1) * 100)}%
+              페이즈 보너스 +{Math.round((soloPhaseBonus(startPhase.stage) - 1) * 100)}%
             </b>
           </div>
           <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-black/55 ring-1 ring-white/10">
@@ -1118,17 +1123,15 @@ function ResultCard({ run }: { run: Run }) {
   const started = useRef(false);
   const updated = run.prevBest == null || run.score > run.prevBest;
   const stageAfter = soloPhaseFor(run.totalAfter).stage;
-  const tierAfter = soloTierIndex(run.best);
-  const tierBefore = run.prevBest == null ? null : soloTierIndex(run.prevBest);
-  const next = SOLO_TIERS[tierAfter + 1];
-  const cur = SOLO_TIERS[tierAfter]!;
-  const barPct = next ? Math.min(100, ((run.best - cur.min) / (next.min - cur.min)) * 100) : 100;
-  const tr = soloTierReward(run.best, stageAfter);
+  // 기여도 = 내 누적 피해 ÷ 보스 누적 피해(이 판 전·후). 다른 사람이 더 치면 줄어든다 — 최종은 보스가 사라질 때.
+  const share = soloShareOf(run.dealt, run.totalAfter);
+  const sharePrev = soloShareOf(run.dealt - run.score, run.totalBefore);
+  const barPct = share > 0 ? Math.max(2, Math.min(100, share * 100)) : 0;
+  const tr = soloShareReward(share, stageAfter);
   const rr = soloRankReward(run.rank);
   const bonus = Math.round((soloPhaseBonus(stageAfter) - 1) * 100);
-  const tierLabel = (i: number) => (SOLO_TIERS[i]!.min === 0 ? '참가' : SOLO_TIERS[i]!.label);
 
-  // 첫 렌더 뒤 한 번 — 점수 카운트업·빛 스윕·순위 굴림·구간 막대·칩 순차 등장.
+  // 첫 렌더 뒤 한 번 — 점수 카운트업·빛 스윕·순위 굴림·기여도 막대·칩 순차 등장.
   const reveal = (el: HTMLDivElement | null) => {
     card.current = el;
     if (!el || started.current) return;
@@ -1151,7 +1154,7 @@ function ResultCard({ run }: { run: Run }) {
       steps.forEach((x) => (x.style.opacity = '1'));
       rk.textContent = String(run.rank);
       if (delta) delta.style.opacity = '1';
-      tier.textContent = tierLabel(tierAfter);
+      tier.textContent = soloSharePct(share);
       bar.style.width = `${barPct}%`;
       return;
     }
@@ -1193,8 +1196,8 @@ function ResultCard({ run }: { run: Run }) {
       bar.style.transition = 'width .7s ease-out';
     }, 1500);
     setTimeout(() => {
-      tier.textContent = tierLabel(tierAfter);
-      if (tierBefore !== tierAfter) pop(tier);
+      tier.textContent = soloSharePct(share);
+      if (share > sharePrev) pop(tier);
       bar.style.width = `${barPct}%`;
     }, 1800);
     setTimeout(() => show(steps[3]), 2250);
@@ -1240,14 +1243,14 @@ function ResultCard({ run }: { run: Run }) {
           </div>
         </div>
         <div data-step style={hide} className="rounded-xl bg-black/30 px-2.5 py-2 text-center ring-1 ring-white/[.06]">
-          <div className="text-[10px] text-slate-500">구간</div>
+          <div className="text-[10px] text-slate-500">기여도</div>
           <b data-rtier className="block text-[20px] leading-none font-black text-slate-100">
-            {tierLabel(tierBefore ?? tierAfter)}
+            {soloSharePct(sharePrev)}
           </b>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-800">
             <div data-rtbar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-200" style={{ width: '0%' }} />
           </div>
-          <div className="mt-0.5 text-[9.5px] text-slate-500">{next ? `${next.label}까지 ${man(next.min - run.best)}` : '가장 높은 구간'}</div>
+          <div className="mt-0.5 text-[9.5px] text-slate-500">내 누적 피해 {man(run.dealt)}</div>
         </div>
       </div>
       <div className="mt-2 flex justify-center gap-1.5">
@@ -1269,14 +1272,14 @@ function ResultCard({ run }: { run: Run }) {
           onClick={() => setDetail((x) => (x === 'tier' ? null : 'tier'))}
           className={`rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-bold text-slate-100 ring-1 ${detail === 'tier' ? 'ring-violet-300' : 'ring-violet-400/40'}`}
         >
-          구간 {rewardText(tr)}
+          참가·기여 {rewardText(tr)}
         </button>
       </div>
       {detail ? (
         <p className="mt-1.5 text-center text-[10.5px] leading-snug text-slate-300">
           {detail === 'rank'
             ? `${rankBand} 순위 보상이에요. 보스가 사라질 때 최종 순위로 정해져요.`
-            : `${tierLabel(tierAfter)} ${tierAfter === 0 ? '' : '구간 '}${rewardText(SOLO_TIERS[tierAfter]!)}에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더했어요. 페이즈가 오를수록 늘어나요.`}
+            : `참가 ${rewardText(SOLO_JOIN_REWARD)}와 기여도 ${soloSharePct(share)} 몫에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더한 지금 값이에요. 다른 사람이 도전하면 기여도가 바뀌고, 보스가 사라질 때 정해져요.`}
         </p>
       ) : null}
       <span data-step style={hide} />
@@ -1338,15 +1341,22 @@ function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloF
   );
 }
 
-function RewardSheet({ stage, best, rank, onClose }: { stage: number; best: number | null; rank: number | null; onClose: () => void }) {
+function RewardSheet({ stage, share, rank, onClose }: { stage: number; share: number | null; rank: number | null; onClose: () => void }) {
   const bonus = Math.round((soloPhaseBonus(stage) - 1) * 100);
-  const myTier = best == null ? undefined : soloTierIndex(best);
+  const m = soloPhaseBonus(stage);
   const myBand = rank == null ? -1 : SOLO_RANK_REWARDS.findIndex((r) => rank >= r.from && rank <= r.to);
+  const per1 = { diamond: Math.round(SOLO_SHARE_POOL.diamond * 0.01 * m), boxes: Math.round(SOLO_SHARE_POOL.boxes * 0.01 * m) };
+  const rows: [string, string][] = [
+    ['참가 보상', rewardText({ diamond: Math.round(SOLO_JOIN_REWARD.diamond * m), boxes: Math.round(SOLO_JOIN_REWARD.boxes * m) })],
+    ['기여도 1%마다', rewardText(per1)],
+  ];
+  if (share != null) rows.push([`내 기여도 ${soloSharePct(share)}`, rewardText(soloShareReward(share, stage))]);
   return (
     <ModalShell onClose={onClose} label="보상 안내">
-      <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 구간 보상 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+      <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 페이즈 보너스 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
         <div className="space-y-2">
-          <SheetTable head={['구간', '보상']} rows={SOLO_TIERS.map((t) => [t.min === 0 ? '참가' : t.label, rewardText(soloTierReward(t.min, stage))])} hi={myTier} />
+          <p className="px-1 text-[11px] leading-snug text-slate-400">기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해예요. 모든 도전이 더해지고, 여왕이 사라질 때 최종으로 정해져요.</p>
+          <SheetTable head={['참가·기여도', '보상']} rows={rows} hi={share != null ? rows.length - 1 : undefined} />
           <SheetTable head={['순위', '보상']} rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, rewardText(r)])} hi={myBand >= 0 ? myBand : undefined} />
         </div>
       </ModalLayout>

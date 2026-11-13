@@ -96,12 +96,14 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     const [rec] = await q<{ final_rank: number; reward_diamond: number; reward_boxes: number }>(sql`
       select final_rank, reward_diamond, reward_boxes from world_boss_solo_records where boss_id=${bossId}::bigint and user_id=${T}::uuid`);
     expect(rec!.final_rank).toBe(1);
-    expect(rec!.reward_diamond).toBeGreaterThanOrEqual(2000 + 20);
+    // 혼자 친 보스 — 기여도 100%: (참가 30 + 기여 15,000) × 페이즈 보너스 + 1위 2,000.
+    expect(rec!.reward_diamond).toBeGreaterThanOrEqual(2000 + 15_030);
     expect(rec!.reward_boxes % 3).toBe(0);
-    const mails = await q<{ title: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`
-      select title, payload from mailbox where user_id=${T}::uuid and type='world_boss' and created_at >= ${t0.toISOString()}::timestamptz`);
+    const mails = await q<{ title: string; body: string; payload: { diamond: number; boxes: Record<string, number> } }>(sql`
+      select title, body, payload from mailbox where user_id=${T}::uuid and type='world_boss' and created_at >= ${t0.toISOString()}::timestamptz`);
     expect(mails).toHaveLength(1);
     expect(mails[0]!.title).toBe('그림자 거미 여왕 결과');
+    expect(mails[0]!.body).toContain('기여도 100.0%');
     expect(mails[0]!.payload.diamond).toBe(rec!.reward_diamond);
     expect(mails[0]!.payload.boxes.weapon * 3).toBe(rec!.reward_boxes);
     const [b] = await q<{ status: string }>(sql`select status from world_bosses where id=${bossId}::bigint`);
