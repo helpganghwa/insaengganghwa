@@ -10,6 +10,23 @@ import {
   WORLD_BOSS_WEAK_PER_SLOT,
 } from '@/lib/game/guild/balance';
 
+import { MILEAGE_PER_MELEE_POINT, POINT_EXTRA_PRICES } from '@/lib/game/balance';
+import {
+  SOLO_CRIT_CHANCE,
+  SOLO_CRIT_MULT,
+  SOLO_FREE_RUNS_PER_DAY,
+  SOLO_HITS_PER_RUN,
+  SOLO_PATTERN_LABEL,
+  SOLO_PATTERN_TABLE,
+  SOLO_PHASE_BASE_HP,
+  SOLO_PHASE_BONUS_CAP,
+  SOLO_PHASE_BONUS_PER_STAGE,
+  SOLO_PHASE_GROWTH,
+  SOLO_RANK_REWARDS,
+  SOLO_SPREAD,
+  SOLO_TIERS,
+} from '@/lib/game/world-boss/solo';
+
 import type { WikiDocMeta } from '../registry';
 import { bpPct, fmtInt } from '../fmt';
 import { DocLink, H2, LI, Tbl, UL, Warn } from '../ui';
@@ -20,7 +37,7 @@ export const meta: WikiDocMeta = {
   slug: 'world-boss',
   cat: '경쟁',
   title: '월드보스',
-  summary: '세계지도 구역에 나타난 보스를 원정대로 토벌하고, 전리품은 구역을 점령한 길드에게.',
+  summary: '세계지도 구역에 나타나는 보스. 잿불의 불사조는 원정대로, 그림자 거미 여왕은 혼자 도전한다.',
   sections: [
     { id: 'what', label: '개요' },
     { id: 'party', label: '원정대' },
@@ -30,6 +47,9 @@ export const meta: WikiDocMeta = {
     { id: 'traits', label: '특성' },
     { id: 'phase', label: '페이즈' },
     { id: 'reward', label: '보상' },
+    { id: 'queen', label: '그림자 거미 여왕' },
+    { id: 'queen-pattern', label: '여왕의 패턴' },
+    { id: 'queen-reward', label: '여왕 보상' },
   ],
 };
 
@@ -42,6 +62,7 @@ export default function Doc() {
     <>
       <H2 id="what">개요</H2>
       <UL>
+        <LI>월드보스는 종류마다 싸우는 방식이 다르다. 잿불의 불사조는 원정대로 맞서고, 그림자 거미 여왕은 혼자 도전한다(아래 그림자 거미 여왕 절). 아래 원정대~보상 절은 잿불의 불사조 기준이다.</LI>
         <LI>세계지도 구역에 월드보스가 나타나 {fmtInt(hours)}시간 머문다. 머무는 동안 원정대가 입힌 피해만큼 페이즈가 오르며 전리품이 쌓인다.</LI>
         <LI>
           원정이 종료되는 순간 쌓인 전리품은 그 구역을 점령한 길드의{' '}
@@ -135,6 +156,52 @@ export default function Doc() {
         <LI>원정이 종료되는 순간 쌓인 전리품(💎·📦)은 그 구역을 점령한 길드의 세금으로 쌓인다.</LI>
       </UL>
       <Warn>종료 시 구역이 중립이면 전리품은 사라진다.</Warn>
+
+      <H2 id="queen">그림자 거미 여왕</H2>
+      <UL>
+        <LI>보스가 나타난 구역에 거주하는 사람만 도전할 수 있다. 거주지는 세계지도에서 바로 옮길 수 있다.</LI>
+        <LI>
+          한 번 도전하면 공격 {fmtInt(SOLO_HITS_PER_RUN)}번을 하고, {fmtInt(SOLO_HITS_PER_RUN)}번 피해의 합이 그 판의 기록이 된다. 하루(0시 기준) {fmtInt(SOLO_FREE_RUNS_PER_DAY)}번은 무료이고, 대난투
+          포인트나 마일리지로 하루 {fmtInt(POINT_EXTRA_PRICES.wb_retry.length)}번까지 더 도전할 수 있다({POINT_EXTRA_PRICES.wb_retry.join(' · ')}포인트, 마일리지는 {fmtInt(MILEAGE_PER_MELEE_POINT)}배).
+        </LI>
+        <LI>순위는 가장 높은 기록 하나로 정한다. 같은 기록이면 먼저 세운 사람이 위다. 모든 도전의 피해는 함께 쌓여 페이즈를 올린다.</LI>
+        <LI>
+          전투력은 <DocLink slug="tower">무한의 탑</DocLink>과 같은 규칙이다. 보스마다 부위별 요구 장비가 있고, 요구 장비를 장착하면 ×1, 그 장비가 대표 아바타를 만들 때 입은
+          장비면 ×2, 요구 장비가 아니면 ×0이다.
+        </LI>
+        <LI>
+          공격 1번의 피해는 전투력의 {SOLO_SPREAD[0]}~{SOLO_SPREAD[1]}배이고, {bpPct(SOLO_CRIT_CHANCE * 10_000)} 확률로 치명타(×{SOLO_CRIT_MULT})가 터진다.
+        </LI>
+      </UL>
+
+      <H2 id="queen-pattern">여왕의 패턴</H2>
+      <UL>
+        <LI>공격할 때마다 여왕이 아래 중 하나로 맞선다.</LI>
+      </UL>
+      <Tbl
+        head={['패턴', '효과', '확률']}
+        rows={SOLO_PATTERN_TABLE.map((r) =>
+          r.p === 'normal' ? ['패턴 없음', '피해 그대로', bpPct(r.w * 10_000)] : [SOLO_PATTERN_LABEL[r.p].name, SOLO_PATTERN_LABEL[r.p].desc, bpPct(r.w * 10_000)],
+        )}
+        firstColNowrap
+      />
+
+      <H2 id="queen-reward">여왕 보상</H2>
+      <UL>
+        <LI>
+          1페이즈 체력은 {n(SOLO_PHASE_BASE_HP / 10_000)}만이고 페이즈마다 {bpPct((SOLO_PHASE_GROWTH - 1) * 10_000)}씩 늘어난다.
+        </LI>
+        <LI>
+          원정이 끝나면 최고 기록이 닿은 구간 보상 하나와 순위 보상({SOLO_RANK_REWARDS[SOLO_RANK_REWARDS.length - 1]!.to}위까지)을 함께 우편으로 받는다. 구간 보상에는 최종 페이즈마다 +
+          {bpPct(SOLO_PHASE_BONUS_PER_STAGE * 10_000)}(최대 +{bpPct(SOLO_PHASE_BONUS_CAP * 10_000)})가 더해진다.
+        </LI>
+      </UL>
+      <Tbl head={['구간', '보상']} rows={SOLO_TIERS.map((t) => [t.min === 0 ? '참가' : t.label, `💎${n(t.diamond)} 📦${n(t.boxes)}`])} firstColNowrap />
+      <Tbl
+        head={['순위', '보상']}
+        rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, `💎${n(r.diamond)} 📦${n(r.boxes)}`])}
+        firstColNowrap
+      />
     </>
   );
 }

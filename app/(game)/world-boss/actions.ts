@@ -46,7 +46,7 @@ const MSG = {
   NOT_INVITABLE: '친구나 같은 길드원만 초대할 수 있어요.',
   NOT_SOLO: '혼자 도전하는 보스가 아니에요.',
   NOT_RESIDENT: '보스가 나타난 구역에 거주해야 도전할 수 있어요.',
-  NO_RUNS: '오늘 도전을 모두 썼어요.',
+  NO_RUNS: '오늘 도전을 모두 사용했어요.',
   NO_POWER: '요구 장비를 하나 이상 장착해야 도전할 수 있어요.',
   BAD_REQUEST: '잘못된 요청이에요.',
   UNAUTHENTICATED: '로그인이 필요해요.',

@@ -23,7 +23,7 @@ const COPY: Record<PointExtraItem, { title: string; desc: string; done: string }
   tower: { title: '탑 추가 도전', desc: '오늘 도전을 한 번 더 해요. 오르기와 토벌 어디에나 쓸 수 있어요.', done: '오늘 도전 +1회' },
   // 줄바꿈은 뜻 단위로 고정(\n) — 390 폭에서 문장 중간이 끊기지 않게(10-16 사용자 지시).
   tower_reroll: { title: '요구 장비 다시 뽑기', desc: '이 층의 요구 장비를 나에게만 새로 뽑아요.\n지금 장비가 다시 나올 수도 있어요.', done: '요구 장비를 다시 뽑았어요' },
-  wb_retry: { title: '월드보스 재도전', desc: '한 판 더 도전해요. 더 높은 점수만 기록에 남고\n모든 판의 피해는 페이즈에 쌓여요.', done: '재도전 +1회' },
+  wb_retry: { title: '월드보스 재도전', desc: '한 번 더 도전해요. 더 높은 점수만 기록에 남고\n모든 도전 피해는 페이즈에 누적돼요.', done: '재도전 +1회' },
 };
 const KIND_KO: Record<PointKind, string> = { melee: '대난투 포인트', mileage: '마일리지' };
 const fmt = (n: number) => n.toLocaleString('ko-KR');
