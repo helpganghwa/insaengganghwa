@@ -19,12 +19,12 @@ export function WorldBossZoneCard(
     | (Common & { mode: 'left'; leftWhen: (now: number) => string; settledGuildName: string | null }),
 ) {
   const left = props.mode === 'left';
-  // 보스 종류별 색 묶음 — 불사조 주황, 거미 여왕(개인 보스, 0253) 보라+은빛. 개인 보스는 전리품·특성이 없고 페이즈는 '지금 페이즈'(넘긴 수 + 1)로 보인다.
+  // 보스 종류별 색 묶음 — 불사조 주황, 거미 여왕(개인 보스, 0253) 보라+은빛. 개인 보스는 전리품·특성 줄이 없다(문구·페이즈 표기는 불사조와 같다, 11-13 사용자).
   const solo = worldBossIsSolo(props.bossCode);
   const C = solo
     ? { border: 'border-violet-500/60', badge: 'bg-violet-700/85 text-violet-50', num: 'text-violet-300', btn: 'bg-violet-800/90 text-violet-50 ring-1 ring-slate-300/60' }
     : { border: 'border-orange-800/70', badge: 'bg-orange-700/85 text-orange-50', num: 'text-orange-400', btn: 'bg-orange-800/90 text-orange-50 ring-1 ring-orange-500/60' };
-  const phase = solo ? props.stage + 1 : props.stage;
+  const phase = props.stage;
   // 한 장의 무대(10-10 사용자): 보스 왼쪽 · 정보 가운데 · 특성 이름은 우측 상단, 작은 '토벌하기' 버튼은 우측 하단(10-11 사용자: 이름 오른쪽에 두면 이름이 말줄임된다). 색은 보스(잿빛 + 불씨 주황)에 맞춘다.
   // 카드 전체가 링크 — 버튼뿐 아니라 어디를 눌러도 보스 상세로(10-10 사용자). 버튼은 눌림 자리를 알려 주는 모양만.
   return (
@@ -56,7 +56,7 @@ export function WorldBossZoneCard(
       <div className="absolute inset-y-2 left-[88px] right-2 z-[2] flex min-w-0 flex-col justify-between whitespace-nowrap">
         <span className="flex min-w-0 items-center gap-1">
           <span className={`shrink-0 rounded-[4px] px-1 text-[8.5px] font-extrabold leading-[1.5] ${left ? 'bg-zinc-700 text-zinc-300' : C.badge}`}>
-            {left ? (solo ? '종료' : '원정 종료') : '월드보스'}
+            {left ? '원정 종료' : '월드보스'}
           </span>
           <b className={`min-w-0 truncate text-[12px] [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-200' : 'text-stone-100'}`}>{props.name}</b>
           {/* 특성 이름 — 카드 우측 상단(10-11 사용자: 이모지 대신 이름만). 상세에서 효과를 본다. */}
@@ -73,9 +73,7 @@ export function WorldBossZoneCard(
           )}
         </Ticker>
         <span className={`flex items-center gap-1.5 pr-16 text-[10.5px] font-bold [text-shadow:0_1px_2px_#000] ${left ? 'text-zinc-300' : 'text-stone-100'}`}>
-          {solo ? (
-            <span>혼자 도전 · 최고 기록 순위</span>
-          ) : (
+          {solo ? null : (
             <>
               <span>💎{props.lootDiamond.toLocaleString('ko-KR')}</span>
               <span>📦{props.lootBoxes.toLocaleString('ko-KR')}</span>
@@ -89,7 +87,7 @@ export function WorldBossZoneCard(
           left ? 'bg-zinc-700 text-zinc-200 ring-1 ring-zinc-500/60' : C.btn
         }`}
       >
-        {left ? '결과 보기' : solo ? '도전하기' : '토벌하기'}
+        {left ? '결과 보기' : '토벌하기'}
       </span>
     </Link>
   );

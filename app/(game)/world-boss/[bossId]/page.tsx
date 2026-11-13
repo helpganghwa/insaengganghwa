@@ -14,15 +14,6 @@ import { WorldBossDetailView } from './WorldBossDetailView';
 
 export const dynamic = 'force-dynamic';
 
-function leftText(leaveAt: string, status: string): string {
-  if (status === 'left') return '사라졌어요';
-  const m = Math.ceil((new Date(leaveAt).getTime() - Date.now()) / 60_000);
-  if (m <= 0) return '곧 사라져요';
-  const d = Math.floor(m / 1440);
-  const h = Math.floor((m % 1440) / 60);
-  return d > 0 ? `${d}일 ${h}시간 남음` : h > 0 ? `${h}시간 ${m % 60}분 남음` : `${m}분 남음`;
-}
-
 /** 월드보스 상세(docs/WORLD-BOSS.md §9) — 원정대 보스는 보스 정보·원정대 목록, 개인 보스(0253)는 순위표·도전. */
 export default async function WorldBossPage({ params }: { params: Promise<{ bossId: string }> }) {
   const { bossId } = await params;
@@ -52,7 +43,6 @@ export default async function WorldBossPage({ params }: { params: Promise<{ boss
           spriteSrc={assetUrl(worldBossSpriteUrl(solo.bossCode))}
           bgSrc={assetUrl(worldBossBgUrl(solo.bossCode))}
           fx={fx}
-          leftText={leftText(solo.leaveAt, solo.status)}
           bossName={worldBossName(solo.bossCode)}
         />
       </>

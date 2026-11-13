@@ -54,9 +54,8 @@ const isClosed = (id: string) => {
 };
 
 export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
-  // 개인 보스(0253) — 보라·은빛, 원정대·전리품·주인 길드 대신 '혼자 도전', 페이즈는 지금 페이즈(넘긴 수 + 1).
+  // 개인 보스(0253) — 보라·은빛, 원정대·전리품·주인 길드 줄은 없다(문구는 불사조와 같게, 11-13 사용자).
   const solo = worldBossIsSolo(b.bossCode);
-  const phase = solo ? b.stage + 1 : b.stage;
   // 서버가 쿠키로 걸러 주므로 여기 오면 '보임'이 기본. 닫는 순간만 쿠키를 다시 읽어 즉시 사라진다(효과 안 setState 없이 외부 스토어).
   const closed = useSyncExternalStore(subscribe, () => isClosed(b.id), () => false);
   if (closed) return null;
@@ -79,7 +78,7 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         prefetch={false}
         href={`/world-boss/${b.id}`}
         className={`relative isolate flex h-full w-full items-center gap-2 overflow-hidden rounded-xl border bg-black pl-[78px] pr-2.5 active:opacity-90 ${b.ended ? 'border-zinc-700' : solo ? 'border-violet-500/60' : 'border-orange-700/60'}`}
-        aria-label={b.ended ? `${b.zone} 월드보스 ${solo ? '종료' : '원정 종료'}, 결과 보기` : `${b.zone}에 월드보스 출현, ${solo ? '도전하기' : '토벌하기'}`}
+        aria-label={b.ended ? `${b.zone} 월드보스 원정 종료, 결과 보기` : `${b.zone}에 월드보스 출현, 토벌하기`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={assetUrl(worldBossBgUrl(b.bossCode))} alt="" aria-hidden draggable={false} className={`absolute inset-0 h-full w-full object-cover ${b.ended ? 'opacity-60 grayscale' : ''}`} style={{ imageRendering: 'pixelated' }} />
@@ -87,7 +86,7 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
         {/* 종료 띠는 구역 카드처럼 흑백·정지(wbs-paused). */}
         <WorldBossSprite kind={b.bossCode} alt={b.name} className={`absolute left-1 top-1/2 z-[1] h-[68px] w-[68px] -translate-y-1/2 ${b.ended ? 'opacity-80 grayscale wbs-paused' : ''}`} />
         <span className="relative z-10 min-w-0 flex-1 leading-tight">
-          <i className={`mb-0.5 inline-block rounded-[3px] px-1.5 text-[8.5px] font-black not-italic text-white ${b.ended ? 'bg-zinc-700 text-zinc-200' : solo ? 'bg-violet-700' : 'bg-orange-700'}`}>{b.ended ? (solo ? '종료' : '원정 종료') : '월드보스 출현'}</i>
+          <i className={`mb-0.5 inline-block rounded-[3px] px-1.5 text-[8.5px] font-black not-italic text-white ${b.ended ? 'bg-zinc-700 text-zinc-200' : solo ? 'bg-violet-700' : 'bg-orange-700'}`}>{b.ended ? '원정 종료' : '월드보스 출현'}</i>
           <b className="flex min-w-0 items-center gap-1 text-[12.5px] text-white [text-shadow:0_1px_2px_#000]">
             {/* 구역 이름은 지역색(세계지도·집행관 태그와 같은 REGION_COLOR, 10-11 사용자). 주인 길드는 문양과 함께(🛡 이모지였던 자리, 10-11 사용자). */}
             <span className="shrink-0" style={{ color: REGION_COLOR[b.region] ?? '#fcd34d' }}>{b.zone}</span>
@@ -101,8 +100,8 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
           <small className="block truncate text-[10px] text-stone-300 [text-shadow:0_1px_2px_#000]">
             {solo
               ? b.ended
-                ? `최종 ${phase}페이즈 · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}`
-                : `${phase}페이즈 · ${b.hoursLeft >= 1 ? `${b.hoursLeft}시간 남음` : '1시간 미만 남음'} · 혼자 도전`
+                ? `최종 ${b.stage}페이즈 · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}`
+                : `${b.stage}페이즈 · 종료까지 ${b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'}`
               : b.ended
               ? `최종 ${b.stage}페이즈 · ${b.owner ? `💎${b.lootDiamond.toLocaleString('ko-KR')} 📦${b.lootBoxes.toLocaleString('ko-KR')}` : '전리품 없음'} · ${b.hoursAgo >= 1 ? `${b.hoursAgo}시간 전` : '방금'}` // 태그가 '원정 종료'라 '종료'를 되풀이하지 않는다(한 줄에 맞춤)
               : `${b.stage}페이즈 · 종료까지 ${b.hoursLeft >= 1 ? `${b.hoursLeft}시간` : '1시간 미만'} · 원정대 모집 중 ${b.recruiting}`}
@@ -112,7 +111,7 @@ export function WorldBossHomeBanner({ b }: { b: WorldBossHomeBannerData }) {
           <span className="relative z-10 shrink-0 rounded-lg bg-zinc-700 px-3 py-1.5 text-[11.5px] font-black text-zinc-100">결과 보기</span>
         ) : (
           solo ? (
-            <span className="relative z-10 shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(139,92,246,0.5)] ring-1 ring-slate-300/50">도전하기</span>
+            <span className="relative z-10 shrink-0 rounded-lg bg-violet-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(139,92,246,0.5)] ring-1 ring-slate-300/50">토벌하기</span>
           ) : (
             <span className="relative z-10 shrink-0 rounded-lg bg-orange-600 px-3 py-1.5 text-[11.5px] font-black text-white shadow-[0_0_10px_rgba(234,88,12,0.5)]">토벌하기</span>
           )

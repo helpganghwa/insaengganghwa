@@ -12,6 +12,7 @@ import { useRef, useState, useTransition } from 'react';
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { ModalShell } from '@/components/ModalShell';
+import { Ticker } from '@/components/Ticker';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
@@ -22,7 +23,6 @@ import {
   SOLO_TIERS,
   soloPhaseBonus,
   soloPhaseFor,
-  soloPhaseHp,
   soloRankReward,
   soloTierIndex,
   soloTierReward,
@@ -75,7 +75,7 @@ function SecondaryButton({ children, className = '', ...p }: React.ButtonHTMLAtt
   );
 }
 
-export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName }: { detail: SoloDetail; spriteSrc: string; bgSrc: string; fx: SoloFx; leftText: string; bossName: string }) {
+export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detail: SoloDetail; spriteSrc: string; bgSrc: string; fx: SoloFx; bossName: string }) {
   const router = useRouter();
   const { showError } = useResourceToast();
   const [view, setView] = useState<'board' | 'prep' | 'battle'>('board');
@@ -125,7 +125,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
   // 재도전 버튼 — 남은 판이 있으면 바로 준비 화면, 없으면 포인트로 사기(오늘 더 못 사면 잠김).
   const retryButton = (onAfter: () => void, label?: string) =>
     !me || !active || !me.resident ? null : runsLeft > 0 ? (
-      <PrimaryButton onClick={onAfter}>{label ?? (me.best == null ? '도전하기' : '재도전')}</PrimaryButton>
+      <PrimaryButton onClick={onAfter}>{label ?? (me.best == null ? '토벌하기' : '재도전')}</PrimaryButton>
     ) : me.retryNext == null ? (
       <PrimaryButton disabled>오늘 도전 끝</PrimaryButton>
     ) : (
@@ -144,7 +144,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
     <div className="pb-2">
       {view === 'board' && (
         <>
-          <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} bossName={bossName} leftText={leftText} phase={phase} />
+          <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} idleSrc={fx.idle} bossName={bossName} phase={phase} onReward={() => setSheet('reward')} onPattern={() => setSheet('pattern')} />
           <Board d={d} />
           <MyLine d={d} stage={phase.stage} />
           {me && !me.resident && active ? (
@@ -156,10 +156,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
             </p>
           ) : null}
           <div className="px-3 pt-3 pb-1">
-            <div className="flex h-11 flex-none gap-2">
-              <SecondaryButton onClick={() => setSheet('reward')}>보상 안내</SecondaryButton>
-              {retryButton(() => setView('prep')) ?? <SecondaryButton onClick={() => setSheet('pattern')}>패턴 안내</SecondaryButton>}
-            </div>
+            <div className="flex h-11 flex-none gap-2">{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</div>
           </div>
         </>
       )}
@@ -193,38 +190,66 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, leftText, bossName 
 
 // ── 첫 화면 ─────────────────────────────────────────────────────────────────
 
-function Hero({ d, bgSrc, spriteSrc, bossName, leftText, phase }: { d: SoloDetail; bgSrc: string; spriteSrc: string; bossName: string; leftText: string; phase: ReturnType<typeof soloPhaseFor> }) {
+function remain(ms: number): string {
+  const m = Math.ceil(ms / 60_000);
+  if (m <= 0) return '곧 원정 종료';
+  const h = Math.floor(m / 60);
+  return h > 0 ? `종료까지 ${h}시간 ${m % 60}분` : `종료까지 ${m}분`;
+}
+
+function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPattern }: { d: SoloDetail; bgSrc: string; spriteSrc: string; idleSrc: string; bossName: string; phase: ReturnType<typeof soloPhaseFor>; onReward: () => void; onPattern: () => void }) {
+  const active = d.status === 'active';
+  const leaveMs = new Date(d.leaveAt).getTime();
   const router = useRouter();
   const bonus = Math.round((soloPhaseBonus(phase.stage) - 1) * 100);
   return (
-    <div className="relative h-[168px] overflow-hidden bg-slate-950">
+    <div className="relative h-[200px] overflow-hidden bg-slate-950">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover" style={PIX} />
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,6,23,0.6)_0%,transparent_30%,transparent_55%,rgba(2,6,23,0.95)_100%)]" />
       <button type="button" onClick={() => router.back()} aria-label="뒤로" className="absolute top-3 left-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl leading-none font-bold text-white">
         ‹
       </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={spriteSrc} alt="" className={`absolute top-[60%] left-1/2 z-[1] h-[112px] w-[112px] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_10px_rgba(139,92,246,.4)] ${d.status === 'left' ? 'opacity-50 grayscale' : ''}`} style={PIX} />
-      <div className="absolute top-3 right-3 left-[52px] z-[2] flex flex-col">
+      {/* 불사조 상세와 같은 크기의 무대(200px) — 머무는 동안은 대기 애니(.wbq), 끝나면 흐린 정지 그림. */}
+      {active ? (
+        <div role="img" aria-label={bossName} className="wbq absolute top-[54%] left-1/2 z-[1] -mt-[80px] -ml-[80px] h-[160px] w-[160px]" style={{ '--wbq-idle': `url(${idleSrc})` } as React.CSSProperties} />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={spriteSrc} alt="" className="absolute top-[54%] left-1/2 z-[1] -mt-[80px] -ml-[80px] h-[160px] w-[160px] object-contain opacity-50 grayscale" style={PIX} />
+      )}
+      <div className="absolute top-3 right-[92px] left-[52px] z-[2] flex flex-col">
         <span className="flex items-center gap-1.5">
-          <span className="rounded-[4px] bg-violet-700/90 px-1 text-[9px] leading-[1.5] font-extrabold text-violet-50">월드보스</span>
+          <span className={`rounded-[4px] px-1 text-[9px] leading-[1.5] font-extrabold ${active ? 'bg-violet-700/90 text-violet-50' : 'bg-stone-700 text-stone-200'}`}>{active ? '월드보스' : '원정 종료'}</span>
           <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{bossName}</h1>
         </span>
-        <span className="text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">
-          {d.zoneName} · {leftText}
-        </span>
+        <span className="text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">{d.zoneName}</span>
+      </div>
+      {/* 보상·패턴 안내 — 히어로 우측 상단에 작게(11-13 사용자) */}
+      <div className="absolute top-3 right-3 z-[3] flex flex-col items-end gap-1">
+        <button type="button" onClick={onReward} className="rounded-full border border-violet-400/50 bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-bold text-violet-100">
+          보상 안내
+        </button>
+        <button type="button" onClick={onPattern} className="rounded-full border border-violet-400/50 bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-bold text-violet-100">
+          패턴 안내
+        </button>
       </div>
       <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
         <span className="flex flex-col">
-          <b className="text-[24px] leading-none font-black text-violet-300 [text-shadow:0_1px_3px_#000]">{phase.stage + 1}페이즈</b>
-          {d.status === 'active' ? (
+          <b className={`text-[28px] leading-none font-black [text-shadow:0_1px_3px_#000] ${active ? 'text-violet-300' : 'text-stone-300'}`}>{active ? `${phase.stage}페이즈` : `최종 ${phase.stage}페이즈`}</b>
+          {active ? (
             <span className="mt-1 text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
               다음 페이즈까지 <b className="text-violet-200">{man(phase.need - phase.into)}</b>
             </span>
           ) : null}
         </span>
-        <b className="text-[12px] font-extrabold text-stone-100 [text-shadow:0_1px_2px_#000]">구간 보상 +{bonus}%</b>
+        <span className="flex flex-col items-end">
+          <b className="text-[13px] font-extrabold text-stone-100 [text-shadow:0_1px_2px_#000]">구간 보상 +{bonus}%</b>
+          {active ? (
+            <Ticker intervalMs={60_000}>{(now) => <span className="text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">{remain(leaveMs - now)}</span>}</Ticker>
+          ) : (
+            <span className="text-[10.5px] text-stone-400">{d.status === 'settling' ? '정산 중' : '원정 종료'}</span>
+          )}
+        </span>
       </div>
     </div>
   );
@@ -411,7 +436,7 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
         <div className="flex h-11 flex-none gap-2">
           <SecondaryButton onClick={onPattern}>패턴 안내</SecondaryButton>
           <PrimaryButton onClick={onGo} disabled={pending || total <= 0 || runsLeft <= 0}>
-            {pending ? '준비 중' : total <= 0 ? '요구 장비 필요' : '도전'}
+            {pending ? '준비 중' : total <= 0 ? '요구 장비 필요' : '출발'}
           </PrimaryButton>
         </div>
       </div>
@@ -424,11 +449,21 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
 const LAND: Partial<Record<string, number>> = { crouch: 520, weapon: 880, armor: 880, accessory: 880, expose: 650 };
 const PC: Partial<Record<string, string>> = { crouch: 'wbq-crouch', dodge: 'wbq-climb', weapon: 'wbq-bind', armor: 'wbq-bind', accessory: 'wbq-bind', expose: 'wbq-expose' };
 const SIL = 'drop-shadow(0 0 10px rgba(139,92,246,.4))';
+/** 레이드 게이지와 같은 색 순환(RaidSessionCard PHASE_PALETTE) — 페이즈를 넘길 때마다 다음 색. */
+const PHASE_BAR = [
+  'bg-emerald-400 shadow-emerald-400/60',
+  'bg-sky-400 shadow-sky-400/60',
+  'bg-violet-400 shadow-violet-400/60',
+  'bg-amber-400 shadow-amber-400/60',
+  'bg-rose-400 shadow-rose-400/60',
+  'bg-cyan-400 shadow-cyan-400/60',
+];
+const phaseBarClass = (stage: number) => `h-full rounded-full shadow-[0_0_10px] ${PHASE_BAR[stage % PHASE_BAR.length]}`;
 
-function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
+export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
   const me = d.me!;
   const root = useRef<HTMLDivElement>(null);
-  const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, timers: [] as ReturnType<typeof setTimeout>[] });
+  const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, shown: soloPhaseFor(run.totalBefore).stage, chain: Promise.resolve(), timers: [] as ReturnType<typeof setTimeout>[] });
   const [left, setLeft] = useState(10);
   const [done, setDone] = useState(false);
   const best0 = run.prevBest ?? 0;
@@ -443,21 +478,40 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
     else st.current.timers.push(setTimeout(fn, ms));
   };
 
-  function drawPhase(flash: boolean) {
-    const p = soloPhaseFor(st.current.phaseTotal);
-    const ph = q('[data-phase]');
-    if (ph) ph.textContent = `${p.stage + 1}페이즈`;
-    const rem = q('[data-remain]');
-    if (rem) rem.textContent = man(p.need - p.into);
-    const bo = q('[data-bonus]');
-    if (bo) bo.textContent = `구간 보상 +${Math.round((soloPhaseBonus(p.stage) - 1) * 100)}%`;
+  // 레이드 게이지와 같은 방식 — 이번 페이즈에 들어간 만큼 차오르고, 한 번에 여러 페이즈를 넘기면 페이즈마다 100%까지 채운 뒤
+  // 다음 색으로 0부터 다시(넘긴 페이즈가 모두 보이게). 순서대로 이어 붙인다(chain) — 스킵이면 기다림 0.
+  function setBar(stage: number, pct: number, animate: boolean) {
     const bar = q<HTMLElement>('[data-hpbar]');
-    if (bar) bar.style.width = `${Math.max(0.6, ((p.need - p.into) / soloPhaseHp(p.stage + 1)) * 100)}%`;
-    if (flash && !st.current.fast && !reduce()) {
-      ph?.animate([{ transform: 'scale(1.5)', background: '#c084fc' }, { transform: 'none' }], { duration: 700 });
-      float(`${p.stage + 1}페이즈`, 'text-[15px] text-fuchsia-200', 0, 120);
-      sounds.levelup();
-    }
+    if (!bar) return;
+    bar.className = phaseBarClass(stage);
+    bar.style.transition = animate ? 'width 380ms ease-out' : 'none';
+    bar.style.width = `${Math.max(2, pct)}%`;
+  }
+  function drawPhase() {
+    const target = soloPhaseFor(st.current.phaseTotal);
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, st.current.fast || reduce() ? 0 : ms));
+    st.current.chain = st.current.chain.then(async () => {
+      while (st.current.shown < target.stage) {
+        setBar(st.current.shown, 100, true);
+        await wait(440);
+        st.current.shown += 1;
+        const shown = st.current.shown;
+        const ph = q('[data-phase]');
+        if (ph) ph.textContent = `${shown}페이즈`;
+        const bo = q('[data-bonus]');
+        if (bo) bo.textContent = `구간 보상 +${Math.round((soloPhaseBonus(shown) - 1) * 100)}%`;
+        if (!st.current.fast && !reduce()) {
+          ph?.animate([{ transform: 'scale(1.5)', background: '#c084fc' }, { transform: 'none' }], { duration: 650 });
+          float(`${shown}페이즈`, 'text-[15px] text-fuchsia-200', 0, 0);
+          sounds.levelup();
+        }
+        setBar(shown, 0, false);
+        await wait(50);
+      }
+      setBar(target.stage, (target.into / target.need) * 100, true);
+      const rem = q('[data-remain]');
+      if (rem) rem.textContent = man(target.need - target.into);
+    });
   }
 
   function float(text: string, cls: string, dx = 0, delay = 0, top = '30%') {
@@ -587,9 +641,8 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
           haptic.hit();
         }
       }
-      const before = soloPhaseFor(s.phaseTotal).stage;
       s.phaseTotal += h.d;
-      drawPhase(soloPhaseFor(s.phaseTotal).stage > before);
+      drawPhase();
       const was = s.sum;
       s.sum += h.d;
       const tot = q<HTMLElement>('[data-total]');
@@ -655,7 +708,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgba(76,29,149,.12),rgba(2,6,23,.8)_85%)]" />
         <div data-head className="absolute top-3 left-3 z-10 flex items-center gap-1.5 transition-opacity duration-300">
           <span data-phase className="rounded-[4px] bg-violet-700/90 px-1 text-[9px] leading-[1.5] font-extrabold text-violet-50">
-            {startPhase.stage + 1}페이즈
+            {startPhase.stage}페이즈
           </span>
           <b className="text-[13px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{bossName}</b>
         </div>
@@ -671,13 +724,15 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
               구간 보상 +{Math.round((soloPhaseBonus(startPhase.stage) - 1) * 100)}%
             </b>
           </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/55 ring-1 ring-white/10">
-            <div data-hpbar className="h-full rounded-full bg-gradient-to-r from-violet-600 via-violet-400 to-slate-200 transition-[width] duration-300" style={{ width: `${Math.max(0.6, ((startPhase.need - startPhase.into) / startPhase.need) * 100)}%` }} />
+          <div className="mt-1 h-2.5 isolate overflow-hidden rounded-full bg-black/55 ring-1 ring-white/10">
+            <div data-hpbar className={phaseBarClass(startPhase.stage)} style={{ width: `${Math.max(2, (startPhase.into / startPhase.need) * 100)}%` }} />
           </div>
         </div>
-        <div data-pat className="absolute top-[38px] left-1/2 z-10 -translate-x-1/2 rounded-xl bg-black/60 px-3 py-1 text-center leading-tight whitespace-nowrap text-zinc-300 opacity-0 ring-1 ring-white/10 transition-opacity duration-150">
+        <div className="pointer-events-none absolute inset-x-0 top-[38px] z-10 flex justify-center">
+        <div data-pat className="rounded-xl bg-black/60 px-3 py-1 text-center leading-tight whitespace-nowrap text-zinc-300 opacity-0 ring-1 ring-white/10 transition-opacity duration-150">
           <b data-pname className="block text-[12px] font-extrabold" />
           <span data-pdesc className="block text-[10px] text-zinc-300/90" />
+        </div>
         </div>
         <div data-thread className="pointer-events-none absolute top-0 left-1/2 z-[1] w-px -translate-x-1/2 bg-slate-200/70" style={{ height: 0, transition: 'height .3s ease-out' }} />
         {/* 가운데 정렬은 margin으로 — Tailwind v4의 -translate-*는 translate 속성이라 거미줄 타기 오르내림(translate keyframes)과 겹쳐 튄다. */}
@@ -917,7 +972,7 @@ function ResultCard({ run }: { run: Run }) {
         <p className="mt-1.5 text-center text-[10.5px] leading-snug text-zinc-300">
           {detail === 'rank'
             ? `${rankBand} 순위 보상이에요. 보스가 사라질 때 최종 순위로 정해져요.`
-            : `${tierLabel(tierAfter)} ${tierAfter === 0 ? '' : '구간 '}${rewardText(SOLO_TIERS[tierAfter]!)}에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈 돌파)를 더했어요. 페이즈가 오를수록 늘어나요.`}
+            : `${tierLabel(tierAfter)} ${tierAfter === 0 ? '' : '구간 '}${rewardText(SOLO_TIERS[tierAfter]!)}에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더했어요. 페이즈가 오를수록 늘어나요.`}
         </p>
       ) : null}
       <p data-step style={hide} className="mt-1.5 text-center text-[10px] text-zinc-500">
