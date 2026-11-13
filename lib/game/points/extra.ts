@@ -7,6 +7,7 @@ import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/
 import { expeditionExtraLock, expeditionExtraOpen } from '@/lib/game/expedition/service';
 import { raidExtraLock } from '@/lib/game/raid/open';
 import { towerExtraLock, towerRerollFloor, towerRerollOf, towerRerollableFloor } from '@/lib/game/tower/service';
+import { wbRetryLock } from '@/lib/game/world-boss/solo-server';
 import type { SlotKeys } from '@/lib/game/tower/engine';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -32,7 +33,7 @@ export type ExtraBuyResult = {
   pool?: SlotKeys | null;
 };
 
-const ITEM_KO: Record<PointExtraItem, string> = { expedition: '추가 파견', raid: '오늘 레이드 +1회', tower: '탑 추가 도전', tower_reroll: '탑 요구 장비 다시 뽑기' };
+const ITEM_KO: Record<PointExtraItem, string> = { expedition: '추가 파견', raid: '오늘 레이드 +1회', tower: '탑 추가 도전', tower_reroll: '탑 요구 장비 다시 뽑기', wb_retry: '월드보스 재도전' };
 
 /** boughtToday번 산 뒤 qty장을 더 살 때의 값 합(대난투 포인트). 한 장이라도 못 사면 null. */
 function priceForQty(item: PointExtraItem, boughtToday: number, qty: number): number | null {
@@ -101,6 +102,9 @@ export async function buyExtra(
         await expeditionExtraLock(tx, userId, serverId);
       } else if (item === 'raid') {
         await raidExtraLock(tx, userId, serverId, day);
+      } else if (item === 'wb_retry') {
+        // 개인 월드보스 재도전(0253) — 거주 구역 보스가 있고 남은 판이 0일 때만.
+        await wbRetryLock(tx, userId, serverId);
       } else {
         // 탑 추가 도전·요구 장비 다시 뽑기 — 진행도 행을 잠가 전투 판정과 직렬화한다(다시 뽑은 요구 장비로 싸우는 판과 겹치지 않게).
         await towerExtraLock(tx, userId, serverId);

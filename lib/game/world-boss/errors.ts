@@ -16,7 +16,13 @@ export type WorldBossErrorCode =
   | 'ALREADY_INVITED'
   | 'NO_INVITE'
   | 'NOT_INVITABLE'
-  | 'PROFANITY';
+  | 'PROFANITY'
+  // 개인 월드보스(0253)
+  | 'NOT_SOLO'
+  | 'NOT_RESIDENT'
+  | 'NO_RUNS'
+  | 'NO_POWER'
+  | 'BAD_REQUEST';
 
 export class WorldBossError extends Error {
   constructor(public readonly code: WorldBossErrorCode) {

@@ -4,7 +4,7 @@
  * 표는 0228(0229 = 우편 종류)이 만든다 — 적용 전엔 inert.
  */
 import { sql } from 'drizzle-orm';
-import { bigint, bigserial, date, index, integer, jsonb, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { bigint, bigserial, boolean, date, index, integer, jsonb, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { guilds, zones } from './guild';
 import { profiles } from './profiles';
@@ -50,6 +50,8 @@ export const worldBosses = pgTable(
     weak: jsonb('weak').$type<WorldBossWeakSet[]>().notNull().default(sql`'[]'::jsonb`),
     /** 특성 코드(0232, 0~2개) — 소환 때 추첨해 고정(WORLD_BOSS_TRAITS). 옛 행은 빈 배열 = 특성 없음. */
     traits: jsonb('traits').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /** 개인 보스(0253)의 부위별 요구 장비(탑 규칙) — 소환 때 추첨. 원정대 보스는 null. */
+    pool: jsonb('pool').$type<{ weapon: string[]; armor: string[]; accessory: string[] }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -183,4 +185,50 @@ export const worldBossInvites = pgTable(
     decidedAt: timestamp('decided_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.partyId, t.userId] }), index('world_boss_invites_user_idx').on(t.userId, t.status)],
+);
+
+/** 개인 월드보스(0253) — 도전 1판. hits = 10타 [{p: 패턴, d: 피해, c: 치명}], power = 그 판의 부위별 전투력(탑 규칙 적용 뒤). */
+export type WorldBossSoloHit = { p: string; d: number; c: boolean };
+export const worldBossSoloRuns = pgTable(
+  'world_boss_solo_runs',
+  {
+    id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+    bossId: bigint('boss_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => worldBosses.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    kstDate: date('kst_date').notNull(),
+    paid: boolean('paid').notNull().default(false),
+    score: bigint('score', { mode: 'bigint' }).notNull(),
+    hits: jsonb('hits').$type<WorldBossSoloHit[]>().notNull(),
+    power: jsonb('power').$type<{ weapon: number; armor: number; accessory: number }>().notNull(),
+    idemKey: uuid('idem_key').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('world_boss_solo_runs_idem_uq').on(t.idemKey), index('world_boss_solo_runs_boss_user_idx').on(t.bossId, t.userId, t.kstDate)],
+);
+
+/** 개인 월드보스(0253) — (보스, 유저) 최고 기록 = 순위표 한 줄. 정산 때 final_rank·보상을 적는다. */
+export const worldBossSoloRecords = pgTable(
+  'world_boss_solo_records',
+  {
+    bossId: bigint('boss_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => worldBosses.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    serverId: smallint('server_id').notNull(),
+    best: bigint('best', { mode: 'bigint' }).notNull(),
+    bestAt: timestamp('best_at', { withTimezone: true }).notNull(),
+    bestRunId: bigint('best_run_id', { mode: 'bigint' }).notNull(),
+    runs: integer('runs').notNull().default(0),
+    finalRank: integer('final_rank'),
+    rewardDiamond: integer('reward_diamond').notNull().default(0),
+    rewardBoxes: integer('reward_boxes').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.bossId, t.userId] }), index('world_boss_solo_records_user_idx').on(t.userId)],
 );

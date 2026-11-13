@@ -1134,6 +1134,8 @@ export const POINT_EXTRA_PRICES = {
   raid: [20, 40, 80],
   tower: [5, 10],
   tower_reroll: [10, 20, 40],
+  /** 개인 월드보스 재도전(0253, 11-11 확정) — 하루 무료 1판 뒤 2번까지. 기록은 더 높을 때만 갱신, 점수는 공동 페이즈에 쌓인다. */
+  wb_retry: [10, 20],
 } as const;
 export type PointExtraItem = keyof typeof POINT_EXTRA_PRICES;
 /** 오늘 n번 산 뒤 다음 값(대난투 포인트). 더 못 사면 null. */

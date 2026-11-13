@@ -11,6 +11,7 @@ import { logWorldEvent } from '@/lib/game/world/event';
 import { raiseOpsAlert } from '@/lib/ops/alert';
 import { sendPushToUsers } from '@/lib/push/send';
 import { worldBossKind, worldBossName } from './bosses';
+import { settleSoloBoss } from './solo-settle';
 
 /**
  * 월드보스 생애(docs/WORLD-BOSS.md §1·§4·§5) — 크론(/api/cron/world-boss, 5분)이 서버마다 차례로 부른다.
@@ -105,13 +106,20 @@ async function settleOne(serverId: number, id: string): Promise<SettledBoss | nu
   return db.transaction(async (tx) => {
       await tx.execute(sql`set local lock_timeout = '3s'`); // 정산도 잠금 대기 상한(10-11 3차)
       const [b] = (await tx.execute(sql`
-        select b.id::text as id, b.zone_id, b.region::text as region, b.boss_code::text as boss_code, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes,
+        select b.id::text as id, b.zone_id, b.region::text as region, b.boss_code::text as boss_code, b.stage, b.loot_diamond::text as loot_diamond, b.loot_boxes, (b.pool is not null) as solo,
                z.name as zone_name, z.owner_guild_id::text as owner, g.name as owner_name
           from world_bosses b join zones z on z.id = b.zone_id left join guilds g on g.id = z.owner_guild_id
          where b.id = ${id}::bigint and b.status = 'active' and b.leave_at <= now()
          for update of b
-      `)) as unknown as { id: string; zone_id: number; region: string; boss_code: string; stage: number; loot_diamond: string; loot_boxes: number; zone_name: string; owner: string | null; owner_name: string | null }[];
+      `)) as unknown as { id: string; zone_id: number; region: string; boss_code: string; stage: number; loot_diamond: string; loot_boxes: number; solo: boolean; zone_name: string; owner: string | null; owner_name: string | null }[];
       if (!b) return null; // 다른 틱이 먼저 정산
+      if (b.solo) {
+        // 개인 보스(0253) — 길드 전리품 없음. 최고 기록 순위로 구간·순위 보상을 우편으로(참가자 모두).
+        const leaveS = worldBossKind(b.boss_code).lines.leave;
+        await settleSoloBoss(tx, { serverId, bossId: b.id, bossName: worldBossName(b.boss_code), zoneName: b.zone_name, stage: Number(b.stage), leavePolite: leaveS.pastPolite });
+        await tx.execute(sql`update world_bosses set status = 'left', settled_at = now() where id = ${id}::bigint`);
+        return { id, zoneId: b.zone_id, zoneName: b.zone_name, region: b.region, bossCode: b.boss_code, stage: Number(b.stage), lootDiamond: 0, lootBoxes: 0, guildId: null, guildName: null, disbanded: 0 } satisfies SettledBoss;
+      }
       const loot = { diamond: Number(b.loot_diamond), boxes: Number(b.loot_boxes) };
       const bossName = worldBossName(b.boss_code);
       const leave = worldBossKind(b.boss_code).lines.leave;
