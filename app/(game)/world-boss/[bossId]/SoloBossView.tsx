@@ -78,7 +78,7 @@ function rollNumber(el: HTMLElement, from: number, to: number, ms: number) {
   };
   rolling.set(el, requestAnimationFrame(step));
 }
-const PATTERN_TONE: Record<string, string> = { crouch: 'text-sky-300', weapon: 'text-violet-300', armor: 'text-violet-300', accessory: 'text-violet-300', dodge: 'text-zinc-300', expose: 'text-rose-300' };
+const PATTERN_TONE: Record<string, string> = { crouch: 'text-sky-300', weapon: 'text-violet-300', armor: 'text-violet-300', accessory: 'text-violet-300', dodge: 'text-slate-300', expose: 'text-rose-300' };
 
 /** 채팅 미니바 위에 떠 있는 버튼 줄(11-13 사용자) — 길드 생성 버튼과 같은 자리 계산(--chat-dock-h). 아래 빈칸이 내용이 가려지지 않게 받친다. */
 function FloatingBar({ children }: { children: React.ReactNode }) {
@@ -86,7 +86,7 @@ function FloatingBar({ children }: { children: React.ReactNode }) {
     <>
       <div aria-hidden className="h-24" />
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 mx-auto max-w-[390px]">
-        <div className="bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent px-3 pt-6 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
+        <div className="bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent px-3 pt-6 pb-[calc(env(safe-area-inset-bottom)+72px+var(--chat-dock-h,0px))]">
           <div className="pointer-events-auto flex h-12 gap-2 [&>*]:shadow-[0_6px_18px_rgba(0,0,0,.55)]">{children}</div>
         </div>
       </div>
@@ -96,14 +96,14 @@ function FloatingBar({ children }: { children: React.ReactNode }) {
 
 function PrimaryButton({ children, className = '', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" {...p} className={`flex-1 rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[14px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:cursor-not-allowed disabled:from-zinc-700 disabled:to-zinc-800 disabled:text-zinc-400 disabled:active:scale-100 ${className}`}>
+    <button type="button" {...p} className={`flex-1 rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 text-[14px] font-black text-violet-50 shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-800 disabled:text-slate-400 disabled:active:scale-100 ${className}`}>
       {children}
     </button>
   );
 }
 function SecondaryButton({ children, className = '', ...p }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button type="button" {...p} className={`flex-1 rounded-xl border border-[rgba(168,145,107,.4)] bg-[#141312] text-[13px] font-extrabold text-zinc-200 disabled:text-zinc-500 ${className}`}>
+    <button type="button" {...p} className={`flex-1 rounded-xl border border-violet-400/40 bg-slate-950 text-[13px] font-extrabold text-slate-200 disabled:text-slate-500 ${className}`}>
       {children}
     </button>
   );
@@ -259,7 +259,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         onOptimistic={() => patch({ extra: extraRetry + 1 })}
         onRollback={() => patch({ extra: Math.max(0, extraRetry) })}
         onResult={() => onAfter()}
-        className="flex-1 rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[14px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)]"
+        className="flex-1 rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 text-[14px] font-black text-violet-50 shadow-[0_2px_10px_rgba(0,0,0,.4)]"
       />
     );
 
@@ -270,7 +270,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
           <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} idleSrc={fx.idle} bossName={bossName} phase={phase} onReward={() => setSheet('reward')} onPattern={() => setSheet('pattern')} />
           <Board d={d} stage={phase.stage} />
           {me && !me.resident && active ? (
-            <p className="mx-3 mt-2 rounded-lg border border-violet-500/30 bg-violet-950/40 px-2.5 py-2 text-[11.5px] leading-snug text-zinc-300">
+            <p className="mx-3 mt-2 rounded-lg border border-violet-500/30 bg-violet-950/40 px-2.5 py-2 text-[11.5px] leading-snug text-slate-300">
               {d.zoneName}에 거주하면 도전할 수 있어요.{me.homeZoneName ? ` 지금 거주지는 ${me.homeZoneName}이에요.` : ''}{' '}
               <Link prefetch={false} href="/guild/map" className="font-bold text-violet-200 underline">
                 지도에서 옮기기
@@ -356,10 +356,10 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
       )}
       <div className="absolute top-3 right-[92px] left-[52px] z-[2] flex flex-col">
         <span className="flex items-center gap-1.5">
-          <span className={`rounded-[4px] px-1 text-[9px] leading-[1.5] font-extrabold ${active ? 'bg-violet-700/90 text-violet-50' : 'bg-stone-700 text-stone-200'}`}>{active ? '월드보스' : '원정 종료'}</span>
-          <h1 className="truncate text-[17px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{bossName}</h1>
+          <span className={`rounded-[4px] px-1 text-[9px] leading-[1.5] font-extrabold ${active ? 'bg-violet-700/90 text-violet-50' : 'bg-slate-700 text-slate-200'}`}>{active ? '월드보스' : '원정 종료'}</span>
+          <h1 className="truncate text-[17px] font-extrabold text-slate-100 [text-shadow:0_1px_3px_#000]">{bossName}</h1>
         </span>
-        <span className="text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">{d.zoneName}</span>
+        <span className="text-[11px] text-slate-300 [text-shadow:0_1px_2px_#000]">{d.zoneName}</span>
       </div>
       {/* 보상·패턴 안내 — 히어로 우측 상단에 작게(11-13 사용자) */}
       <div className="absolute top-3 right-3 z-[3] flex flex-col items-end gap-1">
@@ -372,19 +372,19 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
       </div>
       <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
         <span className="flex flex-col">
-          <b className={`text-[28px] leading-none font-black [text-shadow:0_1px_3px_#000] ${active ? 'text-violet-300' : 'text-stone-300'}`}>{active ? `${phase.stage}페이즈` : `최종 ${phase.stage}페이즈`}</b>
+          <b className={`text-[28px] leading-none font-black [text-shadow:0_1px_3px_#000] ${active ? 'text-violet-300' : 'text-slate-300'}`}>{active ? `${phase.stage}페이즈` : `최종 ${phase.stage}페이즈`}</b>
           {active ? (
-            <span className="mt-1 text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
+            <span className="mt-1 text-[10.5px] text-slate-300 [text-shadow:0_1px_2px_#000]">
               다음 페이즈까지 <b className="text-violet-200">{man(phase.need - phase.into)}</b>
             </span>
           ) : null}
         </span>
         <span className="flex flex-col items-end">
-          <b className="text-[13px] font-extrabold text-stone-100 [text-shadow:0_1px_2px_#000]">구간 보상 +{bonus}%</b>
+          <b className="text-[13px] font-extrabold text-slate-100 [text-shadow:0_1px_2px_#000]">구간 보상 +{bonus}%</b>
           {active ? (
-            <Ticker intervalMs={60_000}>{(now) => <span className="text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">{remain(leaveMs - now)}</span>}</Ticker>
+            <Ticker intervalMs={60_000}>{(now) => <span className="text-[10.5px] text-slate-300 [text-shadow:0_1px_2px_#000]">{remain(leaveMs - now)}</span>}</Ticker>
           ) : (
-            <span className="text-[10.5px] text-stone-400">{d.status === 'settling' ? '정산 중' : '원정 종료'}</span>
+            <span className="text-[10.5px] text-slate-400">{d.status === 'settling' ? '정산 중' : '원정 종료'}</span>
           )}
         </span>
       </div>
@@ -399,7 +399,7 @@ function rankTint(rank: number, me: boolean): string {
   if (rank === 1) return 'from-amber-400/35 via-amber-500/10';
   if (rank === 2) return 'from-slate-300/30 via-slate-300/8';
   if (rank === 3) return 'from-orange-600/30 via-orange-700/8';
-  return me ? 'from-violet-500/30 via-violet-500/8' : 'from-zinc-400/10 via-transparent';
+  return me ? 'from-violet-500/30 via-violet-500/8' : 'from-slate-400/10 via-transparent';
 }
 /** 등수 숫자·구분선·게이지 색 — 틴트와 같은 계열. */
 function rankAccent(rank: number, me: boolean): { text: string; line: string; bar: string } {
@@ -408,7 +408,7 @@ function rankAccent(rank: number, me: boolean): { text: string; line: string; ba
   if (rank === 3) return { text: 'text-orange-200', line: 'bg-orange-500/55', bar: 'bg-orange-500' };
   return me
     ? { text: 'text-violet-200', line: 'bg-violet-500/60', bar: 'bg-violet-400' }
-    : { text: 'text-zinc-300', line: 'bg-zinc-700/60', bar: 'bg-slate-400/60' };
+    : { text: 'text-slate-300', line: 'bg-slate-700/60', bar: 'bg-slate-400/60' };
 }
 /** 순위 한 줄 — 대난투 순위와 같은 구성(오른쪽 얼굴 + 좌→우 등수 틴트·암막 2겹, 등수 | 구분선 | 1줄 이름·길드·칭호·'나', 2줄 보상) + 오른쪽 점수.
  *  글자 그림자는 요소마다 drop-shadow로 — 부모 text-shadow는 칭호 글자(배경 클립)에 상속돼 효과가 뭉개진다.
@@ -420,7 +420,7 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
   const accent = rankAccent(r.rank, r.me);
   const sh = 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]';
   return (
-    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/70 px-3">
+    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-slate-800/70 px-3">
       {r.avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-36">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -428,20 +428,20 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
         </div>
       ) : null}
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-slate-950 to-transparent" />
       <div className="relative z-10 flex w-full items-center gap-2.5">
         <span className={`w-8 shrink-0 text-center font-mono text-[14px] font-extrabold ${sh} ${accent.text}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
         <div className={`w-px shrink-0 self-stretch ${accent.line}`} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
-            <b className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-zinc-50 ${sh}`}>{r.nick}</b>
-            {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className={`min-w-0 shrink-[2] text-[9.5px] text-zinc-300 ${sh}`} /> : null}
+            <b className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-slate-50 ${sh}`}>{r.nick}</b>
+            {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className={`min-w-0 shrink-[2] text-[9.5px] text-slate-300 ${sh}`} /> : null}
             {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10px]" /> : null}
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           </div>
-          <div className={`truncate text-[9.5px] text-zinc-300 tabular-nums ${sh}`}>{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
+          <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</div>
         </div>
-        <b className={`flex-none font-mono text-[14px] font-black text-zinc-50 tabular-nums ${sh}`}>{n(r.score)}</b>
+        <b className={`flex-none font-mono text-[14px] font-black text-slate-50 tabular-nums ${sh}`}>{n(r.score)}</b>
       </div>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[2px] bg-black/40">
         <span className={`block h-full ${accent.bar}`} style={{ width: `${pct}%` }} />
@@ -457,21 +457,21 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
   return (
     <div className="mt-2.5">
       <div className="mb-1.5 px-3">
-        <span className="text-[11px] font-bold tracking-widest text-zinc-500">피해 순위</span>
+        <span className="text-[11px] font-bold tracking-widest text-slate-500">피해 순위</span>
       </div>
-      <ul className="border-t border-zinc-800/80">
-        {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
+      <ul className="border-t border-slate-800/80">
+        {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
           <Row key={r.userId} total={total} stage={stage} r={{ rank: r.rank, nick: r.nickname, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
           me.best != null && me.rank != null ? (
             <>
-              <li className="border-b border-zinc-800/80 py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
+              <li className="border-b border-slate-800/80 py-0.5 text-center text-[10px] leading-none text-slate-600">⋮</li>
               <Row total={total} stage={stage} r={{ rank: me.rank, nick: me.nickname, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             </>
           ) : (
-            <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-400">아직 내 기록이 없어요</li>
+            <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-400">아직 내 기록이 없어요</li>
           )
         ) : null}
       </ul>
@@ -513,36 +513,36 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={spriteSrc} alt="" className="absolute top-1/2 left-[46px] z-[1] -mt-[34px] h-[68px] w-[68px] object-contain drop-shadow-[0_0_8px_rgba(139,92,246,.45)]" style={PIX} />
         <div className="absolute inset-y-0 right-3 left-[120px] z-[2] flex flex-col justify-center">
-          <b className="text-[15px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">도전 준비</b>
-          <span className="text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">{bossName}</span>
+          <b className="text-[15px] font-extrabold text-slate-100 [text-shadow:0_1px_3px_#000]">도전 준비</b>
+          <span className="text-[11px] text-slate-300 [text-shadow:0_1px_2px_#000]">{bossName}</span>
         </div>
         <span className="absolute top-1/2 right-3 z-[2] -translate-y-1/2 rounded-full border border-violet-400/50 bg-slate-950/80 px-2.5 py-1 text-[11px] font-bold text-violet-100">
           오늘 남은 도전 {runsLeft}번
         </span>
       </div>
       <div className="mx-3 mt-2.5 grid grid-cols-2 gap-1.5 text-center">
-        <div className="rounded-lg bg-zinc-900 py-1.5">
-          <div className="text-[10px] text-zinc-500">내 최고 기록</div>
-          <b className="font-mono text-[14px] text-zinc-100 tabular-nums">{me.best == null ? '-' : n(me.best)}</b>
-          <div className="text-[10px] text-zinc-500">{me.rank == null ? '기록 없음' : `${n(me.rank)}위`}</div>
+        <div className="rounded-lg bg-slate-900 py-1.5">
+          <div className="text-[10px] text-slate-500">내 최고 기록</div>
+          <b className="font-mono text-[14px] text-slate-100 tabular-nums">{me.best == null ? '-' : n(me.best)}</b>
+          <div className="text-[10px] text-slate-500">{me.rank == null ? '기록 없음' : `${n(me.rank)}위`}</div>
         </div>
-        <div className="rounded-lg bg-zinc-900 py-1.5">
-          <div className="text-[10px] text-zinc-500">이 장비로 보통</div>
+        <div className="rounded-lg bg-slate-900 py-1.5">
+          <div className="text-[10px] text-slate-500">이 장비로 보통</div>
           <b className="font-mono text-[14px] text-violet-200 tabular-nums">{range ? `${man(range[0])}~${man(range[1])}` : '-'}</b>
-          <div className="text-[10px] text-zinc-500">
+          <div className="text-[10px] text-slate-500">
             {range && me.best != null ? (range[1] > me.best ? '최고 기록을 넘길 수 있어요' : '패턴이 좋으면 넘길 수 있어요') : '패턴에 따라 달라져요'}
           </div>
         </div>
       </div>
       <div className="mx-3 mt-2">
         <div className="mb-1 flex items-baseline justify-between">
-          <span className="text-[11px] font-bold text-zinc-500">내 장비 · 눌러서 바꾸기</span>
-          <button type="button" onClick={() => onPick('weapon')} className="text-[11px] text-zinc-400">
+          <span className="text-[11px] font-bold text-slate-500">내 장비 · 눌러서 바꾸기</span>
+          <button type="button" onClick={() => onPick('weapon')} className="text-[11px] text-slate-400">
             요구 장비{' '}
-            <b className="text-zinc-200">
+            <b className="text-slate-200">
               {me.ownedRequired}/{required}
             </b>
-            <span className="font-bold text-amber-300"> 보기 ›</span>
+            <span className="font-bold text-violet-300"> 보기 ›</span>
           </button>
         </div>
         {SLOTS.map((s) => {
@@ -555,16 +555,16 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
               onClick={() => onPick(s)}
               className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2.5 border-b border-l-2 border-white/[.07] py-1.5 pr-3 pl-2.5 text-left active:bg-white/5 ${m === 2 ? 'border-l-amber-400 bg-amber-500/10' : m === 1 ? 'border-l-emerald-500/70' : 'border-l-red-500/60 bg-red-950/15'}`}
             >
-              <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${m === 2 ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : m === 0 ? 'border-zinc-800 bg-zinc-900 opacity-40 grayscale' : 'border-emerald-700/70 bg-zinc-900'}`}>
+              <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${m === 2 ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : m === 0 ? 'border-slate-800 bg-slate-900 opacity-40 grayscale' : 'border-emerald-700/70 bg-slate-900'}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p?.src ? <img src={p.src} alt="" className="h-7 w-7" style={PIX} /> : null}
               </span>
               <span className={`min-w-0 flex-1 leading-tight ${m === 0 ? 'opacity-60' : ''}`}>
-                <span className="block truncate text-[12px] text-zinc-100">
+                <span className="block truncate text-[12px] text-slate-100">
                   {p ? p.name : '장착 없음'}
-                  {p ? <span className="text-zinc-500"> +{p.level}</span> : null}
+                  {p ? <span className="text-slate-500"> +{p.level}</span> : null}
                 </span>
-                <span className="mt-0.5 flex items-center gap-1 text-[10.5px] text-zinc-500">
+                <span className="mt-0.5 flex items-center gap-1 text-[10.5px] text-slate-500">
                   <span className={`rounded px-1 text-[9.5px] leading-[1.5] font-black ${m === 2 ? 'bg-amber-400 text-amber-950' : m === 1 ? 'bg-emerald-600/80 text-emerald-50' : 'border border-red-500/60 text-red-300'}`}>
                     {m === 2 ? '×2 아바타' : m === 1 ? '×1 적용' : '×0 미적용'}
                   </span>
@@ -572,39 +572,39 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
                   {p && m === 0 ? ' · 요구 장비 아님' : ''}
                 </span>
               </span>
-              <b className={`flex-none tabular-nums ${m === 2 ? 'text-[13px] text-amber-300' : m === 0 ? 'text-[12px] text-red-300/80' : 'text-[12.5px] text-zinc-100'}`}>{m === 0 ? '제외' : n(p!.score)}</b>
-              <span className="flex-none text-[14px] text-zinc-600">›</span>
+              <b className={`flex-none tabular-nums ${m === 2 ? 'text-[13px] text-amber-300' : m === 0 ? 'text-[12px] text-red-300/80' : 'text-[12.5px] text-slate-100'}`}>{m === 0 ? '제외' : n(p!.score)}</b>
+              <span className="flex-none text-[14px] text-slate-600">›</span>
             </button>
           );
         })}
         {/* 아바타 — 무한의 탑처럼 이 자리에서 바로 고른다(고르면 그 아바타 기준 가장 센 장비로 함께 맞춤, 11-13 사용자). */}
         <button type="button" onClick={onAvatar} className="flex w-full items-center gap-2 border-b border-white/[.07] py-1.5 text-left text-[12px] active:bg-white/5">
-          <span className="flex-none text-zinc-400">아바타</span>
+          <span className="flex-none text-slate-400">아바타</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {me.avatarSouth ? <img src={me.avatarSouth} alt="" className="h-8 w-auto" style={PIX} /> : null}
-          <span className="text-[10.5px] text-zinc-500">{me.hasAvatar ? '나만의 아바타' : '기본 아바타'}</span>
-          <span className="ml-auto font-bold text-amber-300">변경 ›</span>
+          <span className="text-[10.5px] text-slate-500">{me.hasAvatar ? '나만의 아바타' : '기본 아바타'}</span>
+          <span className="ml-auto font-bold text-violet-300">변경 ›</span>
         </button>
         <div className="flex items-center justify-between gap-2 py-2 text-[12px] tabular-nums">
           {/* 추천 장착 미리 보기 — 바꾸면 오르는 전투력을 버튼에 바로(11-13 사용자 2안). 더 오를 게 없으면 숨긴다. */}
           {me.bestPower != null ? (
-            <button type="button" onClick={onEquipBest} disabled={pending} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-amber-500/60 bg-amber-950/30 px-2 py-1 text-[11px] font-bold text-amber-200 disabled:opacity-50">
+            <button type="button" onClick={onEquipBest} disabled={pending} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-violet-400/60 bg-violet-950/40 px-2 py-1 text-[11px] font-bold text-violet-200 disabled:opacity-50">
               추천 장착
-              <span className="font-mono text-amber-100">
-                {man(total)} → <b className="text-amber-300">{man(me.bestPower)}</b>
+              <span className="font-mono text-violet-100">
+                {man(total)} → <b className="text-violet-300">{man(me.bestPower)}</b>
               </span>
             </button>
           ) : (
-            <span className="text-[10.5px] text-zinc-500">지금이 가장 강력한 조합이에요</span>
+            <span className="text-[10.5px] text-slate-500">지금이 가장 강력한 조합이에요</span>
           )}
-          <span className="flex-none pl-2 text-zinc-400">
-            전투력 <b className="text-[14px] text-amber-300">{n(total)}</b>
+          <span className="flex-none pl-2 text-slate-400">
+            전투력 <b className="text-[14px] text-violet-200">{n(total)}</b>
           </span>
         </div>
       </div>
       <div className="mx-3 mt-1">
-        <div className="mb-1 text-[10.5px] text-zinc-500">부위 비율</div>
-        <div className="flex h-2 overflow-hidden rounded-full bg-zinc-800">
+        <div className="mb-1 text-[10.5px] text-slate-500">부위 비율</div>
+        <div className="flex h-2 overflow-hidden rounded-full bg-slate-800">
           {total > 0 ? (
             <>
               <span className="bg-amber-400" style={{ width: `${(me.power.weapon / total) * 100}%` }} />
@@ -613,9 +613,9 @@ function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEqui
             </>
           ) : null}
         </div>
-        <div className="mt-1 flex gap-3 text-[10px] text-zinc-400">
+        <div className="mt-1 flex gap-3 text-[10px] text-slate-400">
           {SLOTS.map((s) => (
-            <span key={s} className={me.power[s] === 0 ? 'text-zinc-600' : ''}>
+            <span key={s} className={me.power[s] === 0 ? 'text-slate-600' : ''}>
               {SLOT_KO[s]} {total > 0 ? Math.round((me.power[s] / total) * 100) : 0}%
             </span>
           ))}
@@ -740,7 +740,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
     const label = h.p === 'none' ? null : SOLO_PATTERN_LABEL[h.p];
     const nm = pat.querySelector('[data-pname]') as HTMLElement;
     nm.textContent = label?.name ?? '';
-    nm.className = `block text-[12px] font-extrabold ${PATTERN_TONE[h.p] ?? 'text-zinc-300'}`;
+    nm.className = `block text-[12px] font-extrabold ${PATTERN_TONE[h.p] ?? 'text-slate-300'}`;
     (pat.querySelector('[data-pdesc]') as HTMLElement).textContent = label?.desc ?? '';
     pat.style.opacity = label ? '1' : '0';
     const fast = st.current.fast || reduce();
@@ -824,8 +824,8 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
     const h = run.hits[s.i]!;
     showPattern(h);
     const land = () => {
-      if (h.p === 'dodge') float('빗나감', 'text-[19px] text-zinc-400', 0, 650, '50%');
-      else float(n(h.d), h.p === 'expose' ? 'text-[32px] text-rose-200' : h.c ? 'text-[30px] text-amber-300' : 'text-[24px] text-zinc-50');
+      if (h.p === 'dodge') float('빗나감', 'text-[19px] text-slate-400', 0, 650, '50%');
+      else float(n(h.d), h.p === 'expose' ? 'text-[32px] text-rose-200' : h.c ? 'text-[30px] text-amber-300' : 'text-[24px] text-slate-50');
       if (h.d && !s.fast && !reduce() && boss) {
         const strong = h.c || h.p === 'expose';
         boss.animate([{ rotate: '0deg', scale: '1' }, { rotate: `${strong ? -2.5 : -1.5}deg`, scale: strong ? '0.95' : '0.97' }, { rotate: `${strong ? 2 : 1}deg` }, { rotate: '0deg', scale: '1' }], { duration: strong ? 260 : 200, easing: 'ease-out' });
@@ -847,9 +847,9 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
       const tot = q<HTMLElement>('[data-total]');
       if (run.prevBest != null && was <= best0 && s.sum > best0) {
         const b = q<HTMLElement>('[data-best]');
-        if (b) b.className = 'font-mono text-[12px] text-zinc-500 line-through transition-colors';
-        tot?.classList.replace('text-violet-100', 'text-amber-200');
-        if (!s.fast) tot?.animate([{ textShadow: '0 0 16px rgba(251,191,36,.9)' }, { textShadow: '0 0 0 transparent' }], { duration: 900 });
+        if (b) b.className = 'font-mono text-[12px] text-slate-500 line-through transition-colors';
+        tot?.classList.replace('text-violet-100', 'text-white');
+        if (!s.fast) tot?.animate([{ textShadow: '0 0 16px rgba(196,181,253,.95)' }, { textShadow: '0 0 0 transparent' }], { duration: 900 });
       }
       if (tot) rollNumber(tot, was, s.sum, s.fast || reduce() ? 0 : 420);
       const race = raceAt(s.sum);
@@ -858,7 +858,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
       const rn = q<HTMLElement>('[data-race-note]');
       if (rn) {
         rn.textContent = race.note;
-        rn.className = `text-[10.5px] ${race.beat ? 'text-emerald-300' : 'text-zinc-300'}`;
+        rn.className = `text-[10.5px] ${race.beat ? 'text-emerald-300' : 'text-slate-300'}`;
       }
       const rg = q<HTMLElement>('[data-race-goal]');
       if (rg) rg.textContent = race.goal;
@@ -866,11 +866,11 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
       if (cell) {
         // 칸(11-13 사용자 H1안) — 위 색 띠 + 패턴 짧은 이름(없으면 번호) + 치명 금테·약점 분홍테, 숫자는 굴러 올라간다.
         const ring = h.c ? 'ring-1 ring-amber-400/80' : h.p === 'expose' ? 'ring-1 ring-rose-400/70' : 'ring-1 ring-white/[.06]';
-        cell.className = `relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md bg-zinc-900 ${ring}`;
-        const band = h.p === 'none' ? (h.c ? 'bg-amber-300' : 'bg-zinc-700') : h.p === 'dodge' ? 'border border-zinc-600 bg-transparent' : h.p === 'expose' ? 'bg-rose-400' : h.p === 'crouch' ? 'bg-sky-400/60' : 'bg-violet-400/50';
+        cell.className = `relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md bg-slate-900 ${ring}`;
+        const band = h.p === 'none' ? (h.c ? 'bg-amber-300' : 'bg-slate-700') : h.p === 'dodge' ? 'border border-slate-600 bg-transparent' : h.p === 'expose' ? 'bg-rose-400' : h.p === 'crouch' ? 'bg-sky-400/60' : 'bg-violet-400/50';
         const short = h.c ? '<b class="text-amber-300">치명</b>' : h.p === 'none' ? String(s.i + 1) : SOLO_PATTERN_LABEL[h.p].name.replace(' 옭아매기', '');
-        const tone = h.c ? '' : PATTERN_TONE[h.p] ?? 'text-zinc-500';
-        cell.innerHTML = `<span class="absolute inset-x-0 top-0 h-[3px] ${band}"></span><span class="text-[9px] leading-none ${tone || 'text-zinc-500'}">${short}</span><b data-v class="mt-1 font-mono text-[11.5px] leading-none tabular-nums ${h.d === 0 ? 'text-zinc-500' : h.p === 'expose' ? 'text-rose-200' : h.c ? 'text-amber-200' : 'text-zinc-100'}">${h.d === 0 ? '빗나감' : '0'}</b>`;
+        const tone = h.c ? '' : PATTERN_TONE[h.p] ?? 'text-slate-500';
+        cell.innerHTML = `<span class="absolute inset-x-0 top-0 h-[3px] ${band}"></span><span class="text-[9px] leading-none ${tone || 'text-slate-500'}">${short}</span><b data-v class="mt-1 font-mono text-[11.5px] leading-none tabular-nums ${h.d === 0 ? 'text-slate-500' : h.p === 'expose' ? 'text-rose-200' : h.c ? 'text-amber-200' : 'text-slate-100'}">${h.d === 0 ? '빗나감' : '0'}</b>`;
         const v = cell.querySelector<HTMLElement>('[data-v]');
         if (v && h.d > 0) rollNumber(v, 0, h.d, s.fast || reduce() ? 0 : 380);
         if (!s.fast) cell.animate([{ transform: 'scale(1.15)' }, { transform: 'none' }], { duration: 220 });
@@ -925,17 +925,17 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
           <span data-phase className="rounded-[4px] bg-violet-700/90 px-1 text-[9px] leading-[1.5] font-extrabold text-violet-50">
             {startPhase.stage}페이즈
           </span>
-          <b className="text-[13px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">{bossName}</b>
+          <b className="text-[13px] font-extrabold text-slate-100 [text-shadow:0_1px_3px_#000]">{bossName}</b>
         </div>
         <div className="absolute inset-x-3 bottom-2.5 z-10">
-          <div className="flex items-baseline justify-between text-[10.5px] text-stone-300 [text-shadow:0_1px_2px_#000]">
+          <div className="flex items-baseline justify-between text-[10.5px] text-slate-300 [text-shadow:0_1px_2px_#000]">
             <span>
               다음 페이즈까지{' '}
               <b data-remain className="font-mono text-violet-200">
                 {man(startPhase.need - startPhase.into)}
               </b>
             </span>
-            <b data-bonus className="text-stone-100">
+            <b data-bonus className="text-slate-100">
               구간 보상 +{Math.round((soloPhaseBonus(startPhase.stage) - 1) * 100)}%
             </b>
           </div>
@@ -943,48 +943,43 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
             <div data-hpbar className={phaseBarClass(startPhase.stage)} style={{ width: `${Math.max(2, (startPhase.into / startPhase.need) * 100)}%` }} />
           </div>
         </div>
-        {/* 이번 기록 — 무대 위 반투명 판. 판이 끝나면 결과 카드가 이 자리(무대 위)에 대신 뜬다(11-14 사용자). */}
-        <div className={`absolute inset-x-3 top-[34px] z-10 rounded-xl bg-black/55 px-3 py-2 ring-1 ring-white/10 ${done ? 'hidden' : ''}`}>
+        {/* 이번 기록 — 무대 위 반투명 판(11-14 사용자: 아래 섹션 대신 배경 위 오버레이). 이번 피해·최고 기록·기록 경주 막대는 그대로. */}
+        <div className="absolute inset-x-3 top-[34px] z-10 rounded-xl bg-black/55 px-3 py-2 ring-1 ring-white/10">
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-[10px] text-zinc-400">이번 피해</div>
+              <div className="text-[10px] text-slate-400">이번 피해</div>
               <b data-total className="font-mono text-[24px] leading-none font-black text-violet-100 tabular-nums [text-shadow:0_1px_3px_#000]">
                 0
               </b>
             </div>
-            <div className="text-right text-[10px] leading-snug text-zinc-400">
+            <div className="text-right text-[10px] leading-snug text-slate-400">
               최고 기록{' '}
-              <b data-best className="font-mono text-[11px] text-zinc-200 transition-colors">
+              <b data-best className="font-mono text-[11px] text-slate-200 transition-colors">
                 {run.prevBest == null ? '-' : n(run.prevBest)}
               </b>
               <br />
-              <b data-race-note className="text-[10.5px] text-zinc-300">
+              <b data-race-note className="text-[10.5px] text-slate-300">
                 {raceAt(0).note}
               </b>
             </div>
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/60">
-            <div data-race-bar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-amber-300 transition-[width] duration-300" style={{ width: '0%' }} />
+            <div data-race-bar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-200 transition-[width] duration-300" style={{ width: '0%' }} />
           </div>
-          <div className="mt-0.5 text-right text-[9.5px] text-zinc-400">
+          <div className="mt-0.5 text-right text-[9.5px] text-slate-400">
             <span data-race-goal>{raceAt(0).goal}</span>
           </div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-[112px] z-10 flex justify-center">
-        <div data-pat className="rounded-xl bg-black/60 px-3 py-1 text-center leading-tight whitespace-nowrap text-zinc-300 opacity-0 ring-1 ring-white/10 transition-opacity duration-150">
+        <div data-pat className="rounded-xl bg-black/60 px-3 py-1 text-center leading-tight whitespace-nowrap text-slate-300 opacity-0 ring-1 ring-white/10 transition-opacity duration-150">
           <b data-pname className="block text-[12px] font-extrabold" />
-          <span data-pdesc className="block text-[10px] text-zinc-300/90" />
+          <span data-pdesc className="block text-[10px] text-slate-300/90" />
         </div>
         </div>
         <div data-thread className="pointer-events-none absolute top-0 left-1/2 z-[1] w-px -translate-x-1/2 bg-slate-200/70" style={{ height: 0, transition: 'height .3s ease-out' }} />
         {/* 가운데 정렬은 margin으로 — Tailwind v4의 -translate-*는 translate 속성이라 거미줄 타기 오르내림(translate keyframes)과 겹쳐 튄다. */}
         <div data-boss role="img" aria-label={bossName} className="wbq absolute top-[64%] left-1/2 z-[1] -mt-[84px] -ml-[84px] h-[168px] w-[168px]" style={bossVars} />
         <div data-fx className="pointer-events-none absolute inset-0 z-[5]" />
-        {done ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 px-3">
-            <ResultCard run={run} />
-          </div>
-        ) : null}
       </div>
 
       {!done ? (
@@ -992,13 +987,13 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
           {SLOTS.map((s) => {
             const p = me.pieces.find((x) => x.slot === s);
             return (
-              <div key={s} data-gear={s} className={`relative flex items-center gap-1.5 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 px-1.5 py-1 ${!p || p.mult === 0 ? 'opacity-50' : ''}`}>
+              <div key={s} data-gear={s} className={`relative flex items-center gap-1.5 overflow-hidden rounded-lg border border-slate-800 bg-slate-900 px-1.5 py-1 ${!p || p.mult === 0 ? 'opacity-50' : ''}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p?.src ? <img src={p.src} alt="" className="h-6 w-6" style={PIX} /> : <span className="h-6 w-6" />}
                 <span className="min-w-0 leading-tight">
-                  <span className="block text-[10px] text-zinc-500">{SLOT_KO[s]}</span>
+                  <span className="block text-[10px] text-slate-500">{SLOT_KO[s]}</span>
                   {/* 이 부위의 공격력(탑 규칙 적용 뒤) — 옭아매기에 묶이면 이 값이 빠진다(11-13 사용자). */}
-                  <b className={`block font-mono text-[11.5px] tabular-nums ${p && p.score > 0 ? 'text-zinc-100' : 'text-zinc-600'}`}>{p && p.score > 0 ? man(p.score) : '0'}</b>
+                  <b className={`block font-mono text-[11.5px] tabular-nums ${p && p.score > 0 ? 'text-slate-100' : 'text-slate-600'}`}>{p && p.score > 0 ? man(p.score) : '0'}</b>
                 </span>
                 <span data-web={s} className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated', opacity: 0, transition: 'opacity .2s, scale .25s' }} />
               </div>
@@ -1009,7 +1004,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
 
       <div data-cells className="mx-3 mt-2 grid grid-cols-5 gap-1">
         {Array.from({ length: 10 }, (_, k) => (
-          <span key={k} className="relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-zinc-800 text-[10px] text-zinc-700">
+          <span key={k} className="relative flex h-[44px] flex-col items-center justify-center overflow-hidden rounded-md border border-dashed border-slate-800 text-[10px] text-slate-700">
             {k + 1}
           </span>
         ))}
@@ -1017,6 +1012,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
 
       {done ? (
         <>
+          <ResultCard run={run} />
           <div className="px-3 pt-3 pb-1">
             <div className="flex h-11 gap-2">
               {retry ? <div className="flex flex-1 [&>*]:flex-1">{retry}</div> : null}
@@ -1028,7 +1024,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
         <div className="px-3 pt-3 pb-1">
           <div className="flex h-12 gap-2">
             <SecondaryButton onClick={skip}>스킵</SecondaryButton>
-            <button data-atk type="button" onClick={strike} className="flex-[2] rounded-xl bg-gradient-to-b from-[#e7a93a] to-[#c98622] text-[15px] font-black text-[#2a1a05] shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:opacity-40">
+            <button data-atk type="button" onClick={strike} className="flex-[2] rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 text-[15px] font-black text-violet-50 shadow-[0_2px_10px_rgba(0,0,0,.4)] active:scale-[.97] disabled:opacity-40">
               공격{' '}
               <span className="text-[12px] font-bold opacity-75">
                 · <span className="font-mono">{left}</span>번 남음
@@ -1138,47 +1134,47 @@ function ResultCard({ run }: { run: Run }) {
   const rankBand = band ? (band.from === band.to ? `${band.from}위` : `${band.from}~${band.to}위`) : '';
   const rankUp = run.prevRank != null && run.prevRank > run.rank ? run.prevRank - run.rank : 0;
   return (
-    <div ref={reveal} className="relative w-full overflow-hidden rounded-2xl border border-amber-400/60 bg-[#1c1206]/90 px-3.5 py-3 shadow-[0_0_18px_rgba(251,191,36,.18)] backdrop-blur-[2px]">
-      <div data-shine className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-amber-200/20 to-transparent" style={{ translate: '-150% 0' }} />
-      <div className="text-center text-[11px] font-bold text-amber-300">{run.prevBest == null ? '첫 기록' : updated ? '기록 갱신' : '이번 기록'}</div>
-      <b data-rscore className="block text-center font-mono text-[30px] leading-tight font-black text-amber-100 tabular-nums">
+    <div ref={reveal} className="relative mx-3 mt-3 overflow-hidden rounded-2xl border border-violet-400/60 bg-violet-950/30 px-3.5 py-3 shadow-[0_0_18px_rgba(167,139,250,.2)]">
+      <div data-shine className="pointer-events-none absolute inset-y-0 left-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-slate-100/20 to-transparent" style={{ translate: '-150% 0' }} />
+      <div className="text-center text-[11px] font-bold text-violet-300">{run.prevBest == null ? '첫 기록' : updated ? '기록 갱신' : '이번 기록'}</div>
+      <b data-rscore className="block text-center font-mono text-[30px] leading-tight font-black text-violet-50 tabular-nums">
         0
       </b>
-      <div data-step style={hide} className="text-center text-[11px] text-zinc-400">
+      <div data-step style={hide} className="text-center text-[11px] text-slate-400">
         {run.prevBest == null ? (
           '이 기록으로 순위에 올랐어요'
         ) : updated ? (
           <>
-            최고 기록 <s className="text-zinc-500">{n(run.prevBest)}</s> → <b className="font-mono text-zinc-100">{n(run.best)}</b>
+            최고 기록 <s className="text-slate-500">{n(run.prevBest)}</s> → <b className="font-mono text-slate-100">{n(run.best)}</b>
           </>
         ) : (
           <>
-            최고 기록 <b className="font-mono text-zinc-100">{n(run.best)}</b> 유지
+            최고 기록 <b className="font-mono text-slate-100">{n(run.best)}</b> 유지
           </>
         )}
       </div>
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">
         <div data-step style={hide} className="rounded-xl bg-black/30 px-2.5 py-2 text-center ring-1 ring-white/[.06]">
-          <div className="text-[10px] text-zinc-500">순위</div>
+          <div className="text-[10px] text-slate-500">순위</div>
           <div className="flex items-baseline justify-center gap-0.5">
-            <b data-rrank className="font-mono text-[24px] leading-none font-black text-amber-200">
+            <b data-rrank className="font-mono text-[24px] leading-none font-black text-violet-200">
               {run.prevRank ?? run.rank}
             </b>
-            <span className="text-[11px] text-zinc-400">위</span>
+            <span className="text-[11px] text-slate-400">위</span>
           </div>
-          <div data-rdelta className={`mt-0.5 text-[10px] font-bold ${rankUp ? 'text-emerald-300' : 'text-zinc-500'}`} style={hide}>
+          <div data-rdelta className={`mt-0.5 text-[10px] font-bold ${rankUp ? 'text-emerald-300' : 'text-slate-500'}`} style={hide}>
             {rankUp ? `▲ ${rankUp}` : run.prevRank == null ? '새 기록' : '변동 없음'}
           </div>
         </div>
         <div data-step style={hide} className="rounded-xl bg-black/30 px-2.5 py-2 text-center ring-1 ring-white/[.06]">
-          <div className="text-[10px] text-zinc-500">구간</div>
-          <b data-rtier className="block text-[20px] leading-none font-black text-zinc-100">
+          <div className="text-[10px] text-slate-500">구간</div>
+          <b data-rtier className="block text-[20px] leading-none font-black text-slate-100">
             {tierLabel(tierBefore ?? tierAfter)}
           </b>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-800">
             <div data-rtbar className="h-full rounded-full bg-gradient-to-r from-violet-500 to-slate-200" style={{ width: '0%' }} />
           </div>
-          <div className="mt-0.5 text-[9.5px] text-zinc-500">{next ? `${next.label}까지 ${man(next.min - run.best)}` : '가장 높은 구간'}</div>
+          <div className="mt-0.5 text-[9.5px] text-slate-500">{next ? `${next.label}까지 ${man(next.min - run.best)}` : '가장 높은 구간'}</div>
         </div>
       </div>
       <div className="mt-2 flex justify-center gap-1.5">
@@ -1188,7 +1184,7 @@ function ResultCard({ run }: { run: Run }) {
             style={hide}
             type="button"
             onClick={() => setDetail((x) => (x === 'rank' ? null : 'rank'))}
-            className={`rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-bold text-zinc-100 ring-1 ${detail === 'rank' ? 'ring-amber-300' : 'ring-amber-400/40'}`}
+            className={`rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-bold text-slate-100 ring-1 ${detail === 'rank' ? 'ring-violet-300' : 'ring-violet-400/40'}`}
           >
             순위 {rewardText(rr)}
           </button>
@@ -1198,13 +1194,13 @@ function ResultCard({ run }: { run: Run }) {
           style={hide}
           type="button"
           onClick={() => setDetail((x) => (x === 'tier' ? null : 'tier'))}
-          className={`rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-bold text-zinc-100 ring-1 ${detail === 'tier' ? 'ring-amber-300' : 'ring-amber-400/40'}`}
+          className={`rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-bold text-slate-100 ring-1 ${detail === 'tier' ? 'ring-violet-300' : 'ring-violet-400/40'}`}
         >
           구간 {rewardText(tr)}
         </button>
       </div>
       {detail ? (
-        <p className="mt-1.5 text-center text-[10.5px] leading-snug text-zinc-300">
+        <p className="mt-1.5 text-center text-[10.5px] leading-snug text-slate-300">
           {detail === 'rank'
             ? `${rankBand} 순위 보상이에요. 보스가 사라질 때 최종 순위로 정해져요.`
             : `${tierLabel(tierAfter)} ${tierAfter === 0 ? '' : '구간 '}${rewardText(SOLO_TIERS[tierAfter]!)}에 페이즈 보너스 +${bonus}%(${stageAfter}페이즈)를 더했어요. 페이즈가 오를수록 늘어나요.`}
@@ -1224,16 +1220,16 @@ function SheetTable({ head, rows, hi }: { head: [string, string]; rows: [string,
   return (
     <table className="w-full overflow-hidden rounded-xl text-[12.5px]">
       <thead>
-        <tr className="bg-zinc-950/80 text-[11px] text-zinc-500">
+        <tr className="bg-slate-950/80 text-[11px] text-slate-500">
           <th className="px-3 py-1.5 text-left font-bold">{head[0]}</th>
           <th className="px-3 py-1.5 text-right font-bold">{head[1]}</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-zinc-800">
+      <tbody className="divide-y divide-slate-800">
         {rows.map(([a, b], i) => (
           <tr key={a} className={i === hi ? 'bg-violet-500/15' : ''}>
-            <td className={`px-3 py-2 font-bold ${i === hi ? 'text-violet-200' : 'text-zinc-200'}`}>{a}</td>
-            <td className="px-3 py-2 text-right font-bold text-zinc-100 tabular-nums">{b}</td>
+            <td className={`px-3 py-2 font-bold ${i === hi ? 'text-violet-200' : 'text-slate-200'}`}>{a}</td>
+            <td className="px-3 py-2 text-right font-bold text-slate-100 tabular-nums">{b}</td>
           </tr>
         ))}
       </tbody>
@@ -1247,7 +1243,7 @@ function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloF
   return (
     <ModalShell onClose={onClose} label="여왕의 패턴">
       <ModalLayout title="여왕의 패턴" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
-        <ul className="divide-y divide-zinc-800">
+        <ul className="divide-y divide-slate-800">
           {PATTERN_ORDER.map((k) => {
             const label = SOLO_PATTERN_LABEL[k];
             return (
@@ -1259,7 +1255,7 @@ function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloF
                   {k === 'expose' ? <span className="absolute inset-0 bg-[radial-gradient(circle,rgba(251,113,133,.45),transparent_65%)]" /> : null}
                 </span>
                 <b className={`flex-1 text-[13px] font-extrabold ${PATTERN_TONE[k]}`}>{label.name}</b>
-                <span className="flex-none text-[12px] text-zinc-300">{label.desc}</span>
+                <span className="flex-none text-[12px] text-slate-300">{label.desc}</span>
               </li>
             );
           })}
@@ -1295,7 +1291,7 @@ function AvatarSheet({ me, onPick, onClose }: { me: SoloMe; onPick: (id: string)
       <ModalLayout title="아바타" subtitle="고르면 그 아바타에 맞는 장비로 함께 바꿔요" bodyPad="sm" maxBodyClass="max-h-[56vh]" footer={<ModalButton tone="neutral" onClick={onClose}>닫기</ModalButton>}>
         <div className="flex flex-col gap-1.5">
           {rows.map(({ a, lo }) => (
-            <button key={a.id} type="button" onClick={() => onPick(a.id)} className={`flex h-[56px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left ${a.active ? 'border-amber-500 bg-amber-500/10' : 'border-zinc-800'}`}>
+            <button key={a.id} type="button" onClick={() => onPick(a.id)} className={`flex h-[56px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-left ${a.active ? 'border-violet-400 bg-violet-500/10' : 'border-slate-800'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {a.south ? <img src={a.south} alt="" className="h-10 w-auto" style={PIX} /> : <span className="h-10 w-8" />}
               <span className="min-w-0 flex-1 leading-tight">
@@ -1306,7 +1302,7 @@ function AvatarSheet({ me, onPick, onClose }: { me: SoloMe; onPick: (id: string)
                       const k = a.keys?.[sl];
                       const on = !!k && lo.pieces.some((p) => p.slot === sl && p.key === k && p.mult === 2);
                       return (
-                        <span key={sl} className={`relative flex h-6 w-6 flex-none items-center justify-center rounded-[5px] border ${on ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : 'border-zinc-700 bg-zinc-900 opacity-40 grayscale'}`}>
+                        <span key={sl} className={`relative flex h-6 w-6 flex-none items-center justify-center rounded-[5px] border ${on ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : 'border-slate-700 bg-slate-900 opacity-40 grayscale'}`}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           {k ? <img src={assetUrl(`/sprites/${sl}/${k}.png`)} alt="" className="h-[19px] w-[19px]" style={PIX} /> : null}
                         </span>
@@ -1314,11 +1310,11 @@ function AvatarSheet({ me, onPick, onClose }: { me: SoloMe; onPick: (id: string)
                     })}
                   </span>
                 ) : (
-                  <span className="text-[10px] text-zinc-500">만들 때 입은 장비 없음</span>
+                  <span className="text-[10px] text-slate-500">만들 때 입은 장비 없음</span>
                 )}
               </span>
-              <span className="flex-none text-[10.5px] text-zinc-300 tabular-nums">
-                전투력 <b className="text-amber-300">{n(lo.total)}</b>
+              <span className="flex-none text-[10.5px] text-slate-300 tabular-nums">
+                전투력 <b className="text-violet-200">{n(lo.total)}</b>
               </span>
             </button>
           ))}
@@ -1338,43 +1334,43 @@ function PoolSheet({ d, slot, onSlot, onEquip, pending, onClose }: { d: SoloDeta
       <ModalLayout title="요구 장비" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm" maxBodyClass="max-h-[62vh]">
         <div className="grid grid-cols-3 gap-1 p-1">
           {SLOTS.map((s) => (
-            <button key={s} type="button" onClick={() => onSlot(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${slot === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>
+            <button key={s} type="button" onClick={() => onSlot(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${slot === s ? 'border-violet-400/70 bg-violet-950/50 text-violet-200' : 'border-slate-800 bg-slate-950 text-slate-400'}`}>
               {SLOT_KO[s]} {(d.me?.requiredItems ?? []).filter((x) => x.slot === s).length}/{d.pool[s].length}
             </button>
           ))}
         </div>
         <div className="mt-1 flex flex-col gap-1.5 p-1">
-          {mine.length === 0 ? <p className="py-3 text-center text-[11.5px] text-zinc-500">이 부위의 요구 장비가 아직 없어요.</p> : null}
+          {mine.length === 0 ? <p className="py-3 text-center text-[11.5px] text-slate-500">이 부위의 요구 장비가 아직 없어요.</p> : null}
           {mine.map((it) => (
-            <div key={it.ueid} className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${it.equipped ? 'border-amber-500 bg-amber-950/40' : 'border-zinc-800 bg-zinc-950'}`}>
+            <div key={it.ueid} className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${it.equipped ? 'border-violet-400 bg-violet-950/40' : 'border-slate-800 bg-slate-950'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-zinc-900" style={PIX} /> : <span className="h-9 w-9" />}
+              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-slate-900" style={PIX} /> : <span className="h-9 w-9" />}
               <span className="min-w-0 flex-1 leading-tight">
-                <b className="block truncate text-[12px] text-zinc-100">{it.name}</b>
-                <span className="text-[10px] text-zinc-400">+{it.level}{it.transcend ? ` · 초월 ${it.transcend}` : ''}</span>
+                <b className="block truncate text-[12px] text-slate-100">{it.name}</b>
+                <span className="text-[10px] text-slate-400">+{it.level}{it.transcend ? ` · 초월 ${it.transcend}` : ''}</span>
               </span>
               <span className="flex-none text-right leading-tight">
-                <b className={`block text-[13px] tabular-nums ${it.mult === 2 ? 'text-amber-300' : 'text-zinc-100'}`}>{n(it.score)}</b>
-                <span className="text-[9.5px] text-zinc-500 tabular-nums">{n(it.cp)} ×{it.mult}</span>
+                <b className={`block text-[13px] tabular-nums ${it.mult === 2 ? 'text-amber-300' : 'text-slate-100'}`}>{n(it.score)}</b>
+                <span className="text-[9.5px] text-slate-500 tabular-nums">{n(it.cp)} ×{it.mult}</span>
               </span>
               {it.equipped ? (
-                <span className="w-[52px] flex-none text-center text-[10.5px] font-black text-amber-300">장착 중</span>
+                <span className="w-[52px] flex-none text-center text-[10.5px] font-black text-violet-300">장착 중</span>
               ) : (
-                <button type="button" onClick={() => onEquip(it.ueid)} disabled={pending} className="w-[52px] flex-none rounded-lg bg-amber-500 py-1.5 text-[11px] font-black text-amber-950 disabled:opacity-50">
+                <button type="button" onClick={() => onEquip(it.ueid)} disabled={pending} className="w-[52px] flex-none rounded-lg bg-violet-600 py-1.5 text-[11px] font-black text-violet-50 disabled:opacity-50">
                   장착
                 </button>
               )}
             </div>
           ))}
           {missing.map((it) => (
-            <div key={it.key} className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1.5 opacity-45">
+            <div key={it.key} className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-2 py-1.5 opacity-45">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-zinc-900" style={PIX} /> : <span className="h-9 w-9" />}
+              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-slate-900" style={PIX} /> : <span className="h-9 w-9" />}
               <span className="min-w-0 flex-1 leading-tight">
-                <b className="block truncate text-[12px] text-zinc-100">{it.name}</b>
-                <span className="text-[10px] text-zinc-400">아직 얻지 못한 장비</span>
+                <b className="block truncate text-[12px] text-slate-100">{it.name}</b>
+                <span className="text-[10px] text-slate-400">아직 얻지 못한 장비</span>
               </span>
-              <span className="w-[52px] flex-none text-center text-[10px] text-zinc-500">미보유</span>
+              <span className="w-[52px] flex-none text-center text-[10px] text-slate-500">미보유</span>
             </div>
           ))}
         </div>
