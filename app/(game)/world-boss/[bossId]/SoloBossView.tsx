@@ -7,12 +7,14 @@
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { josa } from 'josa';
 import { useMemo, useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
 import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
+import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
@@ -186,7 +188,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
     keyRef.current ??= crypto.randomUUID();
     const key = keyRef.current;
     start(async () => {
-      const r = await soloRunAction(d.id, key);
+      // 연결이 끊기면(전송 실패·응답 유실) 에러 화면 대신 알림만 — 키는 그대로 두어 다시 누르면 서버가 같은 판을 돌려준다.
+      const r = await soloRunAction(d.id, key).catch(() => ({ status: 'error' as const, code: 'UNKNOWN' as const, message: '연결이 끊겼어요. 다시 눌러 주세요.' }));
       if (r.status !== 'success') {
         showError(r.message);
         if (r.code !== 'UNKNOWN' && r.code !== 'RATE_LIMITED') keyRef.current = null;
@@ -214,9 +217,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       if (r.status !== 'success') {
         setOpt(before);
         showError(r.message ?? '바꾸지 못했어요.');
-        return;
       }
-      router.refresh();
+      // 성공이면 액션 응답이 이 페이지를 다시 그려 온다(revalidatePath) — router.refresh()는 같은 렌더를 한 번 더 부른다(CLAUDE §11.7).
     });
   }
   function equipBest() {
@@ -236,7 +238,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   function pickAvatar(id: string) {
     if (!me) return;
     const av = me.avatars.find((a) => a.id === id);
-    if (!av) return;
+    if (!av || av.active || pending) return;
     setSheet(null);
     optimistic(meAfter(me, loadoutWith(me, av.keys).pieces, id), () => soloPickAvatarAction(d.id, id));
   }
@@ -271,7 +273,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
           <Board d={d} stage={phase.stage} />
           {me && !me.resident && active ? (
             <p className="mx-3 mt-2 rounded-lg border border-violet-500/30 bg-violet-950/40 px-2.5 py-2 text-[11.5px] leading-snug text-slate-300">
-              {d.zoneName}에 거주하면 도전할 수 있어요.{me.homeZoneName ? ` 지금 거주지는 ${me.homeZoneName}이에요.` : ''}{' '}
+              {d.zoneName}에 거주하면 도전할 수 있어요.{me.homeZoneName ? josa(` 지금 거주지는 ${me.homeZoneName}#{이에요}.`) : ''}{' '}
               <Link prefetch={false} href="/guild/map" className="font-bold text-violet-200 underline">
                 지도에서 옮기기
               </Link>
@@ -337,16 +339,14 @@ function remain(ms: number): string {
 function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPattern }: { d: SoloDetail; bgSrc: string; spriteSrc: string; idleSrc: string; bossName: string; phase: ReturnType<typeof soloPhaseFor>; onReward: () => void; onPattern: () => void }) {
   const active = d.status === 'active';
   const leaveMs = new Date(d.leaveAt).getTime();
-  const router = useRouter();
   const bonus = Math.round((soloPhaseBonus(phase.stage) - 1) * 100);
   return (
     <div className="relative h-[200px] overflow-hidden bg-slate-950">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover" style={PIX} />
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(2,6,23,0.6)_0%,transparent_30%,transparent_55%,rgba(2,6,23,0.95)_100%)]" />
-      <button type="button" onClick={() => router.back()} aria-label="뒤로" className="absolute top-3 left-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl leading-none font-bold text-white">
-        ‹
-      </button>
+      {/* 불사조 상세와 같은 뒤로 버튼 — 알림·배너로 바로 들어와 이전 화면이 없으면 지도로. */}
+      <BackFab fallback="/guild/map" className="absolute top-3 left-3 z-10" />
       {/* 불사조 상세와 같은 크기의 무대(200px) — 머무는 동안은 대기 애니(.wbq), 끝나면 흐린 정지 그림. */}
       {active ? (
         <div role="img" aria-label={bossName} className="wbq absolute top-[54%] left-1/2 z-[1] -mt-[80px] -ml-[80px] h-[160px] w-[160px]" style={{ '--wbq-idle': `url(${idleSrc})` } as React.CSSProperties} />
@@ -456,9 +456,10 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
   const meInTop = d.top.some((r) => r.me);
   const total = d.total;
   return (
-    <div className="mt-2.5">
-      <div className="mb-1.5 px-3">
-        <span className="text-[11px] font-bold tracking-widest text-slate-500">피해 순위</span>
+    <div>
+      {/* 머리말 위아래 여백을 같게(py-2) — 히어로 아래와 첫 줄 위 간격이 달라 보이던 것(11-14 사용자). */}
+      <div className="px-3 py-2 leading-none">
+        <span className="text-[11px] font-bold tracking-widest text-slate-400">피해 순위</span>
       </div>
       <ul className="border-t border-slate-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
@@ -913,6 +914,9 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDet
     s.timers.forEach((t) => clearTimeout(t));
     s.timers.length = 0;
     s.busy = false;
+    // 거미줄 타기 도중 끊으면 상단 이름표를 되돌리는 예약도 함께 지워진다 — 여기서 바로 되돌린다.
+    const head = root.current?.querySelector<HTMLElement>('[data-head]');
+    if (head) head.style.opacity = '1';
     strike();
   }
 

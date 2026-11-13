@@ -24,6 +24,8 @@ create table if not exists world_boss_solo_runs (
 );
 create unique index if not exists world_boss_solo_runs_idem_uq on world_boss_solo_runs (idem_key);
 create index if not exists world_boss_solo_runs_boss_user_idx on world_boss_solo_runs (boss_id, user_id, kst_date);
+-- 칭호 판정(judge wbq)은 보스와 무관하게 내 판 전부를 센다.
+create index if not exists world_boss_solo_runs_user_idx on world_boss_solo_runs (user_id, server_id);
 alter table world_boss_solo_runs enable row level security;
 
 create table if not exists world_boss_solo_records (

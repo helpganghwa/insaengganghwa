@@ -50,7 +50,9 @@ export async function settleSoloBoss(tx: Tx, input: { serverId: number; bossId: 
           const body = josa(
             `${input.zoneName}의 ${input.bossName}#{이} ${input.leavePolite}.\n` +
               `내 최고 기록 ${fmt(l.best)} · 최종 ${fmt(l.rank)}위\n` +
-              `${tier.min === 0 ? '참가' : `${tier.label} 구간`} 보상에 최종 ${fmt(input.stage)}페이즈 보너스 +${bonusPct}%가 더해졌어요.`, // 순위 보상 줄은 두지 않는다(11-14 사용자: 참가 예시 모양으로 통일)
+              (input.stage > 0
+                ? `${tier.min === 0 ? '참가' : `${tier.label} 구간`} 보상에 최종 ${fmt(input.stage)}페이즈 보너스 +${bonusPct}%가 더해졌어요.`
+                : `${tier.min === 0 ? '참가' : `${tier.label} 구간`} 보상이에요.`), // 순위 보상 줄은 두지 않는다(11-14 사용자: 참가 예시 모양으로 통일)
           );
           return sql`(${l.userId}::uuid, ${input.serverId}, 'world_boss'::mailbox_type, ${`${input.bossName} 결과`}, ${body}, '월드보스', ${payload}::jsonb, now() + interval '30 days')`;
         }),

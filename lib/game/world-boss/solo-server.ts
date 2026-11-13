@@ -62,7 +62,7 @@ async function soloBossOfResident(tx: Tx, userId: string, serverId: number): Pro
 async function todayRuns(tx: Tx, userId: string, serverId: number, bossId: string, day: string) {
   const [r] = (await tx.execute(sql`
     select count(*) filter (where not paid)::int as free, count(*) filter (where paid)::int as paid
-      from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date`)) as unknown as { free: number; paid: number }[];
+      from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date`)) as unknown as { free: number; paid: number }[];
   const bought = await extrasToday(tx, userId, serverId, 'wb_retry', undefined, day);
   return { free: Number(r?.free ?? 0), paid: Number(r?.paid ?? 0), bought };
 }
@@ -83,10 +83,10 @@ export async function wbRetryLock(tx: Tx, userId: string, serverId: number): Pro
 }
 
 /** 내 순위 = 나보다 높은 기록 수 + 1(동점은 먼저 세운 사람이 위). */
-async function rankOf(tx: Tx, bossId: string, best: number, bestAt: string): Promise<number> {
+async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, bestAt: string): Promise<number> {
   const [r] = (await tx.execute(sql`
     select count(*)::int + 1 as rank from world_boss_solo_records
-     where boss_id = ${bossId}::bigint and (best > ${best}::bigint or (best = ${best}::bigint and best_at < ${bestAt}::timestamptz))`)) as unknown as { rank: number }[];
+     where boss_id = ${bossId}::bigint and server_id = ${serverId} and (best > ${best}::bigint or (best = ${best}::bigint and best_at < ${bestAt}::timestamptz))`)) as unknown as { rank: number }[];
   return Number(r?.rank ?? 1);
 }
 
@@ -108,7 +108,7 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
       id: string; hits: SoloHit[]; score: string; power: SoloPower; paid: boolean; best: string; best_at: string; total: string;
     }[];
     if (prev) {
-      const rank = await rankOf(tx, bossId, Number(prev.best), prev.best_at);
+      const rank = await rankOf(tx, serverId, bossId, Number(prev.best), prev.best_at);
       const t = await todayRuns(tx, userId, serverId, bossId, day);
       return {
         runId: prev.id, hits: prev.hits, score: Number(prev.score), power: prev.power, prevBest: null, prevRank: null,
@@ -116,12 +116,13 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
       };
     }
 
-    // ② 보스·거주·남은 판.
+    // ② 보스·거주·남은 판. 보스 행을 KEY SHARE로 잡는다 — 정산(FOR UPDATE)과 줄을 세워, 종료 직전 판이 정산 뒤에 끼어들거나
+    //    (기록은 있는데 최종 순위·우편이 없음) 기록 행·보스 행을 반대 순서로 잡아 교착되지 않게. 다른 사람의 판끼리는 막지 않는다.
     const [boss] = (await tx.execute(sql`
       select b.id::text as id, b.zone_id, b.status, (b.status = 'active' and b.leave_at > now()) as open, b.pool,
              (select c.residence_zone_id from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as home,
              (select c.active_profile_id::text from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as profile
-        from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId}`)) as unknown as (BossRow & { home: number | null; profile: string | null })[];
+        from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId} for key share of b`)) as unknown as (BossRow & { home: number | null; profile: string | null })[];
     if (!boss) throw new WorldBossError('NOT_FOUND');
     if (!boss.pool) throw new WorldBossError('NOT_SOLO');
     if (!boss.open) throw new WorldBossError('BOSS_NOT_ACTIVE');
@@ -150,9 +151,9 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
     const hits = rollSoloRun(power, rand);
     const score = soloRunScore(hits);
     const [old] = (await tx.execute(sql`
-      select best::text as best, best_at::text as best_at from world_boss_solo_records where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid`)) as unknown as { best: string; best_at: string }[];
+      select best::text as best, best_at::text as best_at from world_boss_solo_records where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and server_id = ${serverId}`)) as unknown as { best: string; best_at: string }[];
     const prevBest = old ? Number(old.best) : null;
-    const prevRank = old ? await rankOf(tx, bossId, Number(old.best), old.best_at) : null;
+    const prevRank = old ? await rankOf(tx, serverId, bossId, Number(old.best), old.best_at) : null;
     const [run] = (await tx.execute(sql`
       insert into world_boss_solo_runs (boss_id, user_id, server_id, kst_date, paid, score, hits, power, idem_key)
       values (${bossId}::bigint, ${userId}::uuid, ${serverId}, ${day}::date, ${paid}, ${score}, ${JSON.stringify(hits)}::jsonb, ${JSON.stringify(power)}::jsonb, ${idemKey}::uuid)
@@ -166,14 +167,17 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
         best_at = case when excluded.best > world_boss_solo_records.best then excluded.best_at else world_boss_solo_records.best_at end,
         best_run_id = case when excluded.best > world_boss_solo_records.best then excluded.best_run_id else world_boss_solo_records.best_run_id end
       returning best::text as best, best_at::text as best_at`)) as unknown as { best: string; best_at: string }[];
-    const rank = await rankOf(tx, bossId, Number(rec!.best), rec!.best_at);
+    const rank = await rankOf(tx, serverId, bossId, Number(rec!.best), rec!.best_at);
 
-    // ⑤ 공동 누적 — 보스 행은 여기서 한 번만 잠근다.
+    // ⑤ 공동 누적 + 페이즈 — 아직 머무는 보스에만(정산이 끝났으면 BOSS_NOT_ACTIVE로 이 판 전체를 되돌린다).
     const [tot] = (await tx.execute(sql`
-      update world_bosses set total_damage = total_damage + ${score}::bigint where id = ${bossId}::bigint returning total_damage::text as total`)) as unknown as { total: string }[];
-    const totalAfter = Number(tot!.total);
+      update world_bosses set total_damage = total_damage + ${score}::bigint
+       where id = ${bossId}::bigint and server_id = ${serverId} and status = 'active'
+      returning total_damage::text as total`)) as unknown as { total: string }[];
+    if (!tot) throw new WorldBossError('BOSS_NOT_ACTIVE');
+    const totalAfter = Number(tot.total);
     const stage = soloPhaseFor(totalAfter).stage;
-    await tx.execute(sql`update world_bosses set stage = greatest(stage, ${stage}) where id = ${bossId}::bigint`);
+    await tx.execute(sql`update world_bosses set stage = greatest(stage, ${stage}) where id = ${bossId}::bigint and server_id = ${serverId}`);
 
     return {
       runId: run!.id, hits, score, power, prevBest, prevRank, best: Number(rec!.best), rank,

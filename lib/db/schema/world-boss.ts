@@ -208,7 +208,7 @@ export const worldBossSoloRuns = pgTable(
     idemKey: uuid('idem_key').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('world_boss_solo_runs_idem_uq').on(t.idemKey), index('world_boss_solo_runs_boss_user_idx').on(t.bossId, t.userId, t.kstDate)],
+  (t) => [uniqueIndex('world_boss_solo_runs_idem_uq').on(t.idemKey), index('world_boss_solo_runs_boss_user_idx').on(t.bossId, t.userId, t.kstDate), index('world_boss_solo_runs_user_idx').on(t.userId, t.serverId)],
 );
 
 /** 개인 월드보스(0253) — (보스, 유저) 최고 기록 = 순위표 한 줄. 정산 때 final_rank·보상을 적는다. */
