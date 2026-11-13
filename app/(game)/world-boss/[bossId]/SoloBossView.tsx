@@ -11,6 +11,8 @@ import { useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { meleeFaceCropStyle, type FaceBox } from '@/components/faceCrop';
+import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
 import { Ticker } from '@/components/Ticker';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -57,6 +59,25 @@ const rewardText = (r: { diamond: number; boxes: number }) => `💎${n(r.diamond
 function rankRewardText(rank: number) {
   const r = soloRankReward(rank);
   return r.diamond ? rewardText(r) : '';
+}
+/** 숫자 롤링 — from에서 to까지 ms 동안 감속하며 올라간다(공격 화면 '이번 피해', 11-13 사용자). 새로 굴리면 앞 굴림은 멈춘다. */
+const rolling = new WeakMap<Element, number>();
+function rollNumber(el: HTMLElement, from: number, to: number, ms: number) {
+  const prev = rolling.get(el);
+  if (prev) cancelAnimationFrame(prev);
+  if (ms <= 0 || from === to) {
+    el.textContent = n(to);
+    return;
+  }
+  let t0 = 0;
+  const step = (t: number) => {
+    if (!t0) t0 = t;
+    const k = Math.min(1, (t - t0) / ms);
+    el.textContent = n(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))));
+    if (k < 1) rolling.set(el, requestAnimationFrame(step));
+    else rolling.delete(el);
+  };
+  rolling.set(el, requestAnimationFrame(step));
 }
 const PATTERN_TONE: Record<string, string> = { crouch: 'text-sky-300', weapon: 'text-violet-300', armor: 'text-violet-300', accessory: 'text-violet-300', dodge: 'text-zinc-300', expose: 'text-rose-300' };
 
@@ -182,7 +203,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       )}
 
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
-      {sheet === 'reward' && <RewardSheet stage={phase.stage} onClose={() => setSheet(null)} />}
+      {sheet === 'reward' && <RewardSheet stage={phase.stage} best={me?.best ?? null} onClose={() => setSheet(null)} />}
       {sheet === 'pool' && <PoolSheet d={d} onClose={() => setSheet(null)} />}
     </div>
   );
@@ -255,14 +276,49 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
   );
 }
 
-function Row({ rank, nick, score, me = false }: { rank: number; nick: string; score: number; me?: boolean }) {
-  const tint = rank === 1 ? 'bg-amber-400/[.12]' : rank === 2 ? 'bg-zinc-300/[.08]' : rank === 3 ? 'bg-orange-700/[.12]' : 'bg-zinc-900/60';
+type BoardRow = { rank: number; nick: string; score: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null };
+
+/** 순위 한 줄 — 대난투 순위와 같은 방식(우측 아바타 얼굴 확대 + 등수색·암막 그라데이션 두 겹, 11-13 사용자). */
+function rankTint(rank: number, me: boolean): string {
+  if (rank === 1) return 'from-amber-400/35 via-amber-500/10';
+  if (rank === 2) return 'from-slate-300/30 via-slate-300/8';
+  if (rank === 3) return 'from-orange-600/30 via-orange-700/8';
+  return me ? 'from-violet-500/30 via-violet-500/8' : 'from-zinc-400/10 via-transparent';
+}
+function rankText(rank: number, me: boolean): string {
+  if (rank === 1) return 'text-amber-200';
+  if (rank === 2) return 'text-slate-100';
+  if (rank === 3) return 'text-orange-200';
+  return me ? 'text-violet-200' : 'text-zinc-400';
+}
+function Row({ r }: { r: BoardRow }) {
+  const reward = rankRewardText(r.rank);
   return (
-    <li className={`flex h-[34px] items-center gap-2 rounded-lg px-2.5 text-[12px] ${me ? 'bg-amber-900/50 shadow-[0_0_12px_rgba(251,191,36,.35)] ring-1 ring-amber-400/80' : tint}`}>
-      <span className={`w-6 shrink-0 text-center font-mono text-[12px] font-black ${me ? 'text-amber-200' : rank <= 3 ? '' : 'text-zinc-500'}`}>{rank <= 3 && !me ? MEDAL[rank - 1] : rank}</span>
-      <span className={`min-w-0 flex-1 truncate font-bold ${me ? 'text-amber-100' : 'text-zinc-100'}`}>{nick}</span>
-      <span className={`shrink-0 font-mono text-[12.5px] font-black tabular-nums ${me ? 'text-amber-200' : rank <= 3 ? 'text-zinc-50' : 'text-zinc-300'}`}>{n(score)}</span>
-      <span className="w-[78px] shrink-0 text-right text-[9.5px] text-zinc-500">{rankRewardText(rank)}</span>
+    <li className={`relative flex h-[50px] items-center overflow-hidden rounded-lg bg-zinc-900/70 px-2.5 ${r.me ? 'ring-1 ring-violet-400/80 shadow-[0_0_12px_rgba(139,92,246,.35)]' : ''}`}>
+      {r.avatar ? (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-32">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
+        </div>
+      ) : null}
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-r ${rankTint(r.rank, r.me)} to-transparent`} />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent" />
+      <div className="relative z-10 flex w-full min-w-0 items-center gap-2.5">
+        <span className={`w-7 shrink-0 text-center font-mono text-[14px] font-extrabold drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] ${rankText(r.rank, r.me)}`}>
+          {r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1">
+            <b className="truncate text-[12.5px] font-extrabold text-zinc-50 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">{r.nick}</b>
+            {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
+            {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className="min-w-0 shrink text-[9.5px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" /> : null}
+          </div>
+          <div className="mt-0.5 flex items-baseline gap-1.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="font-mono text-[13px] font-black text-zinc-50 tabular-nums">{n(r.score)}</span>
+            {reward ? <span className="text-[9.5px] text-zinc-400">{reward}</span> : null}
+          </div>
+        </div>
+      </div>
     </li>
   );
 }
@@ -277,17 +333,17 @@ function Board({ d }: { d: SoloDetail }) {
         <span className="text-[10.5px] text-zinc-500">최고 기록 · 30위까지 순위 보상</span>
       </div>
       <ul className="space-y-1">
-        {d.top.length === 0 ? <li className="flex h-[34px] items-center justify-center rounded-lg bg-zinc-900/60 text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
+        {d.top.length === 0 ? <li className="flex h-[50px] items-center justify-center rounded-lg bg-zinc-900/60 text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
-          <Row key={r.userId} rank={r.rank} nick={r.me ? `나 (${r.nickname})` : r.nickname} score={r.best} me={r.me} />
+          <Row key={r.userId} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem }} />
         ))}
         {me && !meInTop ? (
           <>
             <li className="py-0.5 text-center text-[10px] leading-none text-zinc-600">⋮</li>
             {me.best != null && me.rank != null ? (
-              <Row rank={me.rank} nick={`나 (${me.nickname})`} score={me.best} me />
+              <Row r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem }} />
             ) : (
-              <li className="flex h-[34px] items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[11.5px] text-zinc-400">아직 기록이 없어요</li>
+              <li className="flex h-[50px] items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[11.5px] text-zinc-400">아직 기록이 없어요</li>
             )}
           </>
         ) : null}
@@ -460,7 +516,7 @@ const PHASE_BAR = [
 ];
 const phaseBarClass = (stage: number) => `h-full rounded-full shadow-[0_0_10px] ${PHASE_BAR[stage % PHASE_BAR.length]}`;
 
-export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
+function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: SoloDetail; run: Run; fx: SoloFx; bgSrc: string; bossName: string; retry: React.ReactNode; onDone: () => void }) {
   const me = d.me!;
   const root = useRef<HTMLDivElement>(null);
   const st = useRef({ i: 0, sum: 0, busy: false, fast: false, phaseTotal: run.totalBefore, shown: soloPhaseFor(run.totalBefore).stage, chain: Promise.resolve(), timers: [] as ReturnType<typeof setTimeout>[] });
@@ -652,7 +708,7 @@ export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: 
         tot?.classList.replace('text-violet-100', 'text-amber-200');
         if (!s.fast) tot?.animate([{ textShadow: '0 0 16px rgba(251,191,36,.9)' }, { textShadow: '0 0 0 transparent' }], { duration: 900 });
       }
-      if (tot) tot.textContent = n(s.sum);
+      if (tot) rollNumber(tot, was, s.sum, s.fast || reduce() ? 0 : 420);
       const cell = q('[data-cells]')?.children[s.i] as HTMLElement | undefined;
       if (cell) {
         cell.className = 'relative flex h-[38px] flex-col items-center justify-center overflow-hidden rounded-md bg-zinc-900 ring-1 ring-white/[.06]';
@@ -748,7 +804,11 @@ export function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone }: { d: 
               <div key={s} data-gear={s} className={`relative flex items-center gap-1.5 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 px-1.5 py-1 ${!p || p.mult === 0 ? 'opacity-50' : ''}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 {p?.src ? <img src={p.src} alt="" className="h-6 w-6" style={PIX} /> : <span className="h-6 w-6" />}
-                <span className="text-[10.5px] text-zinc-400">{SLOT_KO[s]}</span>
+                <span className="min-w-0 leading-tight">
+                  <span className="block text-[10px] text-zinc-500">{SLOT_KO[s]}</span>
+                  {/* 이 부위의 공격력(탑 규칙 적용 뒤) — 옭아매기에 묶이면 이 값이 빠진다(11-13 사용자). */}
+                  <b className={`block font-mono text-[11.5px] tabular-nums ${p && p.score > 0 ? 'text-zinc-100' : 'text-zinc-600'}`}>{p && p.score > 0 ? man(p.score) : '0'}</b>
+                </span>
                 <span data-web={s} className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated', opacity: 0, transition: 'opacity .2s, scale .25s' }} />
               </div>
             );
@@ -986,64 +1046,97 @@ function ResultCard({ run }: { run: Run }) {
 
 // ── 안내 시트 ───────────────────────────────────────────────────────────────
 
+const PATTERN_GROUPS: { title: string; keys: string[] }[] = [
+  { title: '피해 그대로', keys: ['normal'] },
+  { title: '피해가 줄어요', keys: ['crouch', 'weapon', 'armor', 'accessory', 'dodge'] },
+  { title: '피해가 늘어요', keys: ['expose'] },
+];
+
+/** 안내 팝업 공통 — 본문 카드(bodyPad sm) 안에서 소제목 + 구분선 목록. 줄 여백은 px-3 py-2.5로 통일. */
+function SheetSection({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="mt-3 first:mt-0">
+      <div className="flex items-baseline justify-between px-3 pb-1.5">
+        <h3 className="text-[11.5px] font-bold text-zinc-400">{title}</h3>
+        {aside ? <span className="text-[11px] text-zinc-500">{aside}</span> : null}
+      </div>
+      <ul className="divide-y divide-zinc-800 overflow-hidden rounded-xl bg-zinc-950/70 ring-1 ring-zinc-800">{children}</ul>
+    </section>
+  );
+}
+
 function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloFx; onClose: () => void }) {
   return (
     <ModalShell onClose={onClose} label="여왕의 패턴">
-      <ModalLayout title="여왕의 패턴" subtitle="공격마다 하나" footer={<ModalButton onClick={onClose}>닫기</ModalButton>}>
-        <p className="text-[11px] leading-relaxed text-zinc-500">공격할 때마다 여왕이 아래 중 하나로 맞서요. 치명타(10%, ×1.5)는 따로 터져요.</p>
-        <ul className="mt-2 space-y-1">
-          {SOLO_PATTERN_TABLE.map((row) => {
-            const k = row.p;
-            const label = k === 'normal' ? null : SOLO_PATTERN_LABEL[k];
-            return (
-              <li key={k} className="flex items-center gap-2.5 rounded-lg bg-zinc-900 px-2.5 py-1.5">
-                <span className="relative flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-md bg-zinc-950">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={spriteSrc} alt="" className="h-8 w-8 drop-shadow-[0_0_6px_rgba(139,92,246,.4)]" style={PIX} />
-                  {k === 'weapon' || k === 'armor' || k === 'accessory' ? <span className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated' }} /> : null}
-                  {k === 'expose' ? <span className="absolute inset-0 bg-[radial-gradient(circle,rgba(251,113,133,.45),transparent_65%)]" /> : null}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <b className={`text-[12.5px] ${label ? PATTERN_TONE[k] : 'text-zinc-500'}`}>{label?.name ?? '패턴 없음'}</b>
-                  <span className="block text-[10.5px] text-zinc-500">{label?.desc ?? '피해 그대로'}</span>
-                </span>
-                <b className="font-mono text-[12px] text-zinc-300">{Math.round(row.w * 100)}%</b>
-              </li>
-            );
-          })}
-        </ul>
+      <ModalLayout title="여왕의 패턴" subtitle="공격할 때마다 하나 · 치명타 10%(×1.5)는 따로" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+        <div className="py-1">
+          {PATTERN_GROUPS.map((g) => (
+            <SheetSection key={g.title} title={g.title}>
+              {g.keys.map((k) => {
+                const row = SOLO_PATTERN_TABLE.find((x) => x.p === k)!;
+                const label = k === 'normal' ? null : SOLO_PATTERN_LABEL[k as keyof typeof SOLO_PATTERN_LABEL];
+                return (
+                  <li key={k} className="flex items-center gap-3 px-3 py-2.5">
+                    <span className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-900 ring-1 ring-violet-500/25">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={spriteSrc} alt="" className="h-9 w-9 drop-shadow-[0_0_6px_rgba(139,92,246,.4)]" style={PIX} />
+                      {k === 'weapon' || k === 'armor' || k === 'accessory' ? <span className="absolute inset-0" style={{ background: `url(${fx.webnet}) center/cover no-repeat`, imageRendering: 'pixelated' }} /> : null}
+                      {k === 'expose' ? <span className="absolute inset-0 bg-[radial-gradient(circle,rgba(251,113,133,.45),transparent_65%)]" /> : null}
+                    </span>
+                    <span className="min-w-0 flex-1 leading-tight">
+                      <b className={`block text-[13px] font-extrabold ${label ? PATTERN_TONE[k] : 'text-zinc-200'}`}>{label?.name ?? '패턴 없음'}</b>
+                      <span className="mt-0.5 block text-[11.5px] text-zinc-400">{label?.desc ?? '이름표 없이 그대로 맞아요'}</span>
+                    </span>
+                    <b className="flex-none font-mono text-[13px] text-zinc-200 tabular-nums">{Math.round(row.w * 100)}%</b>
+                  </li>
+                );
+              })}
+            </SheetSection>
+          ))}
+        </div>
       </ModalLayout>
     </ModalShell>
   );
 }
 
-function RewardSheet({ stage, onClose }: { stage: number; onClose: () => void }) {
+function RewardSheet({ stage, best, onClose }: { stage: number; best: number | null; onClose: () => void }) {
   const bonus = Math.round((soloPhaseBonus(stage) - 1) * 100);
+  const myTier = best == null ? -1 : soloTierIndex(best);
   return (
     <ModalShell onClose={onClose} label="보상 안내">
-      <ModalLayout title="보상 안내" subtitle="보스가 사라질 때 우편으로" footer={<ModalButton onClick={onClose}>닫기</ModalButton>}>
-        <p className="text-[11px] leading-relaxed text-zinc-500">
-          최고 기록이 닿은 구간 보상 하나와 순위 보상을 함께 받아요. 구간 보상에는 최종 페이즈 보너스(페이즈마다 +2%, 최대 +60%)가 더해져요. 지금 +{bonus}%예요.
-        </p>
-        <div className="mt-2 text-[11px] font-bold text-zinc-400">구간</div>
-        <ul className="mt-1 grid grid-cols-2 gap-1 text-[11px]">
-          {SOLO_TIERS.map((t) => (
-            <li key={t.min} className="flex justify-between rounded-md bg-zinc-900 px-2 py-1">
-              <span className="text-zinc-300">{t.min === 0 ? '참가' : t.label}</span>
-              <span className="text-zinc-400">{rewardText(t)}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-2 text-[11px] font-bold text-zinc-400">순위</div>
-        <ul className="mt-1 space-y-1 text-[11px]">
-          {SOLO_RANK_REWARDS.map((r) => (
-            <li key={r.from} className="flex justify-between rounded-md bg-zinc-900 px-2 py-1">
-              <span className="text-zinc-300">{r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`}</span>
-              <span className="text-zinc-400">{rewardText(r)}</span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-2 text-[10.5px] text-zinc-500">같은 기록이면 먼저 세운 사람이 위예요.</p>
+      <ModalLayout title="보상 안내" subtitle="원정이 종료되면 우편으로 받아요" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+        <div className="py-1">
+          <div className="mx-1 flex items-center justify-between rounded-xl bg-violet-950/50 px-3 py-2.5 ring-1 ring-violet-500/30">
+            <span className="text-[12px] leading-snug text-zinc-300">
+              지금 {stage}페이즈
+              <span className="block text-[10.5px] text-zinc-500">페이즈마다 +2% · 최대 +60%</span>
+            </span>
+            <b className="text-[18px] font-black text-violet-200">+{bonus}%</b>
+          </div>
+          <SheetSection title="구간 보상" aside="최고 기록 하나로">
+            {SOLO_TIERS.map((t, i) => {
+              const now = soloTierReward(t.min, stage);
+              const mine = i === myTier;
+              return (
+                <li key={t.min} className={`flex items-center gap-2 px-3 py-2 text-[12px] ${mine ? 'bg-violet-500/10' : ''}`}>
+                  <span className={`w-12 flex-none font-bold ${mine ? 'text-violet-200' : 'text-zinc-200'}`}>{t.min === 0 ? '참가' : t.label}</span>
+                  <span className="flex-1 text-zinc-500 tabular-nums">{rewardText(t)}</span>
+                  <b className="flex-none text-zinc-100 tabular-nums">{rewardText(now)}</b>
+                </li>
+              );
+            })}
+          </SheetSection>
+          <p className="px-3 pt-1 text-right text-[10.5px] text-zinc-500">오른쪽이 지금 페이즈 보너스를 더한 값</p>
+          <SheetSection title="순위 보상" aside="페이즈 보너스 없음">
+            {SOLO_RANK_REWARDS.map((r) => (
+              <li key={r.from} className="flex items-center justify-between px-3 py-2 text-[12px]">
+                <span className="font-bold text-zinc-200">{r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`}</span>
+                <b className="text-zinc-100 tabular-nums">{rewardText(r)}</b>
+              </li>
+            ))}
+          </SheetSection>
+          <p className="px-3 pt-2 text-[11px] leading-relaxed text-zinc-500">구간 보상과 순위 보상을 함께 받아요. 같은 기록이면 먼저 세운 사람이 위예요.</p>
+        </div>
       </ModalLayout>
     </ModalShell>
   );

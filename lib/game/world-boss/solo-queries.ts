@@ -7,6 +7,7 @@ import { db } from '@/lib/db/client';
 import { TOWER_AVATAR_MULT, pieceCombatPower, pointExtraPrice } from '@/lib/game/balance';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { kstDateString } from '@/lib/kst';
+import { parseFaceBox } from '@/components/faceCrop';
 
 import { avatarKeysOf } from './best-loadout';
 import { SOLO_FREE_RUNS_PER_DAY, type SoloPower, type SoloSlot } from './solo';
@@ -27,12 +28,20 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       pool: Record<SoloSlot, string[]> | null; open: boolean;
     }[]>,
     db.execute(sql`
-      select r.user_id::text as uid, c.nickname, r.best::text as best, r.final_rank
+      select r.user_id::text as uid, c.nickname, r.best::text as best, r.final_rank,
+             up.rotations->>'south' as avatar, up.options->'faceBox' as fb, g.name as gname, g.emblem_url as gemblem
         from world_boss_solo_records r left join characters c on c.user_id = r.user_id and c.server_id = r.server_id
-       where r.boss_id = ${bossId}::bigint order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{ uid: string; nickname: string | null; best: string; final_rank: number | null }[]>,
+        left join user_profiles up on up.id = c.active_profile_id
+        left join guild_members gm on gm.user_id = r.user_id and gm.server_id = r.server_id
+        left join guilds g on g.id = gm.guild_id
+       where r.boss_id = ${bossId}::bigint order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{
+      uid: string; nickname: string | null; best: string; final_rank: number | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
+    }[]>,
     userId
       ? (db.execute(sql`
           select c.nickname, c.residence_zone_id as home, hz.name as home_name,
+                 (select up2.options->'faceBox' from user_profiles up2 where up2.id = c.active_profile_id) as fb,
+                 (select json_build_object('name', g.name, 'emblem', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id where gm.user_id = c.user_id and gm.server_id = c.server_id) as guild,
                  (select row_to_json(x) from (
                     select r.best::text as best, r.best_at, r.final_rank, r.reward_diamond, r.reward_boxes,
                            (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at))) as rank
@@ -51,7 +60,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
             from characters c left join zones hz on hz.id = c.residence_zone_id
            where c.user_id = ${userId}::uuid and c.server_id = ${serverId}`) as unknown as Promise<
           {
-            nickname: string | null; home: number | null; home_name: string | null;
+            nickname: string | null; home: number | null; home_name: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
             rec: { best: string; best_at: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; rank: number } | null;
             free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
@@ -89,6 +98,9 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     const owned = new Set(m.owned);
     me = {
       nickname: m.nickname ?? '',
+      faceBox: parseFaceBox(m.fb),
+      guildName: m.guild?.name ?? null,
+      guildEmblem: m.guild?.emblem ?? null,
       resident: m.home !== null && Number(m.home) === Number(b.zone_id),
       homeZoneName: m.home_name,
       best: m.rec ? Number(m.rec.best) : null,
@@ -115,7 +127,10 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     leaveAt: iso(b.leave_at),
     total: Number(b.total),
     stage: Number(b.stage),
-    top: top.map((r, i) => ({ rank: i + 1, userId: r.uid, nickname: r.nickname ?? '알 수 없음', best: Number(r.best), me: r.uid === userId })),
+    top: top.map((r, i) => ({
+      rank: i + 1, userId: r.uid, nickname: r.nickname ?? '알 수 없음', best: Number(r.best), me: r.uid === userId,
+      avatar: r.avatar, faceBox: parseFaceBox(r.fb), guildName: r.gname, guildEmblem: r.gemblem,
+    })),
     pool: Object.fromEntries(
       SLOTS.map((s) => [s, (pool[s] ?? []).map((k) => ({ key: k, name: nameOf.get(k) ?? k, src: spritePath(k), owned: !!m?.owned.includes(k) }))]),
     ) as SoloDetail['pool'],

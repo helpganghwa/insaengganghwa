@@ -1,4 +1,6 @@
 /** 개인 월드보스(0253) 화면 데이터 — 순수 타입(클라이언트가 import). */
+import type { FaceBox } from '@/components/faceCrop';
+
 import type { SoloPower, SoloSlot } from './solo';
 
 export type SoloPiece = { slot: SoloSlot; key: string; name: string; level: number; transcend: number; cp: number; mult: 0 | 1 | 2; score: number; src: string | null };
@@ -12,12 +14,15 @@ export type SoloDetail = {
   status: 'active' | 'settling' | 'left';
   leaveAt: string;
   total: number;
-  /** 넘긴 페이즈 수 — 화면의 '현재 페이즈'는 stage + 1. */
+  /** 넘긴 페이즈 수 — 화면도 이 수를 그대로 'N페이즈'로 보인다(불사조와 같게). */
   stage: number;
-  top: { rank: number; userId: string; nickname: string; best: number; me: boolean }[];
+  top: { rank: number; userId: string; nickname: string; best: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null }[];
   pool: Record<SoloSlot, { key: string; name: string; src: string | null; owned: boolean }[]>;
   me: {
     nickname: string;
+    faceBox: FaceBox | null;
+    guildName: string | null;
+    guildEmblem: string | null;
     resident: boolean;
     homeZoneName: string | null;
     best: number | null;
