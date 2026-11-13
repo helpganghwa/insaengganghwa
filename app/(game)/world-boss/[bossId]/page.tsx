@@ -33,7 +33,7 @@ export default async function WorldBossPage({ params }: { params: Promise<{ boss
     const detail = {
       ...solo,
       pool: { weapon: solo.pool.weapon.map((x) => ({ ...x, src: withSrc(x.src) })), armor: solo.pool.armor.map((x) => ({ ...x, src: withSrc(x.src) })), accessory: solo.pool.accessory.map((x) => ({ ...x, src: withSrc(x.src) })) },
-      me: solo.me ? { ...solo.me, pieces: solo.me.pieces.map((p) => ({ ...p, src: withSrc(p.src) })) } : null,
+      me: solo.me ? { ...solo.me, pieces: solo.me.pieces.map((p) => ({ ...p, src: withSrc(p.src) })), requiredItems: solo.me.requiredItems.map((p) => ({ ...p, src: withSrc(p.src) })) } : null,
     };
     return (
       <>

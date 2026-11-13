@@ -7,7 +7,7 @@
  */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 
 import { ExtraBuyButton } from '@/components/ExtraBuyButton';
 import { ModalButton, ModalLayout } from '@/components/ModalLayout';
@@ -25,7 +25,9 @@ import {
   SOLO_TIERS,
   soloPhaseBonus,
   soloPhaseFor,
+  rollSoloRun,
   soloRankReward,
+  soloRunScore,
   soloTierIndex,
   soloTierReward,
   type SoloHit,
@@ -33,7 +35,7 @@ import {
 } from '@/lib/game/world-boss/solo';
 import type { SoloDetail } from '@/lib/game/world-boss/solo-types';
 
-import { soloEquipBestAction, soloRunAction } from '../actions';
+import { soloEquipAction, soloEquipBestAction, soloRunAction } from '../actions';
 
 export type SoloFx = { idle: string; crouch: string; climb: string; bind: string; expose: string; webshot: string; webnet: string };
 type Run = Awaited<ReturnType<typeof soloRunAction>> extends infer R ? (R extends { status: 'success'; run: infer X } ? X : never) : never;
@@ -103,6 +105,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   const [run, setRun] = useState<Run | null>(null);
   const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | null>(null);
   const [extraRetry, setExtraRetry] = useState(0);
+  const [poolSlot, setPoolSlot] = useState<SoloSlot>('weapon');
   const [pending, start] = useTransition();
   const keyRef = useRef<string | null>(null);
   const d = detail;
@@ -129,6 +132,16 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   function equipBest() {
     start(async () => {
       const r = await soloEquipBestAction(d.id);
+      if (r.status !== 'success') {
+        showError(r.message);
+        return;
+      }
+      router.refresh();
+    });
+  }
+  function equipOne(ueid: string) {
+    start(async () => {
+      const r = await soloEquipAction(d.id, ueid);
       if (r.status !== 'success') {
         showError(r.message);
         return;
@@ -183,7 +196,22 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       )}
 
       {view === 'prep' && me && (
-        <Prep d={d} onBack={() => setView('board')} onPool={() => setSheet('pool')} onPattern={() => setSheet('pattern')} onEquipBest={equipBest} onGo={challenge} pending={pending} runsLeft={runsLeft} />
+        <Prep
+          d={d}
+          bgSrc={bgSrc}
+          spriteSrc={spriteSrc}
+          bossName={bossName}
+          onBack={() => setView('board')}
+          onPick={(s) => {
+            setPoolSlot(s);
+            setSheet('pool');
+          }}
+          onPattern={() => setSheet('pattern')}
+          onEquipBest={equipBest}
+          onGo={challenge}
+          pending={pending}
+          runsLeft={runsLeft}
+        />
       )}
 
       {view === 'battle' && run && me && (
@@ -204,7 +232,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
 
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
       {sheet === 'reward' && <RewardSheet stage={phase.stage} best={me?.best ?? null} onClose={() => setSheet(null)} />}
-      {sheet === 'pool' && <PoolSheet d={d} onClose={() => setSheet(null)} />}
+      {sheet === 'pool' && <PoolSheet d={d} slot={poolSlot} onSlot={setPoolSlot} onEquip={equipOne} pending={pending} onClose={() => setSheet(null)} />}
     </div>
   );
 }
@@ -386,18 +414,43 @@ function MyLine({ d, stage }: { d: SoloDetail; stage: number }) {
 
 // ── 도전 준비 ───────────────────────────────────────────────────────────────
 
-function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLeft }: { d: SoloDetail; onBack: () => void; onPool: () => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number }) {
+/** 예상 피해 범위 — 같은 규칙으로 600판을 굴려 보통(20~80%) 범위를 잡는다(시드 고정이라 화면마다 같다, 11-13 사용자 4안). */
+function expectRange(power: { weapon: number; armor: number; accessory: number }): [number, number] | null {
+  if (power.weapon + power.armor + power.accessory <= 0) return null;
+  let seed = 20261113;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const xs: number[] = [];
+  for (let i = 0; i < 600; i++) xs.push(soloRunScore(rollSoloRun(power, rand)));
+  xs.sort((x, y) => x - y);
+  return [xs[Math.floor(xs.length * 0.2)]!, xs[Math.floor(xs.length * 0.8)]!];
+}
+
+function Prep({ d, bgSrc, spriteSrc, bossName, onBack, onPick, onPattern, onEquipBest, onGo, pending, runsLeft }: {
+  d: SoloDetail; bgSrc: string; spriteSrc: string; bossName: string; onBack: () => void; onPick: (slot: SoloSlot) => void; onPattern: () => void; onEquipBest: () => void; onGo: () => void; pending: boolean; runsLeft: number;
+}) {
   const me = d.me!;
   const total = me.power.weapon + me.power.armor + me.power.accessory;
   const required = d.pool.weapon.length + d.pool.armor.length + d.pool.accessory.length;
+  const range = useMemo(() => expectRange(me.power), [me.power]);
   return (
     <>
-      <div className="flex items-center gap-2 px-3 pt-3">
-        <button type="button" onClick={onBack} aria-label="뒤로" className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl leading-none font-bold text-white">
+      {/* 위쪽 얇은 무대 — 보스와 오늘 남은 도전(11-13 사용자 3안) */}
+      <div className="relative h-[76px] overflow-hidden bg-slate-950">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={bgSrc} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" style={PIX} />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-slate-950/80" />
+        <button type="button" onClick={onBack} aria-label="뒤로" className="absolute top-1/2 left-3 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/45 pb-0.5 text-xl leading-none font-bold text-white">
           ‹
         </button>
-        <b className="text-[15px] font-extrabold">도전 준비</b>
-        <span className="ml-auto text-[11px] text-zinc-400">오늘 남은 도전 {runsLeft}번</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={spriteSrc} alt="" className="absolute top-1/2 left-[46px] z-[1] -mt-[34px] h-[68px] w-[68px] object-contain drop-shadow-[0_0_8px_rgba(139,92,246,.45)]" style={PIX} />
+        <div className="absolute inset-y-0 right-3 left-[120px] z-[2] flex flex-col justify-center">
+          <b className="text-[15px] font-extrabold text-stone-100 [text-shadow:0_1px_3px_#000]">도전 준비</b>
+          <span className="text-[11px] text-stone-300 [text-shadow:0_1px_2px_#000]">{bossName}</span>
+        </div>
+        <span className="absolute top-1/2 right-3 z-[2] -translate-y-1/2 rounded-full border border-violet-400/50 bg-slate-950/80 px-2.5 py-1 text-[11px] font-bold text-violet-100">
+          오늘 남은 도전 {runsLeft}번
+        </span>
       </div>
       <div className="mx-3 mt-2.5 grid grid-cols-2 gap-1.5 text-center">
         <div className="rounded-lg bg-zinc-900 py-1.5">
@@ -406,15 +459,17 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
           <div className="text-[10px] text-zinc-500">{me.rank == null ? '기록 없음' : `${n(me.rank)}위`}</div>
         </div>
         <div className="rounded-lg bg-zinc-900 py-1.5">
-          <div className="text-[10px] text-zinc-500">평균 피해(10번)</div>
-          <b className="font-mono text-[14px] text-violet-200 tabular-nums">약 {man(Math.round(total * 10 * 0.78))}</b>
-          <div className="text-[10px] text-zinc-500">패턴에 따라 달라져요</div>
+          <div className="text-[10px] text-zinc-500">이 장비로 보통</div>
+          <b className="font-mono text-[14px] text-violet-200 tabular-nums">{range ? `${man(range[0])}~${man(range[1])}` : '-'}</b>
+          <div className="text-[10px] text-zinc-500">
+            {range && me.best != null ? (range[1] > me.best ? '최고 기록을 넘길 수 있어요' : '패턴이 좋으면 넘길 수 있어요') : '패턴에 따라 달라져요'}
+          </div>
         </div>
       </div>
       <div className="mx-3 mt-2">
         <div className="mb-1 flex items-baseline justify-between">
-          <span className="text-[11px] font-bold text-zinc-500">내 장비</span>
-          <button type="button" onClick={onPool} className="text-[11px] text-zinc-400">
+          <span className="text-[11px] font-bold text-zinc-500">내 장비 · 눌러서 바꾸기</span>
+          <button type="button" onClick={() => onPick('weapon')} className="text-[11px] text-zinc-400">
             요구 장비{' '}
             <b className="text-zinc-200">
               {me.ownedRequired}/{required}
@@ -426,9 +481,11 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
           const p = me.pieces.find((x) => x.slot === s);
           const m = p?.mult ?? 0;
           return (
-            <div
+            <button
               key={s}
-              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2.5 border-b border-l-2 border-white/[.07] py-1.5 pr-3 pl-2.5 ${m === 2 ? 'border-l-amber-400 bg-amber-500/10' : m === 1 ? 'border-l-emerald-500/70' : 'border-l-red-500/60 bg-red-950/15'}`}
+              type="button"
+              onClick={() => onPick(s)}
+              className={`-mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2.5 border-b border-l-2 border-white/[.07] py-1.5 pr-3 pl-2.5 text-left active:bg-white/5 ${m === 2 ? 'border-l-amber-400 bg-amber-500/10' : m === 1 ? 'border-l-emerald-500/70' : 'border-l-red-500/60 bg-red-950/15'}`}
             >
               <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${m === 2 ? 'border-amber-400 bg-amber-950/60 shadow-[0_0_8px_rgba(251,191,36,.35)]' : m === 0 ? 'border-zinc-800 bg-zinc-900 opacity-40 grayscale' : 'border-emerald-700/70 bg-zinc-900'}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -448,7 +505,8 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
                 </span>
               </span>
               <b className={`flex-none tabular-nums ${m === 2 ? 'text-[13px] text-amber-300' : m === 0 ? 'text-[12px] text-red-300/80' : 'text-[12.5px] text-zinc-100'}`}>{m === 0 ? '제외' : n(p!.score)}</b>
-            </div>
+              <span className="flex-none text-[14px] text-zinc-600">›</span>
+            </button>
           );
         })}
         <div className="flex w-full items-center gap-2 border-b border-white/[.07] py-1.5 text-[12px]">
@@ -460,10 +518,18 @@ function Prep({ d, onBack, onPool, onPattern, onEquipBest, onGo, pending, runsLe
             변경 ›
           </Link>
         </div>
-        <div className="flex items-baseline justify-between py-2 text-[12px] tabular-nums">
-          <button type="button" onClick={onEquipBest} disabled={pending} className="rounded-lg border border-amber-500/50 px-2 py-1 text-[11px] font-bold text-amber-200 disabled:opacity-50">
-            추천 장착
-          </button>
+        <div className="flex items-center justify-between gap-2 py-2 text-[12px] tabular-nums">
+          {/* 추천 장착 미리 보기 — 바꾸면 오르는 전투력을 버튼에 바로(11-13 사용자 2안). 더 오를 게 없으면 숨긴다. */}
+          {me.bestPower != null ? (
+            <button type="button" onClick={onEquipBest} disabled={pending} className="flex min-w-0 items-center gap-1.5 rounded-lg border border-amber-500/60 bg-amber-950/30 px-2 py-1 text-[11px] font-bold text-amber-200 disabled:opacity-50">
+              추천 장착
+              <span className="font-mono text-amber-100">
+                {man(total)} → <b className="text-amber-300">{man(me.bestPower)}</b>
+              </span>
+            </button>
+          ) : (
+            <span className="text-[10.5px] text-zinc-500">지금이 가장 센 조합이에요</span>
+          )}
           <span className="flex-none pl-2 text-zinc-400">
             전투력 <b className="text-[14px] text-amber-300">{n(total)}</b>
           </span>
@@ -1142,28 +1208,56 @@ function RewardSheet({ stage, best, onClose }: { stage: number; best: number | n
   );
 }
 
-function PoolSheet({ d, onClose }: { d: SoloDetail; onClose: () => void }) {
-  const [tab, setTab] = useState<SoloSlot>('weapon');
+/** 요구 장비 고르기(탑의 착용 가능 장비 목록과 같은 방식, 11-13 사용자 1안) — 부위 탭 · 가진 것 먼저(장착 중 맨 위) · 못 가진 것은 흐리게. */
+function PoolSheet({ d, slot, onSlot, onEquip, pending, onClose }: { d: SoloDetail; slot: SoloSlot; onSlot: (s: SoloSlot) => void; onEquip: (ueid: string) => void; pending: boolean; onClose: () => void }) {
+  const mine = (d.me?.requiredItems ?? []).filter((x) => x.slot === slot);
+  const ownedKeys = new Set(mine.map((x) => x.key));
+  const missing = d.pool[slot].filter((x) => !ownedKeys.has(x.key));
   return (
     <ModalShell onClose={onClose} label="요구 장비">
-      <ModalLayout title="요구 장비" subtitle="장착하면 ×1, 아바타에도 쓰인 장비면 ×2" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
-        <div className="grid grid-cols-3 gap-1">
+      <ModalLayout title="요구 장비" subtitle="장착하면 ×1 · 지금 아바타에도 쓰인 장비면 ×2" footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm" maxBodyClass="max-h-[62vh]">
+        <div className="grid grid-cols-3 gap-1 p-1">
           {SLOTS.map((s) => (
-            <button key={s} type="button" onClick={() => setTab(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${tab === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>
-              {SLOT_KO[s]} {d.pool[s].filter((x) => x.owned).length}/{d.pool[s].length}
+            <button key={s} type="button" onClick={() => onSlot(s)} className={`rounded-lg border py-1.5 text-[11.5px] font-extrabold tabular-nums ${slot === s ? 'border-amber-500/70 bg-amber-950/50 text-amber-200' : 'border-zinc-800 bg-zinc-950 text-zinc-400'}`}>
+              {SLOT_KO[s]} {(d.me?.requiredItems ?? []).filter((x) => x.slot === s).length}/{d.pool[s].length}
             </button>
           ))}
         </div>
-        <ul className="mt-2 max-h-[50vh] space-y-1 overflow-y-auto">
-          {d.pool[tab].map((it) => (
-            <li key={it.key} className={`flex items-center gap-2 rounded-lg bg-zinc-900 px-2 py-1.5 ${it.owned ? '' : 'opacity-50'}`}>
+        <div className="mt-1 flex flex-col gap-1.5 p-1">
+          {mine.length === 0 ? <p className="py-3 text-center text-[11.5px] text-zinc-500">이 부위의 요구 장비가 아직 없어요.</p> : null}
+          {mine.map((it) => (
+            <div key={it.ueid} className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 ${it.equipped ? 'border-amber-500 bg-amber-950/40' : 'border-zinc-800 bg-zinc-950'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {it.src ? <img src={it.src} alt="" className="h-8 w-8" style={PIX} /> : <span className="h-8 w-8" />}
-              <span className="min-w-0 flex-1 truncate text-[12px] text-zinc-100">{it.name}</span>
-              <span className="text-[10.5px] text-zinc-500">{it.owned ? '보유' : '미보유'}</span>
-            </li>
+              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-zinc-900" style={PIX} /> : <span className="h-9 w-9" />}
+              <span className="min-w-0 flex-1 leading-tight">
+                <b className="block truncate text-[12px] text-zinc-100">{it.name}</b>
+                <span className="text-[10px] text-zinc-400">+{it.level}{it.transcend ? ` · 초월 ${it.transcend}` : ''}</span>
+              </span>
+              <span className="flex-none text-right leading-tight">
+                <b className={`block text-[13px] tabular-nums ${it.mult === 2 ? 'text-amber-300' : 'text-zinc-100'}`}>{n(it.score)}</b>
+                <span className="text-[9.5px] text-zinc-500 tabular-nums">{n(it.cp)} ×{it.mult}</span>
+              </span>
+              {it.equipped ? (
+                <span className="w-[52px] flex-none text-center text-[10.5px] font-black text-amber-300">장착 중</span>
+              ) : (
+                <button type="button" onClick={() => onEquip(it.ueid)} disabled={pending} className="w-[52px] flex-none rounded-lg bg-amber-500 py-1.5 text-[11px] font-black text-amber-950 disabled:opacity-50">
+                  장착
+                </button>
+              )}
+            </div>
           ))}
-        </ul>
+          {missing.map((it) => (
+            <div key={it.key} className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1.5 opacity-45">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {it.src ? <img src={it.src} alt="" className="h-9 w-9 flex-none rounded-md bg-zinc-900" style={PIX} /> : <span className="h-9 w-9" />}
+              <span className="min-w-0 flex-1 leading-tight">
+                <b className="block truncate text-[12px] text-zinc-100">{it.name}</b>
+                <span className="text-[10px] text-zinc-400">아직 얻지 못한 장비</span>
+              </span>
+              <span className="w-[52px] flex-none text-center text-[10px] text-zinc-500">미보유</span>
+            </div>
+          ))}
+        </div>
       </ModalLayout>
     </ModalShell>
   );

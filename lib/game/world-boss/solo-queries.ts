@@ -9,7 +9,7 @@ import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 import { kstDateString } from '@/lib/kst';
 import { parseFaceBox } from '@/components/faceCrop';
 
-import { avatarKeysOf } from './best-loadout';
+import { avatarKeysOf, pickBestLoadoutBy, type BestAvatar } from './best-loadout';
 import { SOLO_FREE_RUNS_PER_DAY, type SoloPower, type SoloSlot } from './solo';
 import type { SoloDetail } from './solo-types';
 
@@ -55,8 +55,13 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                     select ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level, ue.transcend_level as transcend
                       from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
                      where ue.user_id = c.user_id and ue.server_id = c.server_id and ue.equipped_slot is not null and ci.active) e), '[]'::json) as eq,
-                 coalesce((select json_agg(distinct ci.code) from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-                     where ue.user_id = c.user_id and ue.server_id = c.server_id and ci.active), '[]'::json) as owned
+                 coalesce((select json_agg(o) from (
+                    select ue.id::text as ueid, ci.code as key, ci.name, ci.slot::text as slot, ue.enhance_level as level, ue.transcend_level as transcend, (ue.equipped_slot is not null) as on
+                      from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
+                     where ue.user_id = c.user_id and ue.server_id = c.server_id and ci.active) o), '[]'::json) as owned,
+                 coalesce((select json_agg(a) from (
+                    select up.id::text as id, up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
+                      from user_profiles up where up.user_id = c.user_id and up.server_id = c.server_id) a), '[]'::json) as avatars
             from characters c left join zones hz on hz.id = c.residence_zone_id
            where c.user_id = ${userId}::uuid and c.server_id = ${serverId}`) as unknown as Promise<
           {
@@ -65,7 +70,8 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
             free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
             eq: { key: string; name: string; slot: SoloSlot; level: number; transcend: number }[];
-            owned: string[];
+            owned: { ueid: string; key: string; name: string; slot: SoloSlot; level: number; transcend: number; on: boolean }[];
+            avatars: { id: string; snap: unknown; is_default: boolean; active: boolean }[];
           }[]
         >)
       : Promise.resolve(null),
@@ -95,7 +101,27 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     for (const p of pieces) power[p.slot] += p.score;
     const freeLeft = Math.max(0, SOLO_FREE_RUNS_PER_DAY - Number(m.free_used));
     const retryLeft = Math.max(0, Number(m.bought) - Number(m.paid_used));
-    const owned = new Set(m.owned);
+    const owned = new Set(m.owned.map((o) => o.key));
+    // 가진 요구 장비(부위 고르기 목록) — 탑 규칙 배수를 지금 아바타 기준으로 붙인다.
+    const ownedRequired = m.owned
+      .filter((o) => allowed.has(o.key))
+      .map((o) => {
+        const cp = pieceCombatPower(Number(o.level), Number(o.transcend));
+        const mult: 1 | 2 = keys && keys[o.slot] === o.key ? (TOWER_AVATAR_MULT as 2) : 1;
+        return { ueid: o.ueid, key: o.key, name: o.name, slot: o.slot, level: Number(o.level), transcend: Number(o.transcend), cp, mult, score: cp * mult, equipped: !!o.on, src: spritePath(o.key) };
+      })
+      .sort((a, b) => Number(b.equipped) - Number(a.equipped) || b.score - a.score);
+    // 추천 장착(장비 + 아바타)으로 오르는 전투력 미리 보기 — soloEquipBestAction과 같은 규칙(bestLoadoutOf solo).
+    const customs = m.avatars.flatMap((a) => {
+      const k = !a.is_default ? avatarKeysOf(a.snap) : null;
+      return k ? [{ id: a.id, keys: k, active: !!a.active }] : [];
+    });
+    const cands: BestAvatar[] = customs.some((a) => a.active) ? customs : [{ id: null, keys: null, active: true }, ...customs];
+    const plan = pickBestLoadoutBy(
+      m.owned.map((o) => ({ ueid: o.ueid, slot: o.slot, code: o.key, cp: Math.round(pieceCombatPower(Number(o.level), Number(o.transcend))), on: !!o.on })),
+      cands,
+      (pc, avMatch) => (allowed.has(pc.code) ? pc.cp * (avMatch ? TOWER_AVATAR_MULT : 1) : 0),
+    );
     me = {
       nickname: m.nickname ?? '',
       faceBox: parseFaceBox(m.fb),
@@ -116,6 +142,8 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       avatarSouth: m.avatar?.south ?? null,
       hasAvatar: !!keys,
       ownedRequired: [...allowed].filter((k) => owned.has(k)).length,
+      requiredItems: ownedRequired,
+      bestPower: plan.changed && Math.round(plan.power) > Math.round(power.weapon + power.armor + power.accessory) ? Math.round(plan.power) : null,
     };
   }
   return {
@@ -132,7 +160,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       avatar: r.avatar, faceBox: parseFaceBox(r.fb), guildName: r.gname, guildEmblem: r.gemblem,
     })),
     pool: Object.fromEntries(
-      SLOTS.map((s) => [s, (pool[s] ?? []).map((k) => ({ key: k, name: nameOf.get(k) ?? k, src: spritePath(k), owned: !!m?.owned.includes(k) }))]),
+      SLOTS.map((s) => [s, (pool[s] ?? []).map((k) => ({ key: k, name: nameOf.get(k) ?? k, src: spritePath(k), owned: !!m?.owned.some((o) => o.key === k) }))]),
     ) as SoloDetail['pool'],
     me,
   };

@@ -330,6 +330,22 @@ export async function soloRunAction(bossId: string, key: string) {
   }
 }
 
+/** 도전 준비에서 요구 장비 하나 장착(탑의 착용 가능 장비 목록과 같은 방식). */
+export async function soloEquipAction(bossId: string, ueid: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId) || !isId(ueid)) return err('BOSS_NOT_FOUND');
+  try {
+    await equipItems(g.u, [BigInt(ueid)], g.sid);
+    after(() => grantEquipmentTitles(g.u, g.sid));
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
+    return fail(e, 'soloEquip');
+  }
+}
+
 /** 추천 장착(탑 규칙) — 보스 요구 장비 중 가장 센 조합 + 그에 맞는 아바타. */
 export async function soloEquipBestAction(bossId: string) {
   const g = await gate();

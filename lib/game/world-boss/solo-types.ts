@@ -40,5 +40,9 @@ export type SoloDetail = {
     avatarSouth: string | null;
     hasAvatar: boolean;
     ownedRequired: number;
+    /** 가진 요구 장비 전부(부위 고르기 목록, 장착 중 먼저·센 순). */
+    requiredItems: (Omit<SoloPiece, 'mult'> & { ueid: string; mult: 1 | 2; equipped: boolean })[];
+    /** 추천 장착 뒤 전투력 — 지금보다 오를 때만, 아니면 null. */
+    bestPower: number | null;
   } | null;
 };
