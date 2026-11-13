@@ -37,6 +37,11 @@ export function avatarKeysOf(snap: unknown): Partial<Record<WeakSlot, string>> |
  * avatars가 비면 '아바타 없음' 한 가지로 계산한다. 후보에는 지금 대표(active)가 반드시 하나 들어 있어야 "바꾸지 않음"을 알 수 있다.
  */
 export function pickBestLoadout(pieces: readonly BestPiece[], avatars: readonly BestAvatar[], known: ReadonlySet<string>, weakBonus: number): BestPlan {
+  return pickBestLoadoutBy(pieces, avatars, (p, avMatch, hasAvatar) => piecePower(p.cp, avMatch, hasAvatar, known.has(p.code), weakBonus));
+}
+
+/** 값 매기는 규칙만 바꿔 쓰는 판 — 개인 보스(0253)는 탑 규칙(요구 장비 ×1, 아바타에도 쓰인 요구 장비 ×2, 그 밖 ×0). */
+export function pickBestLoadoutBy(pieces: readonly BestPiece[], avatars: readonly BestAvatar[], valueOf: (p: BestPiece, avatarMatch: boolean, hasAvatar: boolean) => number): BestPlan {
   const cands: readonly BestAvatar[] = avatars.length ? avatars : [{ id: null, keys: null, active: true }];
   let top: BestPlan | null = null;
   for (const a of cands) {
@@ -47,7 +52,7 @@ export function pickBestLoadout(pieces: readonly BestPiece[], avatars: readonly 
       let best: { p: BestPiece; v: number } | null = null;
       for (const p of pieces) {
         if (p.slot !== slot) continue;
-        const v = piecePower(p.cp, !!a.keys && a.keys[slot] === p.code, !!a.keys, known.has(p.code), weakBonus);
+        const v = valueOf(p, !!a.keys && a.keys[slot] === p.code, !!a.keys);
         if (!best || v > best.v || (v === best.v && p.on && !best.p.on)) best = { p, v };
       }
       if (!best) continue;

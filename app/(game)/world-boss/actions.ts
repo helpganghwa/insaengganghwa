@@ -16,6 +16,7 @@ import { WorldBossError, type WorldBossErrorCode } from '@/lib/game/world-boss/e
 import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, inviteToParty, kickMember, leaveParty, requestJoin, respondInvite } from '@/lib/game/world-boss/party';
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, getWorldBossStatus } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf } from '@/lib/game/world-boss/loadout';
+import { runSolo } from '@/lib/game/world-boss/solo-server';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
@@ -309,5 +310,55 @@ export async function respondInviteAction(bossId: string, partyId: string, accep
     return { status: 'success' as const };
   } catch (e) {
     return fail(e, 'respondInvite');
+  }
+}
+
+// ── 개인 월드보스(0253) ─────────────────────────────────────────────────────
+
+/** 도전 1판 — 서버가 10타를 한 번에 굴려 저장하고, 화면은 받은 10타를 공격 버튼으로 하나씩 보여 준다. key = 판마다 화면이 만든 uuid. */
+export async function soloRunAction(bossId: string, key: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId)) return err('BOSS_NOT_FOUND');
+  if (!isUuid(key)) return err('BAD_REQUEST');
+  try {
+    const r = await runSolo(g.u, g.sid, bossId, key);
+    // 순위표·페이즈는 결과 카드를 닫을 때 router.refresh로 다시 읽는다 — 여기서 revalidate하면 연출 도중 화면이 갈린다.
+    return { status: 'success' as const, run: r };
+  } catch (e) {
+    return fail(e, 'soloRun');
+  }
+}
+
+/** 추천 장착(탑 규칙) — 보스 요구 장비 중 가장 센 조합 + 그에 맞는 아바타. */
+export async function soloEquipBestAction(bossId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId)) return err('BOSS_NOT_FOUND');
+  try {
+    const [b] = (await db.execute(sql`select server_id, status, pool, (leave_at > now()) as alive from world_bosses where id = ${bossId}::bigint`)) as unknown as {
+      server_id: number; status: string; pool: { weapon: string[]; armor: string[]; accessory: string[] } | null; alive: boolean;
+    }[];
+    if (!b || b.server_id !== g.sid || b.status === 'scheduled') return err('BOSS_NOT_FOUND');
+    if (!b.pool) return err('NOT_SOLO');
+    if (b.status !== 'active' || !b.alive) return err('BOSS_NOT_ACTIVE');
+    const allowed = new Set([...b.pool.weapon, ...b.pool.armor, ...b.pool.accessory]);
+    const best = await bestLoadoutOf(g.sid, g.u, new Set(), 0, { allowed });
+    if (!best) return err('ALREADY_EQUIPPED');
+    const avatarId = best.avatarId;
+    await equipItems(g.u, best.ueids.map((id) => BigInt(id)), g.sid, avatarId
+      ? async (tx) => { if (!(await activateProfile(g.u, g.sid, avatarId, tx))) throw new AvatarGoneError(); }
+      : undefined);
+    after(() => grantEquipmentTitles(g.u, g.sid));
+    if (avatarId) {
+      revalidatePath('/me');
+      revalidatePath('/me/profiles');
+    }
+    rev(bossId);
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof AvatarGoneError) { rev(bossId); return err('AVATAR_GONE'); }
+    if (e instanceof EquipError) return err(e.code === 'SLOT_TAKEN' ? 'SLOT_TAKEN' : 'UNKNOWN');
+    return fail(e, 'soloEquipBest');
   }
 }

@@ -3,11 +3,11 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { pieceCombatPower } from '@/lib/game/balance';
+import { TOWER_AVATAR_MULT, pieceCombatPower } from '@/lib/game/balance';
 import { WORLD_BOSS_WEAK_BONUS } from '@/lib/game/guild/balance';
 import { spritePath } from '@/lib/game/equipment/sprite-manifest';
 
-import { type BestAvatar, type BestPiece, avatarKeysOf, pickBestLoadout } from './best-loadout';
+import { type BestAvatar, type BestPiece, avatarKeysOf, pickBestLoadout, pickBestLoadoutBy } from './best-loadout';
 import { WEAK_SLOTS, type WeakSlot, piecePower } from './weak';
 
 /**
@@ -89,12 +89,19 @@ export type BestLoadout = {
  * 가진 장비와 보유 아바타 전부를 후보로 공개된 약점·아바타 보너스까지 계산한 가장 좋은 조합(장비 3개 + 대표 아바타) — "추천 장비 장착" 버튼의 제안.
  * 무한의 탑 자동 장착과 같은 규칙(best-loadout.ts, 10-12). 지금 장착·대표와 같으면 null.
  */
-export async function bestLoadoutOf(serverId: number, userId: string, known: ReadonlySet<string>, weakBonus: number = WORLD_BOSS_WEAK_BONUS): Promise<BestLoadout | null> {
+export async function bestLoadoutOf(
+  serverId: number,
+  userId: string,
+  known: ReadonlySet<string>,
+  weakBonus: number = WORLD_BOSS_WEAK_BONUS,
+  /** 개인 보스(0253) — 탑 규칙으로 값을 매기고 활성 장비만 후보(요구 장비 풀 = allowed). */
+  solo?: { allowed: ReadonlySet<string> },
+): Promise<BestLoadout | null> {
   const [rows, avRows] = await Promise.all([
     db.execute(sql`
       select ue.id::text as ueid, ci.code, ci.name, ci.slot::text as slot, ue.enhance_level as el, ue.transcend_level as tl, ue.equipped_slot is not null as on_
         from user_equipment ue join catalog_items ci on ci.id = ue.catalog_item_id
-       where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid`) as unknown as Promise<OwnRow[]>, // 비활성(교체된 옛) 장비도 후보 — 출발 전투력과 같은 기준(10-11 3차)
+       where ue.server_id = ${serverId} and ue.user_id = ${userId}::uuid ${solo ? sql`and ci.active` : sql``}`) as unknown as Promise<OwnRow[]>, // 비활성(교체된 옛) 장비도 후보 — 출발 전투력과 같은 기준(10-11 3차)
     // 보유 아바타 전부(서버별 자산) + 지금 대표 표시. 아바타가 없는 캐릭터는 id가 null인 한 행.
     db.execute(sql`
       select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot as snap,
@@ -111,7 +118,9 @@ export async function bestLoadoutOf(serverId: number, userId: string, known: Rea
   });
   // 지금 대표가 없거나 기본 아바타면 '그대로(보너스 없음)'를 후보에 넣어 바꾸지 않는 선택지를 남긴다.
   const cands: BestAvatar[] = customs.some((a) => a.active) ? customs : [{ id: null, keys: null, active: true }, ...customs];
-  const plan = pickBestLoadout(pieces, cands, known, weakBonus);
+  const plan = solo
+    ? pickBestLoadoutBy(pieces, cands, (p, avMatch) => (solo.allowed.has(p.code) ? p.cp * (avMatch ? TOWER_AVATAR_MULT : 1) : 0))
+    : pickBestLoadout(pieces, cands, known, weakBonus);
   if (!plan.changed) return null;
   const keys = plan.avatar.keys;
   const byUeid = new Map(rows.map((r) => [r.ueid, r] as const));
