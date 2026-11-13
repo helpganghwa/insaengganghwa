@@ -413,30 +413,29 @@ function Row({ r, lead, stage }: { r: BoardRow; lead: number; stage: number }) {
   const tr = soloTierReward(r.score, stage);
   const rr = soloRankReward(r.rank);
   const pct = lead > 0 ? Math.max(2, Math.min(100, Math.round((r.score / lead) * 100))) : 0;
+  // 구도는 L6(1줄 이름·칭호, 2줄 길드·보상, 오른쪽 점수), 아바타는 L1(오른쪽 얼굴 크게, 글자 쪽만 어둡게), 내 줄은 '내 순위' 라벨(11-14 사용자).
   return (
-    <li className="relative flex h-[58px] items-center overflow-hidden border-b border-zinc-800/80 bg-zinc-950 px-3">
+    <li className="relative flex h-[56px] items-center overflow-hidden border-b border-zinc-800/80 bg-zinc-950 px-3">
       {r.avatar ? (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-44">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={r.avatar} alt="" aria-hidden loading="lazy" decoding="async" className="absolute inset-0 h-full w-full" style={meleeFaceCropStyle(r.faceBox)} />
         </div>
       ) : null}
-      {/* 글자 쪽만 어둡게 — 아바타는 오른쪽에서 또렷하게(11-14 사용자: 아바타가 안 보임). */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-zinc-950 from-40% via-zinc-950/60 via-60% to-transparent" />
-      {r.me ? <span className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-violet-400" /> : null}
       <span className={`relative w-7 shrink-0 text-center font-mono text-[14px] font-extrabold ${rankText(r.rank, r.me)}`}>{r.rank <= 3 ? MEDAL[r.rank - 1] : r.rank}</span>
-      <div className="relative ml-1.5 min-w-0 flex-1 leading-tight">
+      <div className="relative ml-1.5 min-w-0 flex-1 leading-tight [text-shadow:0_1px_2px_#000]">
         <div className="flex min-w-0 items-center gap-1">
+          {r.me ? <span className="shrink-0 rounded bg-violet-600 px-1 text-[9px] font-black text-white [text-shadow:none]">내 순위</span> : null}
           <b className="truncate text-[13px] font-extrabold text-zinc-50">{r.nick}</b>
-          {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           {r.title ? <TitleTag code={r.title} still className="min-w-0 text-[10.5px]" /> : null}
         </div>
-        <div className="mt-0.5 min-w-0 text-[9.5px] text-zinc-400">
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[9.5px] text-zinc-400">
           {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={10} className="min-w-0 truncate" /> : <span className="text-zinc-600">무소속</span>}
+          <span className="flex-none text-zinc-300 tabular-nums">{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</span>
         </div>
-        <div className="mt-0.5 font-mono text-[13.5px] font-black text-zinc-50 tabular-nums">{n(r.score)}</div>
       </div>
-      <span className="relative flex-none rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-zinc-100 tabular-nums">{rewardText({ diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes })}</span>
+      <b className="relative flex-none font-mono text-[14px] font-black text-zinc-50 tabular-nums [text-shadow:0_1px_3px_#000]">{n(r.score)}</b>
       <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-black/40">
         <span className={`block h-full ${barColor(r.rank, r.me)}`} style={{ width: `${pct}%` }} />
       </span>
@@ -455,7 +454,7 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
         <span className="text-[10.5px] text-zinc-500">최고 기록 · 30위까지 순위 보상</span>
       </div>
       <ul className="border-t border-zinc-800/80">
-        {d.top.length === 0 ? <li className="flex h-[58px] items-center justify-center text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
+        {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
           <Row key={r.userId} lead={lead} stage={stage} r={{ rank: r.rank, nick: r.nickname, score: r.best, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
@@ -466,7 +465,7 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
               <Row lead={lead} stage={stage} r={{ rank: me.rank, nick: me.nickname, score: me.best, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             </>
           ) : (
-            <li className="flex h-[58px] items-center justify-center text-[11.5px] text-zinc-400">아직 내 기록이 없어요</li>
+            <li className="flex h-[56px] items-center justify-center text-[11.5px] text-zinc-400">아직 내 기록이 없어요</li>
           )
         ) : null}
       </ul>
