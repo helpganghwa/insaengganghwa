@@ -1360,7 +1360,11 @@ function RewardSheet({ stage, share, rank, onClose }: { stage: number; share: nu
     <ModalShell onClose={onClose} label="보상 안내">
       <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 페이즈 보너스 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
         <div className="space-y-2">
-          <p className="px-1 text-[11px] leading-snug text-slate-400">기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해예요. 모든 도전이 더해지고, 여왕이 사라질 때 최종으로 정해져요.</p>
+          <p className="px-1 text-[11px] leading-snug text-slate-400">
+            기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해예요.
+            <br />
+            모든 도전의 피해를 더해서 정해져요.
+          </p>
           <SheetTable head={['참가·기여도', '보상']} rows={rows} hi={share != null ? rows.length - 1 : undefined} />
           <SheetTable head={['순위', '보상']} rows={SOLO_RANK_REWARDS.map((r) => [r.from === r.to ? `${r.from}위` : `${r.from}~${r.to}위`, rewardText(r)])} hi={myBand >= 0 ? myBand : undefined} />
         </div>
