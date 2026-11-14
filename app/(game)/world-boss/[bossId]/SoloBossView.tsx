@@ -506,8 +506,12 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
             {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10px]" /> : null}
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
           </div>
-          <div className={`truncate text-[9.5px] text-slate-300 tabular-nums ${sh}`}>
-            <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText(shown)}
+          {/* 두 줄(11-14 사용자 B안) — 순위는 최고 피해, 기여도는 모든 도전의 누적 피해라 둘 다 보여야 오해가 없다(문의 #608·#609). */}
+          <div className={`truncate text-[9.5px] leading-tight text-slate-300 tabular-nums ${sh}`}>
+            최고 <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 누적 <b className="font-mono font-black text-slate-100">{n(r.dealt)}</b>
+          </div>
+          <div className={`truncate text-[9.5px] leading-tight text-slate-300 tabular-nums ${sh}`}>
+            기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText(shown)}
           </div>
         </div>
       </div>
@@ -1387,6 +1391,8 @@ function RewardSheet({ stage, share, rank, onClose }: { stage: number; share: nu
       <ModalLayout title="보상 안내" subtitle={`${stage}페이즈 · 페이즈 보너스 +${bonus}%`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
         <div className="space-y-2">
           <p className="px-1 text-[11px] leading-snug text-slate-400">
+            순위는 한 번 도전한 최고 피해로 정해져요.
+            <br />
             기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해예요.
             <br />
             모든 도전의 피해를 더해서 정해져요.
