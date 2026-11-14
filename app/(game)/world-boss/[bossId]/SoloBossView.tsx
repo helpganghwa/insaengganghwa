@@ -481,8 +481,9 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
   const share = soloShareOf(r.dealt, total);
   const tr = soloShareReward(share, stage);
   const rr = soloRankReward(r.rank);
-  // 정산된 줄은 실제 지급값(우편과 같은 값), 머무는 동안은 지금 기준 예상값.
-  const shown = r.reward ?? { diamond: tr.diamond + rr.diamond, boxes: tr.boxes + rr.boxes };
+  // 두 줄로 나눠 보인다(11-14 사용자): 위 = 최고 피해와 순위 보상, 아래 = 누적 피해·기여도와 참가·기여도 보상.
+  // 정산된 줄은 실제 지급 합계(우편과 같은 값)에서 최종 순위 보상을 뺀 나머지가 참가·기여도 몫이다.
+  const shareShown = r.reward ? { diamond: Math.max(0, r.reward.diamond - rr.diamond), boxes: Math.max(0, r.reward.boxes - rr.boxes) } : tr;
   const pct = share > 0 ? Math.max(1, Math.min(100, share * 100)) : 0;
   const accent = rankAccent(r.rank, r.me);
   const sh = 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]';
@@ -508,10 +509,11 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
           </div>
           {/* 두 줄(11-14 사용자 B안) — 순위는 최고 피해, 기여도는 모든 도전의 누적 피해라 둘 다 보여야 오해가 없다(문의 #608·#609). */}
           <div className={`truncate text-[9.5px] leading-tight text-slate-300 tabular-nums ${sh}`}>
-            최고 <b className="font-mono font-black text-slate-100">{n(r.score)}</b> · 누적 <b className="font-mono font-black text-slate-100">{n(r.dealt)}</b>
+            최고 <b className="font-mono font-black text-slate-100">{n(r.score)}</b>
+            {rr.diamond > 0 ? <> · {rewardText(rr)}</> : null}
           </div>
           <div className={`truncate text-[9.5px] leading-tight text-slate-300 tabular-nums ${sh}`}>
-            기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText(shown)}
+            누적 <b className="font-mono font-black text-slate-100">{n(r.dealt)}</b> · 기여 <b className="font-black text-violet-200">{soloSharePct(share)}</b> · {rewardText(shareShown)}
           </div>
         </div>
       </div>
@@ -529,8 +531,10 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
   return (
     <div>
       {/* 머리말 위아래 여백을 같게(py-2) — 히어로 아래와 첫 줄 위 간격이 달라 보이던 것(11-14 사용자). */}
-      <div className="px-3 py-2 leading-none">
+      <div className="flex items-baseline justify-between gap-2 px-3 py-2 leading-none">
         <span className="text-[11px] font-bold tracking-widest text-slate-400">피해 순위</span>
+        {/* 순위 기준 안내(11-14 사용자) — 기여도는 누적이라 둘을 헷갈리던 문의(#608·#609). */}
+        <span className="text-[10px] text-slate-500">순위는 최고 피해 기준</span>
       </div>
       <ul className="border-t border-slate-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
