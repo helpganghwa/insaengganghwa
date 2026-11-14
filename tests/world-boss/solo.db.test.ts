@@ -4,12 +4,13 @@ import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { runSolo } from '@/lib/game/world-boss/solo-server';
 import { getSoloBossDetail } from '@/lib/game/world-boss/solo-queries';
 import { settleLeftBosses } from '@/lib/game/world-boss/spawn';
+import { spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
 
 import { endTestDb, sql, testDb } from '../db';
 
 /**
- * 개인 월드보스(0253) 통합 테스트(스테이징 DB) — 테스트 계정의 거주지를 잠시 보스 구역으로 옮기고
- * 도전(무료 1판) → 남은 판 없음 → 비거주자 거절 → 정산(순위·보상·우편)을 실제 표에서 돌린다. 끝나면 되돌린다.
+ * 개인 월드보스(0253) 통합 테스트(스테이징 DB) — 테스트 계정의 거주지를 보스와 다른 구역으로 두고(거주 조건 없음, 11-14)
+ * 도전(무료 1판) → 남은 판 없음 → 정산(순위·보상·우편)을 실제 표에서 돌린다. 끝나면 되돌린다.
  */
 const T = process.env.TEST_USER_ID ?? '';
 const G = '9ea03a3c-41f2-4f4b-b793-da16a14402b2'; // 규규 — 다른 구역 거주자
@@ -32,7 +33,8 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     homeBefore = c?.home ?? null;
     const [g] = await q<{ home: number | null }>(sql`select residence_zone_id as home from characters where user_id=${G}::uuid and server_id=${S}`);
     gHomeBefore = g?.home ?? null;
-    await testDb.execute(sql`update characters set residence_zone_id=${ZONE} where user_id=${T}::uuid and server_id=${S}`);
+    // 보스와 다른 구역에 살아도 도전할 수 있어야 한다(거주 조건 삭제, 11-14).
+    await testDb.execute(sql`update characters set residence_zone_id=${ZONE + 1} where user_id=${T}::uuid and server_id=${S}`);
     if (gHomeBefore === ZONE) await testDb.execute(sql`update characters set residence_zone_id=3 where user_id=${G}::uuid and server_id=${S}`);
     // 요구 장비 = 테스트 계정이 지금 장착한 것(전투력이 0이 아니게).
     const eq = await q<{ code: string; slot: string }>(sql`
@@ -55,7 +57,7 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     await endTestDb();
   });
 
-  it('무료 1판 → 기록·누적, 재전송은 같은 판, 남은 판 없으면 NO_RUNS, 비거주자는 NOT_RESIDENT', async () => {
+  it('다른 구역 거주자도 무료 1판 → 기록·누적, 재전송은 같은 판, 남은 판 없으면 NO_RUNS', async () => {
     const key = crypto.randomUUID();
     const r = await runSolo(T, S, bossId, key);
     expect(r.hits).toHaveLength(10);
@@ -68,7 +70,6 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     expect(again.replayed).toBe(true);
     expect(again.runId).toBe(r.runId);
     expect(await code(runSolo(T, S, bossId, crypto.randomUUID()))).toBe('NO_RUNS');
-    expect(await code(runSolo(G, S, bossId, crypto.randomUUID()))).toBe('NOT_RESIDENT');
     // 재도전은 보스별(slot = 구역 id) — 다른 구역 여왕에서 산 재도전으로는 이 여왕에 못 들어온다.
     const day = (await q<{ d: string }>(sql`select (now() at time zone 'Asia/Seoul')::date::text as d`))[0]!.d;
     const before = await q<{ slot: number; count: number }>(sql`select slot, count from point_extra_buys where user_id=${T}::uuid and server_id=${S} and kst_date=${day}::date and item='wb_retry'`);
@@ -99,8 +100,13 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
 
     const d = await getSoloBossDetail(bossId, S, T);
     expect(d?.top[0]).toMatchObject({ rank: 1, best: r.score, me: true });
-    expect(d?.me).toMatchObject({ resident: true, best: r.score, rank: 1, freeLeft: 0, retryLeft: 0 });
+    expect(d?.me).toMatchObject({ best: r.score, rank: 1, freeLeft: 0, retryLeft: 0 });
   }, 20_000); // 스테이징 왕복이 많아(재도전 구역 기준 확인까지) 기본 5초로는 느린 날 넘친다.
+
+  it('여왕이 떠 있으면 다른 구역에도 여왕을 더 띄울 수 없다(서버당 하나)', async () => {
+    const r = await spawnWorldBossByAdmin({ serverId: S, zoneId: ZONE + 2, spawnAt: null, adminUserId: T, allowOverlap: true, allowNearMidnight: true, bossCode: 'shadow_queen' });
+    expect(r).toMatchObject({ ok: false, code: 'SOLO_BUSY' });
+  }, 20_000);
 
   it('사라질 때 순위·보상을 적고 결과 우편을 보낸다', async () => {
     await testDb.execute(sql`update world_bosses set leave_at = now() - interval '1 second' where id=${bossId}::bigint`);

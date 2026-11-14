@@ -3,7 +3,7 @@ import 'server-only';
 /**
  * 개인 월드보스(0253) 서버 판정 — 도전 1판(10타)을 한 트랜잭션에서 굴리고 저장한다. 화면은 저장된 10타를 받아 공격 버튼으로 하나씩 보여 준다.
  *
- * - 참가: 출현 구역 거주자(이사 와도 된다). 하루(KST) 무료 1판 + 산 재도전(wb_retry)만큼.
+ * - 참가: 그 서버에 캐릭터가 있으면 누구나(거주 조건은 11-14 삭제). 보스마다 하루(KST) 무료 1판 + 산 재도전(wb_retry)만큼.
  * - 힘: 탑 규칙 — 장착 3개 중 보스 요구 장비 ×1, 그중 지금 아바타 생성에도 쓰인 장비 ×2, 그 밖 ×0. 아바타는 지금 고른 아바타(active_profile_id).
  * - 기록: (보스, 유저) 최고 점수만 남긴다(더 높을 때만 갱신, 동점은 먼저 세운 사람). 모든 판의 점수는 보스 누적 피해(공동 페이즈)에 쌓인다.
  * - 잠금: 유저별 권고 잠금(wb_solo:유저) — 같은 사람의 도전·재도전 구매를 직렬화. 보스 행은 마지막 누적 갱신 한 번만 잡는다(핫 행 대기 최소).
@@ -50,16 +50,6 @@ async function lockUser(tx: Tx, userId: string) {
 
 type BossRow = { id: string; zone_id: number; status: string; open: boolean; pool: Pool | null };
 
-/** 이 유저가 지금 도전할 수 있는 개인 보스 — 거주 구역에 출현 중인 것. 없으면 null. */
-async function soloBossOfResident(tx: Tx, userId: string, serverId: number): Promise<BossRow | null> {
-  const [b] = (await tx.execute(sql`
-    select b.id::text as id, b.zone_id, b.status, (b.status = 'active' and b.leave_at > now()) as open, b.pool
-      from characters c join world_bosses b on b.zone_id = c.residence_zone_id and b.server_id = c.server_id
-     where c.user_id = ${userId}::uuid and c.server_id = ${serverId} and b.pool is not null and b.status = 'active' and b.leave_at > now()
-     order by b.spawn_at desc limit 1`)) as unknown as BossRow[];
-  return b ?? null;
-}
-
 /** 오늘 쓴 판(무료·유료)과 산 재도전 수. */
 async function todayRuns(tx: Tx, userId: string, serverId: number, bossId: string, day: string) {
   // 산 재도전은 보스별(11-14 결정) — point_extra_buys.slot = 그 보스의 구역 id(구역마다 개인 보스는 한 번에 하나).
@@ -80,22 +70,28 @@ function runsLeftOf(t: { free: number; paid: number; bought: number }) {
 }
 
 /**
- * 재도전 구매(buyExtra 'wb_retry')의 콘텐츠 잠금 — 거주 구역에 개인 보스가 있고, 오늘 무료 판을 썼고, 사 둔 재도전을 다 썼을 때만 산다
- * (쓰지 않은 재도전이 남았는데 또 사면 자정에 사라질 포인트만 나간다).
+ * 재도전 구매(buyExtra 'wb_retry')의 콘텐츠 잠금 — 그 개인 보스가 출현 중이고, 오늘 무료 판을 썼고, 사 둔 재도전을 다 썼을 때만 산다
+ * (쓰지 않은 재도전이 남았는데 또 사면 자정에 사라질 포인트만 나간다). 돌려주는 값 = 구매 행의 slot(그 보스의 구역 id).
  */
-export async function wbRetryLock(tx: Tx, userId: string, serverId: number): Promise<number> {
+export async function wbRetryLock(tx: Tx, userId: string, serverId: number, bossId: string): Promise<number> {
   await lockUser(tx, userId);
-  const boss = await soloBossOfResident(tx, userId, serverId);
-  if (!boss) throw new PointShopError('NOT_NEEDED');
-  const t = await todayRuns(tx, userId, serverId, boss.id, kstDateString());
+  const [b] = (await tx.execute(sql`
+    select b.zone_id,
+           exists (select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as has_char
+      from world_bosses b
+     where b.id = ${bossId}::bigint and b.server_id = ${serverId} and b.pool is not null and b.status = 'active' and b.leave_at > now()`)) as unknown as {
+    zone_id: number; has_char: boolean;
+  }[];
+  if (!b || !b.has_char) throw new PointShopError('NOT_NEEDED');
+  const t = await todayRuns(tx, userId, serverId, bossId, kstDateString());
   if (runsLeftOf(t) > 0) throw new PointShopError('NOT_NEEDED');
-  return Number(boss.zone_id);
+  return Number(b.zone_id);
 }
 
-/** 재도전 구매 행의 slot — 거주 구역에 개인 보스가 있으면 그 구역 id, 없으면 null(재전송 응답의 횟수 계산용). */
-export async function wbRetrySlot(tx: Tx, userId: string, serverId: number): Promise<number | null> {
-  const boss = await soloBossOfResident(tx, userId, serverId);
-  return boss ? Number(boss.zone_id) : null;
+/** 재도전 구매 행의 slot — 그 개인 보스의 구역 id(없으면 null, 재전송 응답의 횟수 계산용). */
+export async function wbRetrySlotOf(tx: Tx, serverId: number, bossId: string): Promise<number | null> {
+  const [b] = (await tx.execute(sql`select zone_id from world_bosses where id = ${bossId}::bigint and server_id = ${serverId} and pool is not null`)) as unknown as { zone_id: number }[];
+  return b ? Number(b.zone_id) : null;
 }
 
 /** 이 보스에 내가 넣은 누적 피해(모든 판). */
@@ -142,19 +138,18 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
       };
     }
 
-    // ② 보스·거주·남은 판. 보스 행을 KEY SHARE로 잡는다 — 정산(FOR UPDATE)과 줄을 세워, 종료 직전 판이 정산 뒤에 끼어들거나
+    // ② 보스·캐릭터·남은 판. 보스 행을 KEY SHARE로 잡는다 — 정산(FOR UPDATE)과 줄을 세워, 종료 직전 판이 정산 뒤에 끼어들거나
     //    (기록은 있는데 최종 순위·우편이 없음) 기록 행·보스 행을 반대 순서로 잡아 교착되지 않게. 다른 사람의 판끼리는 막지 않는다.
     const [boss] = (await tx.execute(sql`
       select b.id::text as id, b.zone_id, b.status, (b.status = 'active' and b.leave_at > now()) as open, b.pool,
-             (select c.residence_zone_id from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as home,
+             exists (select 1 from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as has_char,
              (select c.active_profile_id::text from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as profile
-        from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId} for key share of b`)) as unknown as (BossRow & { home: number | null; profile: string | null })[];
+        from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId} for key share of b`)) as unknown as (BossRow & { has_char: boolean; profile: string | null })[];
     // 예정 보스는 없는 보스와 같은 답으로 — 응답으로 출현 예정이 드러나지 않게(운영 소환 비노출, 11-14 검수).
     if (!boss || boss.status === 'scheduled') throw new WorldBossError('BOSS_NOT_FOUND');
     if (!boss.pool) throw new WorldBossError('NOT_SOLO');
     if (!boss.open) throw new WorldBossError('BOSS_NOT_ACTIVE');
-    if (boss.home === null || boss.home === undefined) throw new WorldBossError('NO_CHARACTER');
-    if (Number(boss.home) !== Number(boss.zone_id)) throw new WorldBossError('NOT_RESIDENT');
+    if (!boss.has_char) throw new WorldBossError('NO_CHARACTER');
     const t = await todayRuns(tx, userId, serverId, bossId, day);
     if (runsLeftOf(t) <= 0) throw new WorldBossError('NO_RUNS');
     const paid = t.free >= SOLO_FREE_RUNS_PER_DAY;

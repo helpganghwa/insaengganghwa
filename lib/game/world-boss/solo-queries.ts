@@ -48,7 +48,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
        order by r.best desc limit 40`) as unknown as Promise<{ best: string }[]>,
     userId
       ? (db.execute(sql`
-          select c.nickname, c.residence_zone_id as home, hz.name as home_name, c.representative_title_code as title,
+          select c.nickname, c.representative_title_code as title,
                  (select up2.options->'faceBox' from user_profiles up2 where up2.id = c.active_profile_id) as fb,
                  (select json_build_object('name', g.name, 'emblem', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id where gm.user_id = c.user_id and gm.server_id = c.server_id) as guild,
                  (select row_to_json(x) from (
@@ -73,10 +73,10 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                  coalesce((select json_agg(a) from (
                     select up.id::text as id, up.rotations->>'south' as south, up.equipment_snapshot as snap, coalesce((up.options->>'isDefault')::boolean, false) as is_default, (up.id = c.active_profile_id) as active
                       from user_profiles up where up.user_id = c.user_id and up.server_id = c.server_id) a), '[]'::json) as avatars
-            from characters c left join zones hz on hz.id = c.residence_zone_id
+            from characters c
            where c.user_id = ${userId}::uuid and c.server_id = ${serverId}`) as unknown as Promise<
           {
-            nickname: string | null; home: number | null; home_name: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
+            nickname: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
             rec: { best: string; best_at: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; rank: number } | null;
             dealt: string | null; free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
@@ -138,8 +138,6 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       title: m.title,
       guildName: m.guild?.name ?? null,
       guildEmblem: m.guild?.emblem ?? null,
-      resident: m.home !== null && Number(m.home) === Number(b.zone_id),
-      homeZoneName: m.home_name,
       best: m.rec ? Number(m.rec.best) : null,
       dealt: Number(m.dealt ?? 0),
       rank: m.rec ? Number(m.rec.rank) : null,

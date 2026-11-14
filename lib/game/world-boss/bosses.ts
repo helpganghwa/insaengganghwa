@@ -14,7 +14,7 @@ export type WorldBossKindCode = 'ember_phoenix' | 'shadow_queen';
 export type WorldBossKind = {
   code: WorldBossKindCode;
   name: string;
-  /** 개인 보스(0253) — 원정대 대신 거주자가 혼자 10타 도전, 최고 기록 순위(docs/WORLD-BOSS-SOLO.md). 소환 때 요구 장비(pool)를 뽑는다. */
+  /** 개인 보스(0253) — 원정대 대신 누구나 혼자 10타 도전(서버에 한 번에 하나), 최고 기록 순위(docs/WORLD-BOSS-SOLO.md). 소환 때 요구 장비(pool)를 뽑는다. */
   solo?: boolean;
   /** 화면 색 묶음 — 배지·숫자·테두리·바탕(Tailwind 색 이름). 불사조 orange, 거미 여왕 violet. */
   accent: 'orange' | 'violet';

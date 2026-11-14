@@ -59,17 +59,20 @@ type Quote = { melee: number; mileage: number; bought: number; max: number; pric
 // 보내면 요청만 늘고 바로 뒤에 누른 도전·공격이 그 뒤에 줄을 설 수 있다. 받은 지 얼마 안 된 값은 다시 받지 않는다.
 const QUOTE_FRESH_MS = 30_000;
 type QuoteEntry = { q: Quote; at: number; day: string };
-const sharedQuote: Partial<Record<PointExtraItem, QuoteEntry>> = {};
+// 키 = 상품(월드보스 재도전만 '상품:보스 id' — 보스마다 따로 센다, 11-14).
+const sharedQuote: Partial<Record<string, QuoteEntry>> = {};
+const qk = (item: PointExtraItem, bossId?: string) => (bossId ? `${item}:${bossId}` : item);
 // 가장 나중에 보낸 요청의 답만 받아 둔다 — 구매 전에 떠난 조회가 늦게 와서 구매 뒤 값을 덮지 않게.
-const quoteSeq: Partial<Record<PointExtraItem, number>> = {};
-const bumpQuoteSeq = (item: PointExtraItem) => (quoteSeq[item] = (quoteSeq[item] ?? 0) + 1);
-const quoteInflight: Partial<Record<PointExtraItem, ReturnType<typeof requestQuote>>> = {};
-const requestQuote = (item: PointExtraItem) => {
-  const seq = bumpQuoteSeq(item);
-  return extraQuoteAction(item)
+const quoteSeq: Partial<Record<string, number>> = {};
+const bumpQuoteSeq = (k: string) => (quoteSeq[k] = (quoteSeq[k] ?? 0) + 1);
+const quoteInflight: Partial<Record<string, ReturnType<typeof requestQuote>>> = {};
+const requestQuote = (item: PointExtraItem, bossId?: string) => {
+  const k = qk(item, bossId);
+  const seq = bumpQuoteSeq(k);
+  return extraQuoteAction(item, bossId)
     .catch(() => ({ status: 'error', code: 'NETWORK' }) as const)
     .then((r) => {
-      if (r.status === 'success' && quoteSeq[item] === seq) sharedQuote[item] = { q: r, at: Date.now(), day: kstDateString() };
+      if (r.status === 'success' && quoteSeq[k] === seq) sharedQuote[k] = { q: r, at: Date.now(), day: kstDateString() };
       return r;
     });
 };
@@ -78,12 +81,12 @@ const requestQuote = (item: PointExtraItem) => {
  * 구매 직후 받아 둔 견적을 낙관적으로 맞춘다(산 장 수만큼 횟수·다음 값·잔액) — 다음에 ＋를 열 때 서버 답을 기다리지 않게.
  * 모듈 변수 갱신은 컴포넌트 밖 함수에서만(React 컴파일러 불변 규칙).
  */
-const bumpSharedQuoteAfterBuy = (item: PointExtraItem, qty: number, kind: PointKind, spent: number) => {
-  const before = sharedQuote[item];
+const bumpSharedQuoteAfterBuy = (item: PointExtraItem, k: string, qty: number, kind: PointKind, spent: number) => {
+  const before = sharedQuote[k];
   if (!before) return;
   const bought = before.q.bought + qty;
-  bumpQuoteSeq(item); // 구매 전에 떠난 조회의 답이 아래 값을 덮지 않게
-  sharedQuote[item] = {
+  bumpQuoteSeq(k); // 구매 전에 떠난 조회의 답이 아래 값을 덮지 않게
+  sharedQuote[k] = {
     at: before.at,
     day: before.day,
     q: {
@@ -96,26 +99,27 @@ const bumpSharedQuoteAfterBuy = (item: PointExtraItem, qty: number, kind: PointK
   };
 };
 /** 구매 실패 — 낙관적으로 바꾼 견적을 되돌린다(없었으면 비운다). */
-const restoreSharedQuote = (item: PointExtraItem, before: QuoteEntry | undefined) => {
-  if (before) sharedQuote[item] = before;
-  else delete sharedQuote[item];
+const restoreSharedQuote = (k: string, before: QuoteEntry | undefined) => {
+  if (before) sharedQuote[k] = before;
+  else delete sharedQuote[k];
 };
-const rememberUnsettled = (item: PointExtraItem, u: Unsettled | null) => {
-  if (u) unsettledKey[item] = u;
-  else delete unsettledKey[item];
+const rememberUnsettled = (k: string, u: Unsettled | null) => {
+  if (u) unsettledKey[k] = u;
+  else delete unsettledKey[k];
 };
-const fetchSharedQuote = (item: PointExtraItem, fresh = false) => {
-  const going = quoteInflight[item];
+const fetchSharedQuote = (item: PointExtraItem, bossId: string | undefined, fresh = false) => {
+  const k = qk(item, bossId);
+  const going = quoteInflight[k];
   if (going && !fresh) return going;
-  const p = requestQuote(item).finally(() => {
-    if (quoteInflight[item] === p) delete quoteInflight[item];
+  const p = requestQuote(item, bossId).finally(() => {
+    if (quoteInflight[k] === p) delete quoteInflight[k];
   });
-  quoteInflight[item] = p;
+  quoteInflight[k] = p;
   return p;
 };
 /** 오늘 받아 둔 견적만 쓴다 — 자정이 지나면 가격·산 횟수가 처음으로 돌아간다. */
-const cachedQuote = (item: PointExtraItem): QuoteEntry | undefined => {
-  const e = sharedQuote[item];
+const cachedQuote = (k: string): QuoteEntry | undefined => {
+  const e = sharedQuote[k];
   return e && e.day === kstDateString() ? e : undefined;
 };
 // 결과를 모르는 채 끝난 구매의 요청 키(응답 유실·서버 오류) — 서버에서는 이미 샀을 수 있어, 다음 구매가 같은 번째·같은
@@ -123,12 +127,12 @@ const cachedQuote = (item: PointExtraItem): QuoteEntry | undefined => {
 // 구매는 들어간 것이라 새 키를 쓴다. ＋가 화면마다 다시 그려져도 이어지게 상품별로 두고, 오래된 키(10분)·어제 키는 버린다.
 const UNSETTLED_TTL_MS = 10 * 60_000;
 type Unsettled = { key: string; bought: number; qty: number; day: string; at: number; floor?: number };
-const unsettledKey: Partial<Record<PointExtraItem, Unsettled>> = {};
-const unsettledOf = (item: PointExtraItem): Unsettled | null => {
-  const u = unsettledKey[item];
+const unsettledKey: Partial<Record<string, Unsettled>> = {};
+const unsettledOf = (k: string): Unsettled | null => {
+  const u = unsettledKey[k];
   if (!u) return null;
   if (u.day !== kstDateString() || Date.now() - u.at > UNSETTLED_TTL_MS) {
-    delete unsettledKey[item];
+    delete unsettledKey[k];
     return null;
   }
   return u;
@@ -156,6 +160,7 @@ export function ExtraBuyButton({
   onResult,
   floor,
   week,
+  bossId,
   trigger,
   stacked = false,
   onOpenChange,
@@ -169,6 +174,8 @@ export function ExtraBuyButton({
   /** 요구 장비 다시 뽑기만 — 어느 층을 뽑는지, 화면이 본 주(월요일 갱신 주 시작일). 주가 바뀌었으면 서버가 WEEK_CHANGED로 돌려보낸다. */
   floor?: number;
   week?: string;
+  /** 월드보스 재도전만 — 어느 보스의 재도전인지(보스마다 하루 횟수를 따로 센다, 11-14). */
+  bossId?: string;
   /** ＋ 대신 글자 버튼으로(착용 가능 장비 팝업 안의 '다시 뽑기') — 같은 구매 팝업이 열린다. className은 버튼에 붙는다. */
   trigger?: { label: string };
   /** 다른 팝업 위에 겹쳐 열릴 때 — 아래 팝업은 호출부가 onOpenChange로 receded 처리한다. */
@@ -196,12 +203,13 @@ export function ExtraBuyButton({
   const copy = COPY[item];
   // 다시 뽑기는 층을 정확히('102층의…', 10-16 피드백) — 줄바꿈은 COPY와 같은 자리.
   const desc = item === 'tower_reroll' && floor ? `${floor}층의 요구 장비를 나에게만 새로 뽑아요.\n지금 장비가 다시 나올 수도 있어요.` : copy.desc;
-  const fetchQuote = (fresh = false) => fetchSharedQuote(item, fresh);
+  const k = qk(item, bossId);
+  const fetchQuote = (fresh = false) => fetchSharedQuote(item, bossId, fresh);
   useEffect(() => {
     // ＋가 그려질 때 — 받아 둔 값이 없거나 오래됐을 때만 미리 받는다(팝업을 빈 칸 없이 바로 열기 위해).
-    const have = cachedQuote(item);
-    if (!have || Date.now() - have.at > QUOTE_FRESH_MS) void fetchSharedQuote(item);
-  }, [item]);
+    const have = cachedQuote(qk(item, bossId));
+    if (!have || Date.now() - have.at > QUOTE_FRESH_MS) void fetchSharedQuote(item, bossId);
+  }, [item, bossId]);
   const pickKind = (q: Quote) =>
     setKind(q.price !== null && q.melee >= q.price ? 'melee' : q.price !== null && q.mileage >= amountIn('mileage', q.price) ? 'mileage' : 'melee');
 
@@ -212,12 +220,12 @@ export function ExtraBuyButton({
   };
 
   const openPopup = () => {
-    const entry = cachedQuote(item);
+    const entry = cachedQuote(k);
     // 오래된 '오늘은 더 못 삼'은 믿지 않는다 — 그때는 새로 받아 판단한다.
     const expired = !!entry && entry.q.price === null && nowMs() - entry.at > QUOTE_FRESH_MS;
     // 결과를 모르는 구매가 남아 있으면 받아 둔 견적으로 열지 않는다 — 같은 키를 다시 쓸지는 서버의 새 '산 횟수'로
     // 정해야 한다(옛 횟수로 열면 이미 들어간 구매를 한 번 더 '산 것'처럼 보여 주게 된다).
-    const settling = unsettledOf(item) !== null;
+    const settling = unsettledOf(k) !== null;
     const c = entry && !expired && !settling ? entry.q : null;
     if (c && c.price === null) {
       showHeaderToast({ title: '오늘은 더 구매할 수 없어요' });
@@ -280,23 +288,23 @@ export function ExtraBuyButton({
     const max = quote.max;
     const usedQty = qty;
     const spent = amountIn(kind, expectedPrice);
-    const before = sharedQuote[item];
+    const before = sharedQuote[k];
     // 결과를 모르는 채 끝난 같은 번째·같은 장 수 구매가 있으면 그 키로 다시 보낸다(이미 들어갔다면 서버가 한 번만 받는다).
-    const prev = unsettledOf(item);
+    const prev = unsettledOf(k);
     // 다시 뽑기는 층까지 같아야 같은 구매다(검수 10-16) — 다른 층에 옛 키를 다시 쓰면 서버가 앞선 구매로 알아보고 그 층은 뽑지 않는다.
     const key = prev && prev.bought === quote.bought && prev.qty === usedQty && prev.floor === floor ? prev.key : newKey();
     const attempt: Unsettled = { key, bought: quote.bought, qty: usedQty, day: kstDateString(), at: nowMs(), floor };
     // 낙관적 — 팝업을 바로 닫고 호출부 횟수를 먼저 올린다. 다음에 열 견적도 미리 맞춰 둔다.
     close();
     onOptimistic?.(usedQty);
-    bumpSharedQuoteAfterBuy(item, usedQty, kind, spent);
+    bumpSharedQuoteAfterBuy(item, k, usedQty, kind, spent);
     start(async () => {
-      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice, ...(floor !== undefined ? { floor, week } : {}) }).catch(
+      const r = await buyExtraAction({ item, kind, qty: usedQty, key, expectedPrice, ...(floor !== undefined ? { floor, week } : {}), ...(bossId ? { bossId } : {}) }).catch(
         () => ({ status: 'error', code: 'NETWORK' }) as const,
       );
       busy.current = false;
       if (r.status === 'success') {
-        rememberUnsettled(item, null);
+        rememberUnsettled(k, null);
         // 같은 키의 재전송(앞선 요청이 이미 들어가 있었다) — 그 구매는 서버 값으로 화면에 이미 반영됐거나 곧 반영되므로,
         // 이번 낙관 반영은 되돌린다(안 되돌리면 횟수가 하나 더 올라간 채 남는다).
         if (r.duplicate) onRollback?.(usedQty);
@@ -311,8 +319,8 @@ export function ExtraBuyButton({
         });
       } else {
         // 결과를 모르면 키를 남겨 두고(다시 누르면 같은 구매) 화면을 서버 값으로 다시 맞춘다 — 서버에서는 들어갔을 수 있다.
-        rememberUnsettled(item, uncertain(r.code) ? attempt : null);
-        restoreSharedQuote(item, before);
+        rememberUnsettled(k, uncertain(r.code) ? attempt : null);
+        restoreSharedQuote(k, before);
         onRollback?.(usedQty);
         showError(r.code === 'INSUFFICIENT_POINTS' ? `${KIND_KO[kind]}가 부족해요` : (ERR[r.code] ?? '구매하지 못했어요'));
         if (uncertain(r.code)) resyncWhenOnline('route', () => router.refresh());

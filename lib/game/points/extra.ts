@@ -7,7 +7,7 @@ import { POINT_EXTRA_PRICES, pointExtraPrice, type PointExtraItem } from '@/lib/
 import { expeditionExtraLock, expeditionExtraOpen } from '@/lib/game/expedition/service';
 import { raidExtraLock } from '@/lib/game/raid/open';
 import { towerExtraLock, towerRerollFloor, towerRerollOf, towerRerollableFloor } from '@/lib/game/tower/service';
-import { wbRetryLock, wbRetrySlot } from '@/lib/game/world-boss/solo-server';
+import { wbRetryLock, wbRetrySlotOf } from '@/lib/game/world-boss/solo-server';
 import type { SlotKeys } from '@/lib/game/tower/engine';
 import { kstDateString, kstWeekStartString } from '@/lib/kst';
 
@@ -56,7 +56,7 @@ function priceForQty(item: PointExtraItem, boughtToday: number, qty: number): nu
 export async function buyExtra(
   userId: string,
   serverId: number,
-  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number; week?: string },
+  input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number; week?: string; bossId?: string },
 ): Promise<ExtraBuyResult> {
   const { item, kind } = input;
   // 문자열만 — 배열(['raid'])은 hasOwn을 통과하면서 아래 분기는 빗나간다(10-06 최종 검수).
@@ -69,6 +69,9 @@ export async function buyExtra(
   if (item !== 'expedition' && qty !== 1) throw new PointShopError('BAD_REQUEST');
   // 요구 장비 다시 뽑기(0245)는 층이 필요하다 — 11층부터 지금 열린 맨 위 층까지. 다른 상품에 층이 와도 무시한다.
   const floor = item === 'tower_reroll' ? Number(input.floor) : null;
+  // 월드보스 재도전(0253)은 어느 보스의 재도전인지 받는다(거주 조건 삭제 뒤 보스마다 따로 센다, 11-14).
+  const wbBossId = item === 'wb_retry' ? input.bossId : undefined;
+  if (item === 'wb_retry' && (typeof wbBossId !== 'string' || !/^\d{1,18}$/.test(wbBossId))) throw new PointShopError('BAD_REQUEST');
   if (item === 'tower_reroll' && (floor === null || !towerRerollableFloor(floor))) throw new PointShopError('BAD_REQUEST');
   // 화면이 본 주와 다르면(월요일 0시를 넘긴 옛 화면) 사지 않는다 — 보지도 않은 새 주 풀을 바꾸게 되므로(검수 10-16).
   if (item === 'tower_reroll' && input.week !== undefined && input.week !== kstWeekStartString()) throw new PointShopError('WEEK_CHANGED');
@@ -90,7 +93,7 @@ export async function buyExtra(
         sql`select 1 from point_ledger where kind in ('melee', 'mileage') and ref = ${ref} limit 1`,
       )) as unknown as unknown[];
       if (!prev) return null;
-      if (item === 'wb_retry' && slot === 0) slot = (await wbRetrySlot(tx, userId, serverId)) ?? 0;
+      if (item === 'wb_retry' && slot === 0) slot = (await wbRetrySlotOf(tx, serverId, wbBossId!)) ?? 0;
       const bought = await extrasToday(tx, userId, serverId, item, slotOf(), day);
       // 다시 뽑기의 재전송 — 그 층에 저장된 요구 장비를 돌려줘 화면이 같은 것을 보게 한다.
       const pool = floor !== null ? await towerRerollOf(tx, userId, serverId, floor) : undefined;
@@ -106,8 +109,8 @@ export async function buyExtra(
       } else if (item === 'raid') {
         await raidExtraLock(tx, userId, serverId, day);
       } else if (item === 'wb_retry') {
-        // 개인 월드보스 재도전(0253) — 거주 구역 보스가 있고 남은 판이 0일 때만.
-        slot = await wbRetryLock(tx, userId, serverId);
+        // 개인 월드보스 재도전(0253) — 그 보스가 출현 중이고 남은 판이 0일 때만.
+        slot = await wbRetryLock(tx, userId, serverId, wbBossId!);
       } else {
         // 탑 추가 도전·요구 장비 다시 뽑기 — 진행도 행을 잠가 전투 판정과 직렬화한다(다시 뽑은 요구 장비로 싸우는 판과 겹치지 않게).
         await towerExtraLock(tx, userId, serverId);

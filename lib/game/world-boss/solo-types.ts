@@ -29,8 +29,6 @@ export type SoloDetail = {
     title: string | null;
     guildName: string | null;
     guildEmblem: string | null;
-    resident: boolean;
-    homeZoneName: string | null;
     best: number | null;
     /** 이 보스에 넣은 피해 전부(모든 도전 합). */
     dealt: number;

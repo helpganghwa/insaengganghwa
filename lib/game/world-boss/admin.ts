@@ -95,7 +95,7 @@ export async function adminWorldBossBoard(serverIds: number[]): Promise<AdminWor
 export type SpawnOverlap = { id: string; zoneName: string; status: 'scheduled' | 'active'; spawnAt: string; leaveAt: string };
 export type SpawnResult =
   | { ok: true; bossId: string; status: 'scheduled' | 'active'; zoneName: string; spawnAt: string; leaveAt: string }
-  | { ok: false; code: 'ZONE_NOT_FOUND' | 'ZONE_BUSY' | 'PAST' | 'TOO_FAR' }
+  | { ok: false; code: 'ZONE_NOT_FOUND' | 'ZONE_BUSY' | 'SOLO_BUSY' | 'PAST' | 'TOO_FAR' }
   | { ok: false; code: 'OVERLAP'; overlapping: SpawnOverlap[] }
   /** 떠나는 시각이 점령전 자정 공개 창(23:50~00:10 KST)에 걸림 — allowOverlap(확인)으로 다시 부르면 소환한다. */
   | { ok: false; code: 'NEAR_MIDNIGHT'; leaveAt: string };
@@ -138,6 +138,11 @@ export async function spawnWorldBossByAdmin(input: {
     // 구역당 출현 중·예정은 하나(10-11 사용자: 시간이 겹치지 않는 예약도 같은 구역엔 둘 수 없다).
     const inZone = (await tx.execute(sql`select 1 as x from world_bosses where server_id = ${input.serverId} and zone_id = ${input.zoneId} and status in ('scheduled', 'active') limit 1`)) as unknown as unknown[];
     if (inZone.length > 0) return { ok: false, code: 'ZONE_BUSY' };
+    // 개인 보스(여왕)는 서버에 한 번에 하나만(출현 중·예정 포함, 11-14 사용자) — 재도전 구매·무료 판이 '하루 기준'으로 자연스럽게 맞도록.
+    if (worldBossIsSolo(input.bossCode)) {
+      const soloLive = (await tx.execute(sql`select 1 as x from world_bosses where server_id = ${input.serverId} and pool is not null and status in ('scheduled', 'active') limit 1`)) as unknown as unknown[];
+      if (soloLive.length > 0) return { ok: false, code: 'SOLO_BUSY' };
+    }
     if (live.length > 0 && !input.allowOverlap) {
       return {
         ok: false,

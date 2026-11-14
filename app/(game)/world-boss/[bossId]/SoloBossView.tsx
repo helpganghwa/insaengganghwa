@@ -286,13 +286,14 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
 
   // 재도전 버튼 — 남은 판이 있으면 바로 준비 화면, 없으면 포인트로 사기(오늘 더 못 사면 잠김).
   const retryButton = (onAfter: () => void, label?: string) =>
-    !me || !active || !me.resident ? null : runsLeft > 0 ? (
+    !me || !active ? null : runsLeft > 0 ? (
       <PrimaryButton onClick={onAfter}>{label ?? (me.best == null ? '토벌하기' : '재도전')}</PrimaryButton>
     ) : me.retryNext == null ? (
       <PrimaryButton disabled>오늘 도전 끝</PrimaryButton>
     ) : (
       <ExtraBuyButton
         item="wb_retry"
+        bossId={d.id}
         trigger={{ label: `재도전 · ${me.retryNext}pt` }}
         onOptimistic={() => patch({ extra: extraRetry + 1 })}
         onRollback={() => patch({ extra: Math.max(0, extraRetry) })}
@@ -311,14 +312,6 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         <>
           <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} idleSrc={fx.idle} bossName={bossName} phase={phase} onReward={() => setSheet('reward')} onPattern={() => setSheet('pattern')} />
           <Board d={d} stage={phase.stage} />
-          {me && !me.resident && active ? (
-            <p className="mx-3 mt-2 rounded-lg border border-violet-500/30 bg-violet-950/40 px-2.5 py-2 text-[11.5px] leading-snug text-slate-300">
-              {d.zoneName}에 거주하면 도전할 수 있어요.{me.homeZoneName ? josa(` 지금 거주지는 ${me.homeZoneName}#{이에요}.`) : ''}{' '}
-              <Link prefetch={false} href="/guild/map" className="font-bold text-violet-200 underline">
-                지도에서 옮기기
-              </Link>
-            </p>
-          ) : null}
           {!active && me && me.best != null ? <FinalCard d={d} /> : null}
           <FloatingBar>{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</FloatingBar>
         </>

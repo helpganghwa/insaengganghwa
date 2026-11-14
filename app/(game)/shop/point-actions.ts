@@ -16,22 +16,22 @@ import { kstDateString } from '@/lib/kst';
 import { rateLimited } from '@/lib/ratelimit';
 
 /** 추가 횟수 팝업이 열릴 때 — 두 통화 잔액·오늘 산 횟수·이번 가격(대난투 포인트). 조회만. */
-export async function extraQuoteAction(item: PointExtraItem) {
+export async function extraQuoteAction(item: PointExtraItem, bossId?: string) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (typeof item !== 'string' || !Object.hasOwn(POINT_EXTRA_PRICES, item)) return { status: 'error', code: 'BAD_REQUEST' } as const;
   const serverId = await getActiveServerId();
+  // 월드보스 재도전은 보스별 — 보스 id가 없거나 이상하면 0회로 본다(그 보스의 구역 행만 센다).
+  const wbBoss = item === 'wb_retry' && typeof bossId === 'string' && /^\d{1,18}$/.test(bossId) ? bossId : null;
   // 한 번의 왕복으로(잔액 둘 + 오늘 산 횟수) — ＋가 보이는 화면마다 불리는 조회라 커넥션을 하나만 쓴다.
   const [row] = (await db.execute(sql`
     select coalesce((select melee_points from characters where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as mp,
            coalesce((select balance from mileage_wallets where user_id = ${u}::uuid and server_id = ${serverId}), 0)::bigint::text as ml,
            (select coalesce(sum(count), 0)::int from point_extra_buys
              where user_id = ${u}::uuid and server_id = ${serverId} and kst_date = ${kstDateString()}::date and item = ${item}
-               -- 월드보스 재도전은 보스별(slot = 거주 구역의 개인 보스 구역 id, 11-14) — 구매·도전과 같은 기준으로 센다.
+               -- 월드보스 재도전은 보스별(slot = 그 개인 보스의 구역 id, 11-14) — 구매·도전과 같은 기준으로 센다.
                ${item === 'wb_retry'
-                 ? sql`and slot = (select b.zone_id from characters c join world_bosses b on b.zone_id = c.residence_zone_id and b.server_id = c.server_id
-                                    where c.user_id = ${u}::uuid and c.server_id = ${serverId} and b.pool is not null and b.status = 'active' and b.leave_at > now()
-                                    order by b.spawn_at desc limit 1)`
+                 ? sql`and slot = (select b.zone_id from world_bosses b where b.id = ${wbBoss}::bigint and b.server_id = ${serverId} and b.pool is not null)`
                  : sql``}) as bought
   `)) as unknown as { mp: string; ml: string; bought: number }[];
   const bought = Number(row?.bought ?? 0);
@@ -48,7 +48,7 @@ export async function extraQuoteAction(item: PointExtraItem) {
 const PAGE: Record<PointExtraItem, string> = { expedition: '/expedition', raid: '/raid', tower: '/tower', tower_reroll: '/tower', wb_retry: '/guild/map' };
 
 /** 추가 횟수 한 장 사기(docs/POINT-SHOP.md §6). key = 구매 시도마다 클라가 만든 값(재전송 한 번만). */
-export async function buyExtraAction(input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number; week?: string }) {
+export async function buyExtraAction(input: { item: PointExtraItem; kind: PointKind; qty?: number; key: string; expectedPrice?: number; floor?: number; week?: string; bossId?: string }) {
   const u = await getSessionUserId();
   if (!u) return { status: 'error', code: 'UNAUTHENTICATED' } as const;
   if (await rateLimited(u, 'shop')) return { status: 'error', code: 'RATE_LIMITED' } as const;

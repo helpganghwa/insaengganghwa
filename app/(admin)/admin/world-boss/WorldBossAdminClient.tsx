@@ -20,6 +20,7 @@ const STATUS_KO: Record<string, { label: string; cls: string }> = {
 const ERROR_KO: Record<string, string> = {
   BAD_KIND: '모르는 보스 종류예요.',
   ZONE_BUSY: '그 구역엔 이미 출현 중이거나 예정인 보스가 있어요(구역당 하나).',
+  SOLO_BUSY: '그림자 거미 여왕은 이미 출현 중이거나 예정되어 있어요(서버당 하나).',
   ZONE_NOT_FOUND: '구역을 찾을 수 없어요.',
   PAST: '지난 시각이에요. 즉시 소환하거나 앞 시각으로 잡아 주세요.',
   TOO_FAR: '30일 안쪽으로만 예약할 수 있어요.',
