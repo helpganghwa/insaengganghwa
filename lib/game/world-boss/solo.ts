@@ -16,6 +16,8 @@ export type SoloPower = Record<SoloSlot, number>;
 export type SoloHit = { p: SoloPattern; d: number; c: boolean };
 
 export const SOLO_HITS_PER_RUN = 10;
+/** 순위표에 보이는 상위 인원(11-14 사용자: 10 → 50). 그 밖이면 내 줄을 아래에 따로 붙인다. */
+export const SOLO_TOP_SHOWN = 50;
 /** 하루 무료 도전(KST 날짜마다). 재도전은 포인트로 산다(POINT_EXTRA_PRICES.wb_retry). */
 export const SOLO_FREE_RUNS_PER_DAY = 1;
 export const SOLO_CRIT_CHANCE = 0.1;

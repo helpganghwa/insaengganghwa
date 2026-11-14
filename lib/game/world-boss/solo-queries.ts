@@ -10,7 +10,7 @@ import { kstDateString } from '@/lib/kst';
 import { parseFaceBox } from '@/components/faceCrop';
 
 import { avatarKeysOf, pickBestLoadoutBy, type BestAvatar } from './best-loadout';
-import { SOLO_FREE_RUNS_PER_DAY, type SoloPower, type SoloSlot } from './solo';
+import { SOLO_FREE_RUNS_PER_DAY, SOLO_TOP_SHOWN, type SoloPower, type SoloSlot } from './solo';
 import type { SoloDetail } from './solo-types';
 
 const SLOTS: SoloSlot[] = ['weapon', 'armor', 'accessory'];
@@ -38,7 +38,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
         left join guild_members gm on gm.user_id = r.user_id and gm.server_id = r.server_id
         left join guilds g on g.id = gm.guild_id
        where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
-       order by r.best desc, r.best_at asc, r.user_id limit 10`) as unknown as Promise<{
+       order by r.best desc, r.best_at asc, r.user_id limit ${SOLO_TOP_SHOWN}`) as unknown as Promise<{
       uid: string; nickname: string | null; best: string; dealt: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
     }[]>,
     // 기록 경주(공격 화면) — 다른 사람들의 최고 기록 상위 40개(내 기록 제외). 판 도중 '지금 N위권·다음 순위까지'를 화면이 계산한다.

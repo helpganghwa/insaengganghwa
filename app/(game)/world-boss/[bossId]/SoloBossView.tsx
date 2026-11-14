@@ -36,6 +36,7 @@ import {
   soloShareReward,
   SOLO_JOIN_REWARD,
   SOLO_SHARE_POOL,
+  SOLO_TOP_SHOWN,
   type SoloHit,
   type SoloSlot,
 } from '@/lib/game/world-boss/solo';
@@ -238,7 +239,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       const dealt = ru.dealt;
       const mine = { rank: ru.rank, reward: null, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
       const others = d.top.filter((x) => !x.me);
-      const top = ru.rank <= 10 ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, 10).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, 10);
+      const TOP = SOLO_TOP_SHOWN; // 순위표 상위 50명(서버 목록과 같은 수)
+      const top = ru.rank <= TOP ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, TOP).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, TOP);
       patch({ me: { freeLeft: 0, retryLeft: ru.runsLeft, best: ru.best, dealt, rank: ru.rank }, total: ru.totalAfter, top, extra: 0 });
       setRun(ru);
       setView('battle');
@@ -534,7 +536,7 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
       <div className="flex items-baseline justify-between gap-2 px-3 py-2 leading-none">
         <span className="text-[11px] font-bold tracking-widest text-slate-400">피해 순위</span>
         {/* 순위 기준 안내(11-14 사용자) — 기여도는 누적이라 둘을 헷갈리던 문의(#608·#609). */}
-        <span className="text-[10px] text-slate-500">순위는 최고 피해 기준</span>
+        <span className="text-[10px] text-slate-500">최고 피해 기준</span>
       </div>
       <ul className="border-t border-slate-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
