@@ -100,7 +100,7 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     const d = await getSoloBossDetail(bossId, S, T);
     expect(d?.top[0]).toMatchObject({ rank: 1, best: r.score, me: true });
     expect(d?.me).toMatchObject({ resident: true, best: r.score, rank: 1, freeLeft: 0, retryLeft: 0 });
-  });
+  }, 20_000); // 스테이징 왕복이 많아(재도전 구역 기준 확인까지) 기본 5초로는 느린 날 넘친다.
 
   it('사라질 때 순위·보상을 적고 결과 우편을 보낸다', async () => {
     await testDb.execute(sql`update world_bosses set leave_at = now() - interval '1 second' where id=${bossId}::bigint`);

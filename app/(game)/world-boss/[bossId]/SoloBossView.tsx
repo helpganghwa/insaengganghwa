@@ -751,6 +751,7 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: So
   const dead = useRef(false);
   useEffect(() => {
     const s = st.current;
+    dead.current = false; // 개발 모드(StrictMode)의 가짜 언마운트 뒤 다시 붙을 때 되살린다.
     return () => {
       dead.current = true;
       s.timers.forEach((t) => clearTimeout(t));
@@ -1143,16 +1144,17 @@ function ResultCard({ run }: { run: Run }) {
   const card = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const started = useRef(false);
-  // 연출 예약(timeout·interval) — 카드가 사라지면 모두 지운다(순위표 화면에서 보상음이 나지 않게, 11-14 검수).
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  // 연출 예약 — 카드가 사라진 뒤에는 아무것도 하지 않는다(순위표 화면에서 보상음이 나지 않게, 11-14 검수).
+  // 예약을 지우는 대신 살아 있는지 본다: 연출은 첫 렌더의 ref에서 한 번만 시작하므로, 개발 모드(StrictMode)의
+  // 가짜 언마운트에 예약을 지우면 다시 시작하지 못하고 카드가 빈 채로 남는다.
+  const alive = useRef(true);
   useEffect(() => {
-    const ts = timers.current;
+    alive.current = true;
     return () => {
-      ts.forEach((t) => { clearTimeout(t); clearInterval(t); });
-      ts.length = 0;
+      alive.current = false;
     };
   }, []);
-  const at = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
+  const at = (fn: () => void, ms: number) => setTimeout(() => alive.current && fn(), ms);
   const updated = run.prevBest == null || run.score > run.prevBest;
   const stageAfter = soloPhaseFor(run.totalAfter).stage;
   // 기여도 = 내 누적 피해 ÷ 보스 누적 피해(이 판 전·후). 다른 사람이 더 치면 줄어든다 — 최종은 보스가 사라질 때.
@@ -1213,6 +1215,10 @@ function ResultCard({ run }: { run: Run }) {
       let r = from;
       const stepN = Math.max(1, Math.ceil((from - run.rank) / 8));
       const iv = setInterval(() => {
+        if (!alive.current) {
+          clearInterval(iv);
+          return;
+        }
         r = Math.max(run.rank, r - stepN);
         rk.textContent = n(r);
         pop(rk);
@@ -1222,7 +1228,6 @@ function ResultCard({ run }: { run: Run }) {
           sounds.reward();
         }
       }, 110);
-      timers.current.push(iv);
     }, 1150);
     at(() => {
       show(steps[2]);
