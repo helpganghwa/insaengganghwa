@@ -196,7 +196,7 @@ export default function Doc() {
           원정이 끝나면 참가 보상, 기여도 보상, 순위 보상({SOLO_RANK_REWARDS[SOLO_RANK_REWARDS.length - 1]!.to}위까지)을 함께 우편으로 받는다.
         </LI>
         <LI>
-          기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해(모든 도전의 합)다. 기여도 보상은 💎{n(SOLO_SHARE_POOL.diamond)} 📦{n(SOLO_SHARE_POOL.boxes)}을 기여도만큼 나눈 몫이다.
+          기여도는 여왕이 받은 전체 피해 중 내가 넣은 피해(모든 도전의 합)다. 기여도 보상은 총 💎{n(SOLO_SHARE_POOL.diamond)} 📦{n(SOLO_SHARE_POOL.boxes)} 가운데 내 기여도만큼의 몫이다.
         </LI>
         <LI>
           참가 보상(💎{n(SOLO_JOIN_REWARD.diamond)} 📦{n(SOLO_JOIN_REWARD.boxes)})과 기여도 보상에는 최종 페이즈마다 +{bpPct(SOLO_PHASE_BONUS_PER_STAGE * 10_000)}(최대 +

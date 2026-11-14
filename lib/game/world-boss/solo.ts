@@ -79,7 +79,8 @@ export function rollSoloRun(power: SoloPower, rand: () => number): SoloHit[] {
       continue;
     }
     const spread = SOLO_SPREAD[0] + (SOLO_SPREAD[1] - SOLO_SPREAD[0]) * rand();
-    const crit = rand() < SOLO_CRIT_CHANCE;
+    // 피해가 0인 타격(전투력이 그 부위뿐인데 묶임)엔 치명이 없다 — 0 치명이 치명 칭호에 세지지 않게(11-14 검수).
+    const crit = base > 0 && rand() < SOLO_CRIT_CHANCE;
     hits.push({ p, d: Math.round(base * spread * (crit ? SOLO_CRIT_MULT : 1)), c: crit });
   }
   return hits;

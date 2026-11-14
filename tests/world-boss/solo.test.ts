@@ -47,6 +47,12 @@ describe('개인 월드보스 규칙', () => {
     expect(soloPhaseFor(21_000_000).stage).toBe(2);
   });
 
+  it('피해 0인 타격엔 치명이 없다(무기만 있는데 무기 옭아매기)', () => {
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 300; i++) for (const h of rollSoloRun({ weapon: 1000, armor: 0, accessory: 0 }, rand)) if (h.d === 0) expect(h.c).toBe(false);
+  });
+
   it('참가·기여도 보상 + 페이즈 보너스(상자 3의 배수), 순위 보상 100위까지', () => {
     expect(soloShareReward(0, 0)).toEqual({ diamond: 80, boxes: 9 });
     expect(soloShareReward(0.1, 0)).toEqual({ diamond: 980, boxes: 129 });

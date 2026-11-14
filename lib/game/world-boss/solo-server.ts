@@ -115,7 +115,7 @@ async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, be
 
 /** 도전 1판. idemKey = 화면이 판마다 만든 uuid(재전송이면 저장된 판을 돌려준다). */
 export async function runSolo(userId: string, serverId: number, bossId: string, idemKey: string, rand: () => number = cryptoRand): Promise<SoloRunResult> {
-  if (!/^\d{1,18}$/.test(bossId)) throw new WorldBossError('NOT_FOUND');
+  if (!/^\d{1,18}$/.test(bossId)) throw new WorldBossError('BOSS_NOT_FOUND');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idemKey)) throw new WorldBossError('BAD_REQUEST');
   const day = kstDateString();
   return db.transaction(async (tx) => {
@@ -137,7 +137,8 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
       return {
         dealt,
         runId: prev.id, hits: prev.hits, score: Number(prev.score), power: prev.power, prevBest: null, prevRank: null,
-        best: Number(prev.best), rank, totalBefore: Number(prev.total), totalAfter: Number(prev.total), runsLeft: runsLeftOf(t), paid: prev.paid, replayed: true,
+        // 재전송은 판 전 누적을 모른다 — 지금 누적에서 이 판을 뺀 값으로(페이즈 게이지가 이 판을 두 번 더하지 않게, 11-14 검수).
+        best: Number(prev.best), rank, totalBefore: Math.max(0, Number(prev.total) - Number(prev.score)), totalAfter: Number(prev.total), runsLeft: runsLeftOf(t), paid: prev.paid, replayed: true,
       };
     }
 
@@ -148,7 +149,8 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
              (select c.residence_zone_id from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as home,
              (select c.active_profile_id::text from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId}) as profile
         from world_bosses b where b.id = ${bossId}::bigint and b.server_id = ${serverId} for key share of b`)) as unknown as (BossRow & { home: number | null; profile: string | null })[];
-    if (!boss) throw new WorldBossError('NOT_FOUND');
+    // 예정 보스는 없는 보스와 같은 답으로 — 응답으로 출현 예정이 드러나지 않게(운영 소환 비노출, 11-14 검수).
+    if (!boss || boss.status === 'scheduled') throw new WorldBossError('BOSS_NOT_FOUND');
     if (!boss.pool) throw new WorldBossError('NOT_SOLO');
     if (!boss.open) throw new WorldBossError('BOSS_NOT_ACTIVE');
     if (boss.home === null || boss.home === undefined) throw new WorldBossError('NO_CHARACTER');

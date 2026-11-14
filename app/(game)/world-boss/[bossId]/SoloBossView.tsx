@@ -231,7 +231,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         return;
       }
       keyRef.current = null;
-      const ru = r.run;
+      // 재전송으로 돌려받은 판은 판 전 최고 기록·순위를 모른다 — 지금 값으로 채워 '첫 기록·새 기록'으로 잘못 보이지 않게(11-14 검수).
+      const ru = r.run.replayed ? { ...r.run, prevBest: r.run.prevBest ?? r.run.best, prevRank: r.run.prevRank ?? r.run.rank } : r.run;
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
       const meNow = d.me!;
       const dealt = ru.dealt;
@@ -295,7 +296,11 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         trigger={{ label: `재도전 · ${me.retryNext}pt` }}
         onOptimistic={() => patch({ extra: extraRetry + 1 })}
         onRollback={() => patch({ extra: Math.max(0, extraRetry) })}
-        onResult={() => onAfter()}
+        onResult={(r) => {
+          // 재전송(이미 산 구매)이면 낙관 반영이 되돌려졌으니 서버 값으로 다시 맞춘다 — 남은 판이 0으로 보여 출발이 잠기지 않게.
+          if (r.duplicate) router.refresh();
+          onAfter();
+        }}
         className="flex-1 rounded-xl bg-gradient-to-b from-violet-500 to-violet-700 text-[14px] font-black text-violet-50 shadow-[0_2px_10px_rgba(0,0,0,.4)]"
       />
     );
@@ -742,10 +747,21 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: So
   };
   const q = <T extends Element = HTMLElement>(s: string) => root.current?.querySelector<T>(s) ?? null;
   const reduce = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  // 화면을 떠나면(하단 탭·뒤로가기) 남은 연출·효과음을 모두 멈춘다 — 다른 화면에서 타격음·승리음이 나지 않게(11-14 검수).
+  const dead = useRef(false);
+  useEffect(() => {
+    const s = st.current;
+    return () => {
+      dead.current = true;
+      s.timers.forEach((t) => clearTimeout(t));
+      s.timers.length = 0;
+    };
+  }, []);
   const later = (fn: () => void, ms: number) => {
+    if (dead.current) return;
     const quick = reduce() || st.current.fast;
     if (quick || ms <= 0) fn();
-    else st.current.timers.push(setTimeout(fn, ms));
+    else st.current.timers.push(setTimeout(() => !dead.current && fn(), ms));
   };
 
   // 레이드 게이지와 같은 방식 — 이번 페이즈에 들어간 만큼 차오르고, 한 번에 여러 페이즈를 넘기면 페이즈마다 100%까지 채운 뒤
@@ -759,7 +775,8 @@ function SoloBattle({ d, run, fx, bgSrc, bossName, retry, onDone, ctl }: { d: So
   }
   function drawPhase() {
     const target = soloPhaseFor(st.current.phaseTotal);
-    const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, st.current.fast || reduce() ? 0 : ms));
+    // 떠난 뒤에는 풀지 않는다 — 이어 붙은 연출(chain)이 그 자리에서 멈춘다.
+    const wait = (ms: number) => new Promise<void>((r) => setTimeout(() => !dead.current && r(), st.current.fast || reduce() ? 0 : ms));
     st.current.chain = st.current.chain.then(async () => {
       while (st.current.shown < target.stage) {
         setBar(st.current.shown, 100, true);
@@ -1126,6 +1143,16 @@ function ResultCard({ run }: { run: Run }) {
   const card = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<string | null>(null);
   const started = useRef(false);
+  // 연출 예약(timeout·interval) — 카드가 사라지면 모두 지운다(순위표 화면에서 보상음이 나지 않게, 11-14 검수).
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    const ts = timers.current;
+    return () => {
+      ts.forEach((t) => { clearTimeout(t); clearInterval(t); });
+      ts.length = 0;
+    };
+  }, []);
+  const at = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
   const updated = run.prevBest == null || run.score > run.prevBest;
   const stageAfter = soloPhaseFor(run.totalAfter).stage;
   // 기여도 = 내 누적 피해 ÷ 보스 누적 피해(이 판 전·후). 다른 사람이 더 치면 줄어든다 — 최종은 보스가 사라질 때.
@@ -1157,7 +1184,7 @@ function ResultCard({ run }: { run: Run }) {
     if (reduce) {
       sc.textContent = n(run.score);
       steps.forEach((x) => (x.style.opacity = '1'));
-      rk.textContent = String(run.rank);
+      rk.textContent = n(run.rank);
       if (delta) delta.style.opacity = '1';
       tier.textContent = soloSharePct(share);
       bar.style.width = `${barPct}%`;
@@ -1174,12 +1201,12 @@ function ResultCard({ run }: { run: Run }) {
       else pop(sc);
     };
     requestAnimationFrame(tick);
-    setTimeout(() => show(steps[0]), 950);
-    setTimeout(() => {
+    at(() => show(steps[0]), 950);
+    at(() => {
       show(steps[1]);
       const from = run.prevRank ?? run.rank;
       if (from <= run.rank) {
-        rk.textContent = String(run.rank);
+        rk.textContent = n(run.rank);
         show(delta);
         return;
       }
@@ -1187,7 +1214,7 @@ function ResultCard({ run }: { run: Run }) {
       const stepN = Math.max(1, Math.ceil((from - run.rank) / 8));
       const iv = setInterval(() => {
         r = Math.max(run.rank, r - stepN);
-        rk.textContent = String(r);
+        rk.textContent = n(r);
         pop(rk);
         if (r <= run.rank) {
           clearInterval(iv);
@@ -1195,19 +1222,20 @@ function ResultCard({ run }: { run: Run }) {
           sounds.reward();
         }
       }, 110);
+      timers.current.push(iv);
     }, 1150);
-    setTimeout(() => {
+    at(() => {
       show(steps[2]);
       bar.style.transition = 'width .7s ease-out';
     }, 1500);
-    setTimeout(() => {
+    at(() => {
       tier.textContent = soloSharePct(share);
       if (share > sharePrev) pop(tier);
       bar.style.width = `${barPct}%`;
     }, 1800);
-    setTimeout(() => show(steps[3]), 2250);
-    setTimeout(() => show(steps[4]), 2400);
-    setTimeout(() => show(steps[5]), 2600);
+    at(() => show(steps[3]), 2250);
+    at(() => show(steps[4]), 2400);
+    at(() => show(steps[5]), 2600);
   };
 
   const hide = { opacity: 0 } as const;

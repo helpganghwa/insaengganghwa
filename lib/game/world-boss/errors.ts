@@ -19,6 +19,7 @@ export type WorldBossErrorCode =
   | 'PROFANITY'
   // 개인 월드보스(0253)
   | 'NOT_SOLO'
+  | 'BOSS_NOT_FOUND'
   | 'NOT_RESIDENT'
   | 'NO_RUNS'
   | 'NO_POWER'
