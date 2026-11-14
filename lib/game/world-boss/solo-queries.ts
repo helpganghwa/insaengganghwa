@@ -30,7 +30,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
   if (!b || b.server_id !== serverId || b.status === 'scheduled' || !b.pool) return null;
   const [top, ladderRows, mineRows] = await Promise.all([
     db.execute(sql`
-      select r.user_id::text as uid, c.nickname, r.best::text as best, r.final_rank, r.reward_diamond, r.reward_boxes, c.representative_title_code as title,
+      select r.user_id::text as uid, c.nickname, (select p.public_code from profiles p where p.id = r.user_id) as code, r.best::text as best, r.final_rank, r.reward_diamond, r.reward_boxes, c.representative_title_code as title,
              (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id) as dealt,
              up.rotations->>'south' as avatar, up.options->'faceBox' as fb, g.name as gname, g.emblem_url as gemblem
         from world_boss_solo_records r left join characters c on c.user_id = r.user_id and c.server_id = r.server_id
@@ -39,7 +39,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
         left join guilds g on g.id = gm.guild_id
        where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
        order by r.best desc, r.best_at asc, r.user_id limit ${SOLO_TOP_SHOWN}`) as unknown as Promise<{
-      uid: string; nickname: string | null; best: string; dealt: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
+      uid: string; nickname: string | null; code: string | null; best: string; dealt: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
     }[]>,
     // 기록 경주(공격 화면) — 다른 사람들의 최고 기록 상위 40개(내 기록 제외). 판 도중 '지금 N위권·다음 순위까지'를 화면이 계산한다.
     db.execute(sql`
@@ -48,7 +48,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
        order by r.best desc limit 40`) as unknown as Promise<{ best: string }[]>,
     userId
       ? (db.execute(sql`
-          select c.nickname, c.representative_title_code as title,
+          select c.nickname, (select p.public_code from profiles p where p.id = c.user_id) as code, c.representative_title_code as title,
                  (select up2.options->'faceBox' from user_profiles up2 where up2.id = c.active_profile_id) as fb,
                  (select json_build_object('name', g.name, 'emblem', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id where gm.user_id = c.user_id and gm.server_id = c.server_id) as guild,
                  (select row_to_json(x) from (
@@ -76,7 +76,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
             from characters c
            where c.user_id = ${userId}::uuid and c.server_id = ${serverId}`) as unknown as Promise<
           {
-            nickname: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
+            nickname: string | null; code: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
             rec: { best: string; best_at: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; rank: number } | null;
             dealt: string | null; free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
@@ -134,6 +134,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     );
     me = {
       nickname: m.nickname ?? '',
+      publicCode: m.code ?? null,
       faceBox: parseFaceBox(m.fb),
       title: m.title,
       guildName: m.guild?.name ?? null,
@@ -159,6 +160,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
   }
   return {
     id: b.id,
+    serverId: Number(b.server_id),
     bossCode: b.boss_code,
     zoneId: Number(b.zone_id),
     zoneName: b.zone_name,
@@ -170,7 +172,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
     top: top.map((r, i) => ({
       rank: r.final_rank != null ? Number(r.final_rank) : i + 1,
       reward: r.final_rank != null ? { diamond: Number(r.reward_diamond), boxes: Number(r.reward_boxes) } : null,
-      userId: r.uid, nickname: r.nickname ?? '알 수 없음', best: Number(r.best), dealt: Number(r.dealt), me: r.uid === userId,
+      userId: r.uid, nickname: r.nickname ?? '알 수 없음', publicCode: r.code, best: Number(r.best), dealt: Number(r.dealt), me: r.uid === userId,
       avatar: r.avatar, faceBox: parseFaceBox(r.fb), guildName: r.gname, guildEmblem: r.gemblem, title: r.title,
     })),
     pool: Object.fromEntries(

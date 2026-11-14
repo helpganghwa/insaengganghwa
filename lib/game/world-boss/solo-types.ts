@@ -7,6 +7,8 @@ export type SoloPiece = { slot: SoloSlot; key: string; name: string; level: numb
 
 export type SoloDetail = {
   id: string;
+  /** 서버 — 닉네임 프로필 링크(profileHref)용. */
+  serverId: number;
   bossCode: string;
   zoneId: number;
   zoneName: string;
@@ -18,12 +20,13 @@ export type SoloDetail = {
   stage: number;
   /** dealt = 이 보스에 넣은 피해 전부(모든 도전 합) — 순위 줄 게이지는 dealt / total(11-14 사용자). */
   /** 떠난 뒤(정산됨)엔 rank = 최종 순위, reward = 실제 지급(그 뒤 탈퇴로 다시 세지 않는다). 머무는 동안은 지금 순위·reward null. */
-  top: { rank: number; reward: { diamond: number; boxes: number } | null; userId: string; nickname: string; best: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null }[];
+  top: { rank: number; reward: { diamond: number; boxes: number } | null; userId: string; nickname: string; publicCode: string | null; best: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null }[];
   /** 다른 사람들의 최고 기록 상위 40개(큰 순) — 공격 화면 기록 경주. */
   ladder: number[];
   pool: Record<SoloSlot, { key: string; name: string; src: string | null; owned: boolean }[]>;
   me: {
     nickname: string;
+    publicCode: string | null;
     faceBox: FaceBox | null;
     /** 대표 칭호 코드. */
     title: string | null;

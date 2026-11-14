@@ -18,6 +18,7 @@ import { BackFab } from '@/components/BackNav';
 import { GuildBadge } from '@/components/GuildBadge';
 import { ModalShell } from '@/components/ModalShell';
 import { assetUrl } from '@/lib/asset-versions';
+import { profileHref } from '@/lib/game/profile/href';
 import { Ticker } from '@/components/Ticker';
 import { useResourceToast } from '@/components/ResourceToast';
 import * as haptic from '@/lib/game/haptic';
@@ -237,7 +238,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
       const meNow = d.me!;
       const dealt = ru.dealt;
-      const mine = { rank: ru.rank, reward: null, userId: '__me', nickname: meNow.nickname, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
+      const mine = { rank: ru.rank, reward: null, userId: '__me', nickname: meNow.nickname, publicCode: meNow.publicCode, best: ru.best, dealt, me: true, avatar: meNow.avatarSouth, faceBox: meNow.faceBox, guildName: meNow.guildName, guildEmblem: meNow.guildEmblem, title: meNow.title };
       const others = d.top.filter((x) => !x.me);
       const TOP = SOLO_TOP_SHOWN; // 순위표 상위 50명(서버 목록과 같은 수)
       const top = ru.rank <= TOP ? [...others.slice(0, ru.rank - 1), mine, ...others.slice(ru.rank - 1)].slice(0, TOP).map((x, i) => ({ ...x, rank: i + 1 })) : others.slice(0, TOP);
@@ -458,7 +459,7 @@ function FinalCard({ d }: { d: SoloDetail }) {
   );
 }
 
-type BoardRow = { rank: number; reward?: { diamond: number; boxes: number } | null; nick: string; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
+type BoardRow = { rank: number; reward?: { diamond: number; boxes: number } | null; nick: string; publicCode: string | null; score: number; dealt: number; me: boolean; avatar: string | null; faceBox: FaceBox | null; guildName: string | null; guildEmblem: string | null; title: string | null };
 
 /** 등수별 배경 틴트 — 대난투 순위와 같은 방식(금·은·동, 나는 보라). 좌→우라 오른쪽 아바타를 덮지 않는다. */
 function rankTint(rank: number, me: boolean): string {
@@ -479,7 +480,7 @@ function rankAccent(rank: number, me: boolean): { text: string; line: string; ba
 /** 순위 한 줄 — 대난투 순위와 같은 구성(오른쪽 얼굴 + 좌→우 등수 틴트·암막 2겹, 등수 | 구분선 | 1줄 이름·길드·칭호·'나', 2줄 작은 점수 · 보상).
  *  글자 그림자는 요소마다 drop-shadow로 — 부모 text-shadow는 칭호 글자(배경 클립)에 상속돼 효과가 뭉개진다.
  *  아래 가장자리 게이지 = 보스가 받은 전체 피해 중 이 사람이 넣은 몫(모든 도전 합, 11-14 사용자). */
-function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number }) {
+function Row({ r, total, stage, serverId }: { r: BoardRow; total: number; stage: number; serverId: number }) {
   const share = soloShareOf(r.dealt, total);
   const tr = soloShareReward(share, stage);
   const rr = soloRankReward(r.rank);
@@ -504,7 +505,14 @@ function Row({ r, total, stage }: { r: BoardRow; total: number; stage: number })
         <div className={`w-px shrink-0 self-stretch ${accent.line}`} />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1">
-            <b className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-slate-50 ${sh}`}>{r.nick}</b>
+            {/* 대난투 순위처럼 닉네임을 누르면 프로필(공개코드 + 서버, 11-14 사용자). */}
+            {r.publicCode ? (
+              <Link prefetch={false} href={profileHref(r.publicCode, serverId)} className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-slate-50 ${sh}`}>
+                {r.nick}
+              </Link>
+            ) : (
+              <b className={`min-w-0 shrink truncate text-[12.5px] font-extrabold text-slate-50 ${sh}`}>{r.nick}</b>
+            )}
             {r.guildName ? <GuildBadge emblemUrl={r.guildEmblem} name={r.guildName} size={11} className={`min-w-0 shrink-[2] text-[9.5px] text-slate-300 ${sh}`} /> : null}
             {r.title ? <TitleTag code={r.title} className="min-w-0 shrink-0 text-[10px]" /> : null}
             {r.me ? <span className="shrink-0 rounded bg-violet-500/30 px-1 text-[8.5px] font-black text-violet-200">나</span> : null}
@@ -541,13 +549,13 @@ function Board({ d, stage }: { d: SoloDetail; stage: number }) {
       <ul className="border-t border-slate-800/80">
         {d.top.length === 0 ? <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-500">아직 기록이 없어요</li> : null}
         {d.top.map((r) => (
-          <Row key={r.userId} total={total} stage={stage} r={{ rank: r.rank, reward: r.reward, nick: r.nickname, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
+          <Row key={r.userId} total={total} stage={stage} serverId={d.serverId} r={{ rank: r.rank, reward: r.reward, nick: r.nickname, publicCode: r.publicCode, score: r.best, dealt: r.dealt, me: r.me, avatar: r.avatar, faceBox: r.faceBox, guildName: r.guildName, guildEmblem: r.guildEmblem, title: r.title }} />
         ))}
         {me && !meInTop ? (
           me.best != null && me.rank != null ? (
             <>
               <li className="border-b border-slate-800/80 py-0.5 text-center text-[10px] leading-none text-slate-600">⋮</li>
-              <Row total={total} stage={stage} r={{ rank: me.finalRank ?? me.rank, reward: me.reward, nick: me.nickname, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
+              <Row total={total} stage={stage} serverId={d.serverId} r={{ rank: me.finalRank ?? me.rank, reward: me.reward, nick: me.nickname, publicCode: me.publicCode, score: me.best, dealt: me.dealt, me: true, avatar: me.avatarSouth, faceBox: me.faceBox, guildName: me.guildName, guildEmblem: me.guildEmblem, title: me.title }} />
             </>
           ) : (
             <li className="flex h-[56px] items-center justify-center text-[11.5px] text-slate-400">아직 내 기록이 없어요</li>
