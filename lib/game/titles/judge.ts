@@ -437,10 +437,10 @@ async function collectMetrics(
         -- 환불 반환(avatar_refund·emblem_refund)은 '획득'이 아니다 — 아바타 생성→거절 루프로
         -- 누적 획득을 부풀릴 수 있어 dia_free와 같은 기준으로 뺀다.
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and reason not in ('avatar_refund','emblem_refund')
+                    and reason not in ('avatar_refund','emblem_refund','raid_open_refund')
                     and created_at >= (select t0 from birth)),0)::bigint as dia_gained,
         coalesce((select sum(delta) from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                    and reason not in ('iap','battlepass_premium','point_exchange_mileage','avatar_refund','emblem_refund')
+                    and reason not in ('iap','battlepass_premium','point_exchange_mileage','avatar_refund','emblem_refund','raid_open_refund')
                     and created_at >= (select t0 from birth)),0)::bigint as dia_free,
         coalesce((select max(t) from (
           select sum(v) as t from (
@@ -460,7 +460,7 @@ async function collectMetrics(
             -- 되는데 max가 무시하므로 무해하다.
             select (created_at ${sql.raw(KST)})::date, -delta
               from diamond_ledger where user_id=${u} and server_id=${s} and delta > 0
-                and reason in ('avatar_refund','emblem_refund')
+                and reason in ('avatar_refund','emblem_refund','raid_open_refund')
                 and created_at >= (select t0 from birth)
           ) x group by d) y),0)::bigint as spend_day_max,
         -- 10일 창 **최저 잔액** 복원(자린고비, 2026-08-21 문구 개정 "지출 있어도 유지 인정") —

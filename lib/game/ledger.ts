@@ -51,6 +51,8 @@ export type LedgerReason =
   | 'avatar_refund'
   /** 길드 문양 생성 환불(생성 실패·운영자 회수). */
   | 'emblem_refund'
+  /** 레이드 소환 취소 환불(11-16) — ref=raid_open_refund:<레이드 id>. 낸 소환비를 그대로 돌려준다. */
+  | 'raid_open_refund'
   // ── 소모(−) ──
   /** 강화 시간 단축 — **원장 미기록**(LEDGER_SKIP_REASONS 참조). */
   | 'enhance_reduce'

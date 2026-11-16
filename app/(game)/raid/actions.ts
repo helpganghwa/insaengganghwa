@@ -26,6 +26,7 @@ import {
 } from '@/lib/game/raid';
 import { getInviteCandidates, inviteToRaid } from '@/lib/game/raid/invite';
 import { notifyRaidInvite } from '@/lib/game/raid/notify';
+import { cancelHostedRaid, leaveRaid } from '@/lib/game/raid/cancel';
 import { RAID_TIERS, type RaidTier } from '@/lib/game/balance';
 
 const MSG: Record<string, string> = {
@@ -46,6 +47,8 @@ const MSG: Record<string, string> = {
   INVALID_TARGET: '초대할 수 없는 대상입니다 (친구·길드원만 초대 가능).',
   NO_ATTACKS: '공격 횟수를 모두 사용했습니다 (추가 공격 구매 가능).',
   REWARD_ALREADY_CLAIMED: '이미 보상을 받았습니다.',
+  CANCEL_NOT_ALLOWED: '다른 참가자가 있거나 공격을 한 번이라도 하면 취소할 수 없어요.',
+  CANCEL_EXPIRED: '참여한 지 10분이 지나 취소할 수 없어요.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
   RATE_LIMITED: '요청이 너무 빠릅니다. 잠시 후 다시 시도해 주세요.',
   MAINTENANCE: '서버 점검 중입니다. 잠시 후 다시 시도해 주세요.',
@@ -301,6 +304,42 @@ export async function inviteToRaidAction(raidId: string, inviteeUserId: string) 
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
     console.error('[raid.invite]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 참여 취소(11-16) — 참여한 뒤 10분 안·공격 전. 오늘 레이드 횟수 1회를 돌려받는다. */
+export async function leaveRaidAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (!/^\d{1,18}$/.test(raidId)) return err('RAID_NOT_FOUND');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
+  try {
+    await leaveRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.leave]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 소환 취소(11-16) — 다른 참가자 0명·내 공격 0회. 레이드를 지우고 낸 소환비·오늘 횟수를 돌려준다. */
+export async function cancelHostedRaidAction(raidId: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (!/^\d{1,18}$/.test(raidId)) return err('RAID_NOT_FOUND');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
+  try {
+    const r = await cancelHostedRaid({ userId: u, serverId: await getActiveServerId(), raidId: BigInt(raidId) });
+    rev(raidId);
+    return { status: 'success' as const, refund: r.refund };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.cancel]', e);
     return err('UNKNOWN');
   }
 }

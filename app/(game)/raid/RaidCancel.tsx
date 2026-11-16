@@ -1,0 +1,128 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { josa } from 'josa';
+import { useState } from 'react';
+
+import { ModalButton, ModalLayout } from '@/components/ModalLayout';
+import { ModalShell } from '@/components/ModalShell';
+import { useResourceToast } from '@/components/ResourceToast';
+import { Ticker } from '@/components/Ticker';
+
+import { cancelHostedRaidAction, leaveRaidAction } from './actions';
+import type { RaidView } from './RaidSessionCard';
+
+const fmt = (n: number) => n.toLocaleString('ko-KR');
+
+/** 남은 시간 m:ss — 0이면 null(버튼을 숨긴다). */
+function leftText(deadlineMs: number, now: number): string | null {
+  const s = Math.ceil((deadlineMs - now) / 1000);
+  if (s <= 0) return null;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/**
+ * 레이드 취소 버튼 + 확인 팝업(11-16, 시안 5J85UYsahKUhmiJh8GAYDE v2) — 공격 버튼 바로 아래 보조 버튼(h-9).
+ * 낙관적: 확인을 누르면 팝업을 닫고 곧바로 onOptimistic으로 카드를 '취소함' 상태로 바꾼다. 서버가 받으면 목록으로 가며
+ * 헤더 알림, 거절·통신 실패면 onRollback으로 되돌리고 오류 토스트.
+ */
+export function RaidCancel({
+  raidId,
+  cancel,
+  onOptimistic,
+  onRollback,
+}: {
+  raidId: string;
+  cancel: NonNullable<RaidView['cancel']>;
+  onOptimistic: () => void;
+  onRollback: () => void;
+}) {
+  const router = useRouter();
+  const { showError, showHeaderToast } = useResourceToast();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const leave = cancel.kind === 'leave';
+  const deadlineMs = leave ? Date.parse(cancel.deadlineIso) : 0;
+  const free = !leave && cancel.refund === 0;
+
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    setOpen(false);
+    onOptimistic();
+    const r = await (leave ? leaveRaidAction(raidId) : cancelHostedRaidAction(raidId)).catch(
+      () => ({ status: 'error', message: '연결이 끊겨 취소하지 못했어요. 다시 시도해 주세요.' }) as const,
+    );
+    setBusy(false);
+    if (r.status !== 'success') {
+      onRollback();
+      showError(r.message ?? '취소하지 못했어요.');
+      return;
+    }
+    if (leave) {
+      showHeaderToast({ title: '참여를 취소했어요', detail: '오늘 레이드 횟수 1회를 돌려받았어요.' });
+    } else {
+      const refund = 'refund' in r ? Number(r.refund) : 0;
+      showHeaderToast({ title: '소환을 취소했어요', detail: refund > 0 ? josa(`💎${fmt(refund)}#{을} 돌려받았어요.`) : '오늘 첫 무료 소환을 다시 쓸 수 있어요.' });
+    }
+    router.replace('/raid');
+  };
+
+  const btnCls =
+    'flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 text-[12px] font-bold text-zinc-300 active:scale-95 disabled:opacity-60';
+
+  return (
+    <>
+      {leave ? (
+        <Ticker intervalMs={1000}>
+          {(now) => {
+            const t = leftText(deadlineMs, now);
+            if (!t) return null; // 10분이 지나면 사라진다(서버도 다시 검사)
+            return (
+              <button type="button" disabled={busy} onClick={() => setOpen(true)} className={btnCls}>
+                참여 취소<span className="font-mono text-[11px] font-semibold text-zinc-500">{t}</span>
+              </button>
+            );
+          }}
+        </Ticker>
+      ) : (
+        <button type="button" disabled={busy} onClick={() => setOpen(true)} className={btnCls}>
+          소환 취소
+          {free ? <span className="text-[11px] font-semibold text-zinc-500">무료 소환 되돌리기</span> : null}
+        </button>
+      )}
+
+      {open ? (
+        <ModalShell onClose={() => setOpen(false)} label={leave ? '참여 취소' : '소환 취소'}>
+          <ModalLayout
+            title={leave ? '참여를 취소할까요?' : '소환을 취소할까요?'}
+            footer={
+              <>
+                <ModalButton tone="neutral" onClick={() => setOpen(false)}>
+                  닫기
+                </ModalButton>
+                <ModalButton tone="danger" onClick={run}>
+                  {leave ? '참여 취소' : '소환 취소'}
+                </ModalButton>
+              </>
+            }
+          >
+            <div className="space-y-2 text-[12.5px] leading-relaxed break-keep text-zinc-200">
+              {leave ? (
+                <p>이 레이드 참여자에서 빠지고, 오늘 레이드 횟수 1회를 돌려받아요.</p>
+              ) : (
+                <>
+                  <p>{free ? '레이드가 사라지고 오늘 첫 무료 소환을 다시 쓸 수 있어요.' : josa(`레이드가 사라지고 소환비 💎${fmt(cancel.refund)}#{을} 돌려받아요.`)}</p>
+                  <p>오늘 레이드 횟수 1회도 함께 돌려받아요.</p>
+                </>
+              )}
+            </div>
+            <p className="mt-3 rounded-lg bg-zinc-800 px-3 py-2 text-[11px] leading-relaxed break-keep text-zinc-400">
+              {leave ? '취소는 참여한 뒤 10분 안에, 공격하기 전까지만 할 수 있어요.' : '다른 참가자가 있거나 공격을 한 번이라도 하면 취소할 수 없어요.'}
+            </p>
+          </ModalLayout>
+        </ModalShell>
+      ) : null}
+    </>
+  );
+}

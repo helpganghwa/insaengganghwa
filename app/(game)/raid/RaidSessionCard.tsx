@@ -24,6 +24,7 @@ import { assetUrl } from '@/lib/asset-versions';
 import { useResourceToast, type HeaderReward } from '@/components/ResourceToast';
 import { useDiamondGate } from '@/components/DiamondGate';
 import { RaidInviteSheet } from './RaidInviteSheet';
+import { RaidCancel } from './RaidCancel';
 import { GuildBadge } from '@/components/GuildBadge';
 import * as haptic from '@/lib/game/haptic';
 import { sounds } from '@/lib/game/sound';
@@ -79,6 +80,11 @@ export type RaidView = {
   }[];
   /** 개설자만 — 대기 중 참가 요청(공유링크 등). */
   pendingRequests: { userId: string; nickname: string; publicCode: string }[];
+  /**
+   * 지금 할 수 있는 취소(11-16) — 참여 취소(마감 시각까지) 또는 소환 취소(돌려받을 소환비, 무료 소환이면 0). 못 하면 null.
+   * 공격하면 카드가 낙관적으로 숨기고, 마감이 지나면 카운트다운이 숨긴다(서버가 다시 검사).
+   */
+  cancel: { kind: 'leave'; deadlineIso: string } | { kind: 'host'; refund: number } | null;
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
@@ -316,8 +322,12 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // 전환하고 서버 확정은 백그라운드. 실패 시 롤백 + 에러 토스트만.
   const [optJoined, setOptJoined] = useState(false);
   const [requestedLocal, setRequestedLocal] = useState(v.join?.requested ?? false);
-  const joined = v.isParticipant || optJoined;
+  // 취소(11-16) — 확인을 누르면 응답 전에 '취소함'으로 바꾸고(낙관적), 실패하면 되돌린다.
+  const [cancelled, setCancelled] = useState(false);
+  const joined = (v.isParticipant || optJoined) && !cancelled;
   const canAttack = joined && !settled && !over && left > 0;
+  // 공격을 한 번이라도 하면(낙관 반영 포함) 취소 버튼은 바로 사라진다 — 서버도 같은 조건으로 다시 막는다.
+  const showCancel = !!v.cancel && !settled && !over && !cancelled && localUsed === 0 && localExtra === 0;
 
   // 누적 보상(공시) — 현재까지 돌파한 페이즈의 결정론 드롭 + 도달 마일스톤 합산(난이도별).
   const drops = aggregatePhaseDrops(BigInt(v.raidId), v.phasesCleared, v.tier, v.openedAtIso);
@@ -850,7 +860,11 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           )
         ) : (
           <div className="space-y-2">
-            {!joined ? (
+            {cancelled ? (
+              <div className={`${ACTION_SLOT} bg-zinc-800 text-sm font-bold text-zinc-300`}>
+                {v.isHost ? '소환을 취소했어요' : '참여를 취소했어요'}
+              </div>
+            ) : !joined ? (
               // ── 관전 모드 — 공격 버튼 자리에 참가/요청(동일 h-12, 시프트 없음) ──
               requestedLocal ? (
                 <div className={`${ACTION_SLOT} bg-zinc-800 text-sm font-bold text-zinc-300`}>
@@ -920,6 +934,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                 {over ? '⏳ 정산 대기' : '공격 불가'}
               </div>
             )}
+            {showCancel && v.cancel ? (
+              <RaidCancel raidId={v.raidId} cancel={v.cancel} onOptimistic={() => setCancelled(true)} onRollback={() => setCancelled(false)} />
+            ) : null}
           </div>
         )}
 

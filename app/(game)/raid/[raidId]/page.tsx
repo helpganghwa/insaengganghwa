@@ -1,10 +1,10 @@
 import { notFound, redirect } from 'next/navigation';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { preload } from 'react-dom';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
-import { raidTierOf } from '@/lib/game/balance';
+import { RAID_LEAVE_WINDOW_MS, raidTierOf } from '@/lib/game/balance';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -92,6 +92,7 @@ export default async function RaidDetail({
         totalDamage: raidParticipants.totalDamage,
         attacksUsed: raidParticipants.attacksUsed,
         extraAttacks: raidParticipants.extraAttacks,
+        joinedAt: raidParticipants.joinedAt,
         nickname: characters.nickname,
         publicCode: profiles.publicCode,
       })
@@ -111,6 +112,7 @@ export default async function RaidDetail({
     totalDamage: bigint;
     attacksUsed: number;
     extraAttacks: number;
+    joinedAt: Date;
     nickname: string | null;
     publicCode: string;
   }[]);
@@ -191,7 +193,33 @@ export default async function RaidDetail({
     ? await getPendingJoinRequests(BigInt(raidId)).catch(() => [])
     : [];
 
+  // 취소(11-16) — 서버가 지금 취소할 수 있는지만 정해 넘긴다(공격하면 카드가 낙관적으로 숨긴다).
+  // 참여 취소: 남의 레이드·참여 10분 안·공격 0회 / 소환 취소: 다른 참가자 0명·내 공격 0회(시간 제한 없음).
+  let cancel: RaidView['cancel'] = null;
+  const live = raid.status === 'active' && raid.expireAt.getTime() > Date.now();
+  const untouched = !!me && me.attacksUsed === 0 && me.extraAttacks === 0 && Number(me.totalDamage) === 0;
+  if (live && untouched && me) {
+    if (isHost) {
+      if (parts.length === 1) {
+        // 돌려받을 소환비 — 원장의 이 레이드 소환 지출(11-16부터 ref, 그 전엔 같은 시각의 소환 지출).
+        const [paid] = (await withTimeout(
+          db.execute(sql`
+            select coalesce(-sum(delta), 0)::int as paid from diamond_ledger
+             where user_id = ${userId}::uuid and server_id = ${raid.serverId} and reason = 'raid_open'
+               and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = ${raid.openedAt.toISOString()}::timestamptz))`),
+          3000,
+          'raid.cancelCost',
+        ).catch(() => [])) as unknown as { paid: number }[];
+        cancel = { kind: 'host', refund: Math.max(0, Number(paid?.paid ?? 0)) };
+      }
+    } else {
+      const deadline = me.joinedAt.getTime() + RAID_LEAVE_WINDOW_MS;
+      if (deadline > Date.now()) cancel = { kind: 'leave', deadlineIso: new Date(deadline).toISOString() };
+    }
+  }
+
   const view: RaidView = {
+    cancel,
     raidId,
     bossCode: raid.bossCode,
     status: raid.status,

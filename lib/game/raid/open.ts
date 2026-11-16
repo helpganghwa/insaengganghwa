@@ -42,6 +42,9 @@ export type RaidErrorCode =
   | 'NOT_HOST'
   | 'REQUEST_NOT_FOUND'
   | 'NOT_SHARED'
+  // 레이드 취소(11-16) — 공격했거나 다른 참가자가 있음 / 참여 취소 10분이 지남
+  | 'CANCEL_NOT_ALLOWED'
+  | 'CANCEL_EXPIRED'
   // 클라가 다른 레이드의 멱등키를 보냈다 — 과금 경로에서만 쓴다(조용히 재과금하느니 거부).
   | 'RETRY';
 
@@ -158,11 +161,7 @@ export function openRaid(input: {
       .from(raids)
       .where(and(eq(raids.hostUserId, userId), eq(raids.serverId, input.serverId), gte(raids.openedAt, kstStartOfDay())));
     const cost = raidOpenCost(tier, ht?.n ?? 0);
-    if (cost > 0) {
-      // 서버별 지갑 조건부 UPDATE(부족 시 미차감).
-      const paid = await walletTrySpend(tx, userId, input.serverId, cost, 'raid_open');
-      if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
-    } else {
+    if (cost === 0) {
       // 무료 경로는 지갑을 안 건드리므로 "이 서버에 캐릭터가 있다"는 암묵 검사가 빠진다(검토 지적) —
       // 위조 srv 쿠키로 캐릭터 없는 서버에 CP 0 호스트 레이드를 여는 것을 join.ts와 같은 코드로 막는다.
       const [ch] = await tx
@@ -197,6 +196,13 @@ export function openRaid(input: {
       .returning({ id: raids.id, shareCode: raids.shareCode });
 
     await tx.insert(raidParticipants).values({ raidId: raid!.id, userId });
+
+    // 개설비 — 레이드 행을 만든 뒤 그 id를 원장 ref로 남긴다(소환 취소 때 낸 만큼 돌려주기 위해, 11-16).
+    // 서버별 지갑 조건부 UPDATE(부족 시 미차감) → 실패하면 이 트랜잭션 전체(레이드 행 포함)가 롤백된다.
+    if (cost > 0) {
+      const paid = await walletTrySpend(tx, userId, input.serverId, cost, 'raid_open', `raid_open:${raid!.id}`);
+      if (!paid) throw new RaidError('INSUFFICIENT_DIAMOND');
+    }
 
     return { raidId: raid!.id, shareCode: raid!.shareCode, cost };
   });

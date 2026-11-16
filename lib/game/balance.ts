@@ -339,6 +339,8 @@ export function supplyItemProbability(slotActiveCatalogCount: number): number {
 export const RAID_MAX_PARTICIPANTS = 10; // 호스트 포함
 export const RAID_MAX_CONCURRENT_PER_USER = 5; // 호스팅+참여 합산 — 2026-09-07 3→5(일일 한도와 동일, 길드 자금 레이드 5연속 개설 건의)
 export const RAID_DAILY_CAP = 5; // 유저당 1일(KST)
+/** 참여 취소 가능 시간(2026-11-16, 11-10 사용자 확정) — 참여한 뒤 10분 안·공격 전. 빈자리를 붙잡아 두는 악용을 막는다. 소환 취소는 시간 제한 없음. */
+export const RAID_LEAVE_WINDOW_MS = 10 * 60_000;
 /**
  * 하루 첫 소환 무료(2026-09-08 결정, 문의 "누군가 열겠지 기다리다 하루가 간다" 대응) — **소환(호스팅)만** 센다(참여 제외).
  * 1회 근거: 14일 실측 소환자-일의 71%가 하루 1회, 2회 이상은 결제 상위 소수(5회 소환자-일 35 중 결제자 30).
