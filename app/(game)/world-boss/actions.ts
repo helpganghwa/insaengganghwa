@@ -17,6 +17,7 @@ import { cancelInvite, cancelJoinRequest, createParty, decideJoin, departParty, 
 import { getWorldBossBattle, getWorldBossDepartedMore, getWorldBossInvitable, getWorldBossStatus } from '@/lib/game/world-boss/queries';
 import { bestLoadoutOf, knownWeakOf, soloLoadoutForAvatar } from '@/lib/game/world-boss/loadout';
 import { runSolo } from '@/lib/game/world-boss/solo-server';
+import { getSoloReplay } from '@/lib/game/world-boss/solo-queries';
 import { WORLD_BOSS_PARTY_MAX, parseWorldBossTraits, worldBossWeakBonus } from '@/lib/game/guild/balance';
 import { EquipError, equipItems } from '@/lib/game/equipment/equip';
 import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
@@ -327,6 +328,20 @@ export async function soloRunAction(bossId: string, key: string) {
     return { status: 'success' as const, run: r };
   } catch (e) {
     return fail(e, 'soloRun');
+  }
+}
+
+/** 다시 보기(11-16) — 내 지난 한 판을 그 판 시각 기준 값과 함께(읽기만, 아무것도 바꾸지 않는다). */
+export async function soloReplayAction(bossId: string, runId: string) {
+  const g = await gate();
+  if ('status' in g) return g;
+  if (!isId(bossId) || !isId(runId)) return err('BOSS_NOT_FOUND');
+  try {
+    const r = await getSoloReplay(g.u, g.sid, bossId, runId);
+    if (!r) return err('BOSS_NOT_FOUND');
+    return { status: 'success' as const, run: r.run, ladder: r.ladder };
+  } catch (e) {
+    return fail(e, 'soloReplay');
   }
 }
 

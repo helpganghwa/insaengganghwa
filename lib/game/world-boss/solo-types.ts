@@ -1,7 +1,7 @@
 /** 개인 월드보스(0253) 화면 데이터 — 순수 타입(클라이언트가 import). */
 import type { FaceBox } from '@/components/faceCrop';
 
-import type { SoloPower, SoloSlot } from './solo';
+import type { SoloHit, SoloPower, SoloSlot } from './solo';
 
 export type SoloPiece = { slot: SoloSlot; key: string; name: string; level: number; transcend: number; cp: number; mult: 0 | 1 | 2; score: number; src: string | null };
 
@@ -35,6 +35,8 @@ export type SoloDetail = {
     best: number | null;
     /** 이 보스에 넣은 피해 전부(모든 도전 합). */
     dealt: number;
+    /** 내 도전 기록(최근 30판, 최신 먼저) — 판마다 저장된 10타 그대로(다시 보기). */
+    runs: { id: string; at: string; paid: boolean; score: number; hits: SoloHit[]; power: SoloPower }[];
     rank: number | null;
     finalRank: number | null;
     reward: { diamond: number; boxes: number } | null;

@@ -43,7 +43,7 @@ import {
 } from '@/lib/game/world-boss/solo';
 import type { SoloDetail } from '@/lib/game/world-boss/solo-types';
 
-import { soloEquipAction, soloEquipBestAction, soloPickAvatarAction, soloRunAction } from '../actions';
+import { soloEquipAction, soloEquipBestAction, soloPickAvatarAction, soloReplayAction, soloRunAction } from '../actions';
 
 export type SoloFx = { idle: string; crouch: string; climb: string; bind: string; expose: string; webshot: string; webnet: string };
 type Run = Awaited<ReturnType<typeof soloRunAction>> extends infer R ? (R extends { status: 'success'; run: infer X } ? X : never) : never;
@@ -170,7 +170,10 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   const { showError } = useResourceToast();
   const [view, setView] = useState<'board' | 'prep' | 'battle'>('board');
   const [run, setRun] = useState<Run | null>(null);
-  const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | 'avatar' | null>(null);
+  const [sheet, setSheet] = useState<'pattern' | 'reward' | 'pool' | 'avatar' | 'records' | null>(null);
+  // 다시 보기(11-16) — 지난 판을 전투 화면 그대로. ladder = 그 판 시각의 다른 사람 최고 기록(기록 경주가 그때 모습으로).
+  const [replay, setReplay] = useState<{ ladder: number[] } | null>(null);
+  const [replaying, setReplaying] = useState<string | null>(null);
   const [poolSlot, setPoolSlot] = useState<SoloSlot>('weapon');
   const [pending, start] = useTransition();
   // 휴대폰 뒤로가기(11-14 결정) — 준비·전투 화면에 있는 동안 기록 한 칸을 쌓아 둔다. 준비 → 순위표,
@@ -180,14 +183,15 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   useEffect(() => {
     onHardBack.current = () => {
       if (view === 'battle' && battleCtl.current?.skip()) return true;
-      const fromBattle = view === 'battle';
+      const fromBattle = view === 'battle' && !replay;
       setRun(null);
+      setReplay(null);
       setView('board');
       // 결과 화면 버튼(closeBattle)과 같게 — 다른 사람 기록까지 다시 읽는다.
       if (fromBattle) router.refresh();
       return false;
     };
-  }, [view, router]);
+  }, [view, router, replay]);
   const inSub = view !== 'board';
   useEffect(() => {
     if (!inSub) return;
@@ -284,7 +288,30 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   function closeBattle() {
     setRun(null);
     setView('board');
+    // 다시 보기는 아무것도 바뀌지 않았다 — 다시 읽지 않고 기록 목록으로 돌아간다.
+    if (replay) {
+      setReplay(null);
+      setSheet('records');
+      return;
+    }
     router.refresh();
+  }
+  /** 다시 보기 — 그 판 시각의 순위·기록을 받아 전투 화면을 연다. 받는 동안 그 줄만 '불러오는 중'. */
+  function openReplay(runId: string) {
+    if (replaying) return;
+    setReplaying(runId);
+    start(async () => {
+      const r = await soloReplayAction(d.id, runId).catch(() => ({ status: 'error' as const, code: 'UNKNOWN' as const, message: '연결이 끊겨 불러오지 못했어요. 다시 시도해 주세요.' }));
+      setReplaying(null);
+      if (r.status !== 'success') {
+        showError(r.message);
+        return;
+      }
+      setSheet(null);
+      setReplay({ ladder: r.ladder });
+      setRun(r.run);
+      setView('battle');
+    });
   }
 
   // 재도전 버튼 — 남은 판이 있으면 바로 준비 화면, 없으면 포인트로 사기(오늘 더 못 사면 잠김).
@@ -313,7 +340,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
     <div className="pb-2">
       {view === 'board' && (
         <>
-          <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} idleSrc={fx.idle} bossName={bossName} phase={phase} onReward={() => setSheet('reward')} onPattern={() => setSheet('pattern')} />
+          <Hero d={d} bgSrc={bgSrc} spriteSrc={spriteSrc} idleSrc={fx.idle} bossName={bossName} phase={phase} onReward={() => setSheet('reward')} onPattern={() => setSheet('pattern')} onRecords={me && me.runs.length > 0 ? () => setSheet('records') : null} />
           <Board d={d} stage={phase.stage} />
           {!active && me && me.best != null ? <FinalCard d={d} /> : null}
           <FloatingBar>{retryButton(() => setView('prep')) ?? <PrimaryButton disabled>{active ? '토벌하기' : '원정 종료'}</PrimaryButton>}</FloatingBar>
@@ -342,8 +369,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
 
       {view === 'battle' && run && me && (
         <SoloBattle
-          key={run.runId}
-          d={d}
+          key={replay ? `replay:${run.runId}` : run.runId}
+          d={replay ? { ...d, ladder: replay.ladder } : d}
           run={run}
           fx={fx}
           bgSrc={bgSrc}
@@ -357,6 +384,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         />
       )}
 
+      {sheet === 'records' && me && <RecordsSheet runs={me.runs} loading={replaying} onReplay={openReplay} onClose={() => setSheet(null)} />}
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
       {sheet === 'reward' && <RewardSheet stage={phase.stage} share={me && me.best != null ? soloShareOf(me.dealt, d.total) : null} rank={me?.rank ?? null} onClose={() => setSheet(null)} />}
       {sheet === 'avatar' && me && <AvatarSheet me={me} onPick={pickAvatar} onClose={() => setSheet(null)} />}
@@ -374,7 +402,7 @@ function remain(ms: number): string {
   return h > 0 ? `종료까지 ${h}시간 ${m % 60}분` : `종료까지 ${m}분`;
 }
 
-function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPattern }: { d: SoloDetail; bgSrc: string; spriteSrc: string; idleSrc: string; bossName: string; phase: ReturnType<typeof soloPhaseFor>; onReward: () => void; onPattern: () => void }) {
+function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPattern, onRecords }: { d: SoloDetail; bgSrc: string; spriteSrc: string; idleSrc: string; bossName: string; phase: ReturnType<typeof soloPhaseFor>; onReward: () => void; onPattern: () => void; onRecords: (() => void) | null }) {
   const active = d.status === 'active';
   const leaveMs = new Date(d.leaveAt).getTime();
   const bonus = Math.round((soloPhaseBonus(phase.stage) - 1) * 100);
@@ -407,6 +435,11 @@ function Hero({ d, bgSrc, spriteSrc, idleSrc, bossName, phase, onReward, onPatte
         <button type="button" onClick={onPattern} className="rounded-full border border-violet-400/50 bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-bold text-violet-100">
           패턴 안내
         </button>
+        {onRecords ? (
+          <button type="button" onClick={onRecords} className="rounded-full border border-amber-300/60 bg-slate-950/80 px-2 py-0.5 text-[10.5px] font-bold text-amber-100">
+            내 기록
+          </button>
+        ) : null}
       </div>
       <div className="absolute inset-x-3 bottom-2.5 z-[2] flex items-end justify-between gap-2">
         <span className="flex flex-col">
@@ -1363,6 +1396,97 @@ function SheetTable({ head, rows, hi }: { head: [string, string]; rows: [string,
 }
 
 const PATTERN_ORDER = ['crouch', 'weapon', 'armor', 'accessory', 'dodge', 'expose'] as const;
+
+// ── 내 도전 기록(11-16, 시안 8EikKiiA1kKHkASUkxbeKH A안) ─────────────────────────
+
+const HIT_TONE: Record<SoloHit['p'], string> = {
+  none: 'bg-slate-500', crouch: 'bg-amber-500', weapon: 'bg-violet-500', armor: 'bg-violet-500', accessory: 'bg-violet-500', dodge: 'bg-slate-700', expose: 'bg-rose-500',
+};
+type RunRow = SoloMe['runs'][number];
+// KST 표시(CLAUDE §3.8) — 9시간 더한 UTC 필드로 읽는다.
+const kst = (d: Date) => new Date(d.getTime() + 9 * 3600_000);
+const kstMd = (d: Date) => `${kst(d).getUTCMonth() + 1}.${String(kst(d).getUTCDate()).padStart(2, '0')}`;
+const kstHm = (d: Date) => `${String(kst(d).getUTCHours()).padStart(2, '0')}:${String(kst(d).getUTCMinutes()).padStart(2, '0')}`;
+
+/** 10타 막대 — 높이 = 피해(가장 큰 타 기준), 색 = 패턴, 금테 = 치명, 빗나감은 바닥에 얇게. */
+function HitStrip({ hits }: { hits: RunRow['hits'] }) {
+  const mx = Math.max(1, ...hits.map((h) => h.d));
+  return (
+    <span className="flex h-[14px] items-end gap-[2px]" aria-hidden>
+      {hits.map((h, i) => (
+        <span key={i} className={`w-[6px] rounded-[1px] ${HIT_TONE[h.p]} ${h.c ? 'ring-1 ring-amber-300' : ''}`} style={{ height: h.d ? Math.max(3, Math.round((14 * h.d) / mx)) : 2 }} />
+      ))}
+    </span>
+  );
+}
+
+function RecordsSheet({ runs, loading, onReplay, onClose }: { runs: RunRow[]; loading: string | null; onReplay: (id: string) => void; onClose: () => void }) {
+  const best = Math.max(...runs.map((r) => r.score));
+  const legend: [string, string][] = [['bg-slate-500', '보통'], ['bg-rose-500', '약점 노출'], ['bg-amber-500', '웅크리기'], ['bg-violet-500', '옭아매기']];
+  return (
+    <ModalShell onClose={onClose} label="내 도전 기록">
+      <ModalLayout title="내 도전 기록" subtitle={`이 원정에서 한 도전 ${runs.length}회 · 순위는 가장 높은 한 판으로 정해져요.`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-1 pb-2 text-[10px] text-slate-400">
+          {legend.map(([c, t]) => (
+            <span key={t} className="flex items-center gap-1">
+              <i className={`h-2 w-[6px] rounded-[1px] ${c}`} />
+              {t}
+            </span>
+          ))}
+          <span className="flex items-center gap-1">
+            <i className="h-[3px] w-[6px] rounded-[1px] bg-slate-700" />
+            빗나감
+          </span>
+          <span className="flex items-center gap-1">
+            <i className="h-2 w-[6px] rounded-[1px] bg-slate-500 ring-1 ring-amber-300" />
+            치명
+          </span>
+        </div>
+        <ul className="border-t border-slate-800">
+          {runs.map((r) => {
+            const top = r.score === best;
+            const at = new Date(r.at);
+            const crit = r.hits.filter((h) => h.c).length;
+            const miss = r.hits.filter((h) => h.p === 'dodge').length;
+            const exp = r.hits.filter((h) => h.p === 'expose').length;
+            const notes = [exp ? `약점 노출 ${exp}` : '', crit ? `치명 ${crit}` : '', miss ? `빗나감 ${miss}` : ''].filter(Boolean).join(' · ');
+            return (
+              <li key={r.id} className={`flex items-center gap-2.5 border-b border-slate-800/70 px-1.5 py-2 ${top ? 'bg-amber-400/[.06]' : ''}`}>
+                <span className="w-[42px] shrink-0 text-center leading-tight">
+                  <b className="block font-mono text-[11.5px] text-slate-200">{kstMd(at)}</b>
+                  <span className="font-mono text-[10px] text-slate-500">{kstHm(at)}</span>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    {r.paid ? (
+                      <span className="rounded-[4px] bg-slate-800 px-1 text-[9.5px] font-bold text-slate-300">재도전</span>
+                    ) : (
+                      <span className="rounded-[4px] bg-violet-900/70 px-1 text-[9.5px] font-bold text-violet-200">무료</span>
+                    )}
+                    {top ? <span className="rounded-[4px] bg-amber-400/90 px-1 text-[9.5px] font-extrabold text-slate-950">최고</span> : null}
+                    <b className={`ml-0.5 font-mono text-[13.5px] font-extrabold tabular-nums ${top ? 'text-amber-300' : 'text-slate-50'}`}>{n(r.score)}</b>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <HitStrip hits={r.hits} />
+                    <span className="truncate text-[10px] text-slate-400">{notes}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={!!loading}
+                  onClick={() => onReplay(r.id)}
+                  className="shrink-0 rounded-full border border-violet-400/50 bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-violet-100 disabled:opacity-60"
+                >
+                  {loading === r.id ? '불러오는 중' : '다시 보기'}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </ModalLayout>
+    </ModalShell>
+  );
+}
 
 function PatternSheet({ spriteSrc, fx, onClose }: { spriteSrc: string; fx: SoloFx; onClose: () => void }) {
   return (

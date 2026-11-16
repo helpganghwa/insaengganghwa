@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { WorldBossError } from '@/lib/game/world-boss/errors';
 import { runSolo } from '@/lib/game/world-boss/solo-server';
-import { getSoloBossDetail } from '@/lib/game/world-boss/solo-queries';
+import { getSoloBossDetail, getSoloReplay } from '@/lib/game/world-boss/solo-queries';
 import { settleLeftBosses } from '@/lib/game/world-boss/spawn';
 import { spawnWorldBossByAdmin } from '@/lib/game/world-boss/admin';
 
@@ -102,6 +102,30 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     expect(d?.top[0]).toMatchObject({ rank: 1, best: r.score, me: true });
     expect(d?.me).toMatchObject({ best: r.score, rank: 1, freeLeft: 0, retryLeft: 0 });
   }, 20_000); // 스테이징 왕복이 많아(재도전 구역 기준 확인까지) 기본 5초로는 느린 날 넘친다.
+
+  it('내 도전 기록·다시 보기 — 목록은 최신 순, 다시 보기 값은 그 판 시각 기준(뒤에 생긴 기록은 섞이지 않는다)', async () => {
+    const [mine] = await q<{ id: string; at: string; score: string }>(sql`select id::text as id, created_at::text as at, score::text as score from world_boss_solo_runs where boss_id=${bossId}::bigint and user_id=${T}::uuid`);
+    const ins = async (user: string, score: number, at: string) =>
+      (await q<{ id: string }>(sql`insert into world_boss_solo_runs (boss_id, user_id, server_id, kst_date, paid, score, hits, power, idem_key, created_at)
+        values (${bossId}::bigint, ${user}::uuid, ${S}, (now() at time zone 'Asia/Seoul')::date, true, ${score}, '[]'::jsonb, '{"weapon":1,"armor":1,"accessory":1}'::jsonb, gen_random_uuid(), ${at}::timestamptz) returning id::text as id`))[0]!.id;
+    const made: string[] = [];
+    try {
+      const at = mine!.at;
+      // 그 판 전: 내 낮은 판 1, 남의 판 1(내 판보다 낮게). 그 판 뒤: 남의 아주 큰 판, 내 판.
+      made.push(await ins(T, 5, new Date(Date.parse(at) - 60_000).toISOString()));
+      made.push(await ins(G, 3, new Date(Date.parse(at) - 30_000).toISOString()));
+      made.push(await ins(G, 9e15, new Date(Date.parse(at) + 30_000).toISOString()));
+      made.push(await ins(T, 7, new Date(Date.parse(at) + 60_000).toISOString()));
+      const d = await getSoloBossDetail(bossId, S, T);
+      expect(d?.me?.runs.map((r) => r.score)).toEqual([7, Number(mine!.score), 5]);
+      const r = await getSoloReplay(T, S, bossId, mine!.id);
+      expect(r?.run).toMatchObject({ score: Number(mine!.score), prevBest: 5, best: Number(mine!.score), rank: 1, prevRank: 1, totalBefore: 8, dealt: 5 + Number(mine!.score) });
+      expect(r?.ladder).toEqual([3]);
+      expect(await getSoloReplay(G, S, bossId, mine!.id)).toBeNull(); // 남의 판은 못 연다
+    } finally {
+      for (const id of made) await testDb.execute(sql`delete from world_boss_solo_runs where id=${id}::bigint`);
+    }
+  }, 20_000);
 
   it('여왕이 떠 있으면 다른 구역에도 여왕을 더 띄울 수 없다(서버당 하나)', async () => {
     const r = await spawnWorldBossByAdmin({ serverId: S, zoneId: ZONE + 2, spawnAt: null, adminUserId: T, allowOverlap: true, allowNearMidnight: true, bossCode: 'shadow_queen' });
