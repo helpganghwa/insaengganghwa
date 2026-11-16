@@ -122,6 +122,18 @@ describe.skipIf(!T)('레이드 취소 — DB 통합', () => {
     expect(await code(cancelHostedRaid({ userId: T, serverId: S, raidId: BigInt(id) }))).toBe('RAID_NOT_FOUND');
   }, 30_000);
 
+  it('소환 취소 — 11-16 전에 연 레이드(원장 ref 없음)는 소환 시각(마이크로초)으로 소환비를 찾아 돌려준다', async () => {
+    await snapshot();
+    const id = await makeRaid(T);
+    await setDaily(1);
+    await testDb.execute(sql`update characters set diamond = diamond - 200 where user_id=${T}::uuid and server_id=${S}`);
+    await testDb.execute(sql`insert into diamond_ledger (user_id, server_id, delta, reason, ref, created_at)
+      select ${T}::uuid, ${S}, -200, 'raid_open', null, opened_at from raids where id=${id}::bigint`);
+    const r = await cancelHostedRaid({ userId: T, serverId: S, raidId: BigInt(id) });
+    expect(r.refund).toBe(200);
+    await testDb.execute(sql`delete from diamond_ledger where user_id=${T}::uuid and reason='raid_open' and ref is null and created_at > now() - interval '5 minutes'`);
+  }, 30_000);
+
   it('소환 — 낸 소환비를 원장에 레이드 id로 남기고, 취소하면 그만큼 돌려준다', async () => {
     await snapshot();
     await setDaily(0);

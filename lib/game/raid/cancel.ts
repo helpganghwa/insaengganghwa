@@ -85,10 +85,11 @@ export function cancelHostedRaid(input: { userId: string; serverId: number; raid
 
     // 낸 소환비 — 원장에서 이 레이드의 소환 지출을 찾는다(11-16부터 ref = raid_open:<id>).
     // 그 전에 연 레이드는 ref가 없어, 같은 트랜잭션 시각(now())에 남은 소환 지출로 찾는다(raids.opened_at = 원장 created_at).
+    // 비교는 DB 값끼리 한다 — JS Date는 밀리초까지라 마이크로초 시각과 같다고 나오지 않는다.
     const [spent] = (await tx.execute(sql`
       select coalesce(-sum(delta), 0)::bigint::text as paid from diamond_ledger
        where user_id = ${userId}::uuid and server_id = ${serverId} and reason = 'raid_open'
-         and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = ${raid.openedAt.toISOString()}::timestamptz))`)) as unknown as { paid: string }[];
+         and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = (select opened_at from raids where id = ${raidId}::bigint)))`)) as unknown as { paid: string }[];
     const refund = Math.max(0, Number(spent?.paid ?? 0));
 
     // 공격 0회라 raid_attacks는 없지만, 혹시 남은 행이 있으면 함께 지운다(FK 없음).
