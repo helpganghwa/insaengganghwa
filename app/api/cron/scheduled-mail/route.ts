@@ -45,25 +45,27 @@ function pushExcerpt(body: string, max: number): string {
 export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   try {
-    // 클레임 — 도래·미발송·미취소 행을 원자 스탬프(재실행·동시 발화 멱등).
-    const due = (await db.execute(sql`
-      update admin_scheduled_mails
-      set sent_at = now()
-      where scheduled_at <= now() and sent_at is null and canceled_at is null
-      returning id, admin_id, title, body, payload, push, server_id
-    `)) as unknown as {
-      id: string;
-      admin_id: string;
-      title: string;
-      body: string;
-      payload: unknown;
-      push: boolean;
-      server_id: number | null;
-    }[];
+    type Due = { id: string; admin_id: string; title: string; body: string; payload: unknown; push: boolean; server_id: number | null };
+    // 클레임은 **한 통씩**(11-16 적대적 검수 F1) — 한꺼번에 찍으면 함수가 시간 제한에 걸려 죽을 때 남은 우편이
+    // '발송됨'으로 찍힌 채 영영 안 나갔다. 행 잠금(skip locked)이라 동시 발화도 한 통을 두 번 집지 않는다.
+    const claimNext = async (): Promise<Due | null> => {
+      const [row] = (await db.execute(sql`
+        update admin_scheduled_mails set sent_at = now()
+         where id = (select id from admin_scheduled_mails
+                      where scheduled_at <= now() and sent_at is null and canceled_at is null
+                      order by scheduled_at, id limit 1 for update skip locked)
+        returning id::text as id, admin_id, title, body, payload, push, server_id
+      `)) as unknown as Due[];
+      return row ?? null;
+    };
+    const startedAt = Date.now();
+    let dispatched = 0;
 
     let sent = 0;
     let failed = 0;
-    for (const m of due) {
+    // 함수 제한(120초) 전에 멈춘다 — 남은 우편은 클레임되지 않은 채라 다음 틱(5분)이 이어 보낸다.
+    for (let m = await claimNext(); m; m = Date.now() - startedAt < 60_000 ? await claimNext() : null) {
+      dispatched += 1;
       // 대상 서버(0208): 숫자면 그 서버 캐릭터 보유자에게만 그 서버 우편함으로(즉시 발송과 동일),
       // null이면 전 서버 = **캐릭터가 있는 서버마다 1통**(2026-09-21 결정 D2). 종전에는 계정당 1통을
       // last_server_id로 보내, 두 서버를 하는 사람은 한쪽에서만 받고 캐릭터가 없는 서버 우편함에
@@ -75,7 +77,16 @@ export async function GET(req: Request) {
       try {
         // 적재와 발송 기록은 한 문장(원자) — 실패하면 아무것도 남지 않아 다시 보내도 중복이 없다. 수신자 수도 함께 기록한다.
         const [row] = (await db.execute(sql`
-          with dest as (
+          with lg as (
+            -- 이 예약 우편의 발송 기록(멱등 키 = 예약 id에서 만든 uuid). 커밋 뒤 응답 전에 연결이 끊겨 실패로 보고 다시
+            -- 보내도(11-16 적대적 검수 F1), 기록이 이미 있으면 여기서 0행이 되고 아래 적재도 건너뛴다 — 이중 발송 없음.
+            insert into admin_mail_logs (admin_id, mode, recipient_count, target_label, title, body, payload, idempotency_key)
+            values (${m.admin_id}::uuid, 'broadcast', 0, ${label}, ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb,
+                    md5(${'scheduled-mail:' + m.id})::uuid)
+            on conflict (idempotency_key) do nothing
+            returning id
+          ),
+          dest as (
             select c.user_id, c.server_id
               from characters c
               join profiles p on p.id = c.user_id
@@ -88,15 +99,16 @@ export async function GET(req: Request) {
             insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
             select d.user_id, d.server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
             from dest d
-            returning 1
-          ),
-          lg as (
-            insert into admin_mail_logs (admin_id, mode, recipient_count, target_label, title, body, payload)
-            values (${m.admin_id}::uuid, 'broadcast', (select count(*)::int from ins), ${label}, ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb)
+            where exists (select 1 from lg)
             returning 1
           )
-          select (select count(*)::int from ins) as n, (select count(*)::int from lg) as l
-        `)) as unknown as { n: number; l: number }[];
+          select (select count(*)::int from ins) as n, (select id::text from lg) as log_id
+        `)) as unknown as { n: number; log_id: string | null }[];
+        if (row?.log_id) {
+          await db
+            .execute(sql`update admin_mail_logs set recipient_count = ${Number(row.n)} where id = ${row.log_id}::bigint`)
+            .catch(() => undefined);
+        }
         count = Number(row?.n ?? 0);
       } catch (e) {
         // 한 통이 실패해도 뒤 우편·공지 발행은 계속한다(종전엔 남은 우편이 '발송됨'으로 찍힌 채 영영 안 나갔다).
@@ -124,6 +136,10 @@ export async function GET(req: Request) {
             select p.id::text as id from profiles p
              where ${SENDABLE_SQL('p')}
                and (${target}::smallint is null or p.last_server_id = ${target}::smallint)
+               -- 전 서버 발송은 우편을 받은 사람만(운영 중인 서버에 캐릭터가 있는 계정) — 11-16 적대적 검수 F9
+               and (${target}::smallint is not null or exists (
+                     select 1 from characters c join servers sv on sv.id = c.server_id
+                      where c.user_id = p.id and sv.status <> 'closed'))
           `)) as unknown as { id: string }[];
           // 푸시는 짧게, 우편은 길게(2026-08-29 확정): 제목 = 우편 제목, 본문 = 우편 본문의 첫 문장들을 60자 이내로
           // (문장 단위로 끊어 잘린 말 없이). 마크다운 강조(**)·줄바꿈 제거.
@@ -191,7 +207,7 @@ export async function GET(req: Request) {
     }
 
     await beatCron('scheduled-mail', `mail=${sent} failed=${failed} ann=${announcementsPublished}`);
-    return Response.json({ ok: failed === 0, dispatched: due.length, mailed: sent, failed, announcementsPublished });
+    return Response.json({ ok: failed === 0, dispatched, mailed: sent, failed, announcementsPublished });
   } catch (e) {
     console.error('[scheduled-mail]', e);
     // 우편 한 통의 실패는 위에서 잡아 클레임을 푼다. 여기 오는 건 클레임 자체가 실패했거나 함수가 그 밖에서 죽은 경우다.

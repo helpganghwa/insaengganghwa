@@ -8,6 +8,7 @@ import { ConfirmButton } from '@/components/ui/ConfirmButton';
 import Link from 'next/link';
 
 import { useResourceToast } from '@/components/ResourceToast';
+import { gateMessage } from '@/lib/game/action-result';
 import { useDiamondActions } from '@/components/DiamondContext';
 import { useDiamondGate } from '@/components/DiamondGate';
 import {
@@ -194,8 +195,12 @@ export function GuildHome({
     setRetryOptimistic(true); // 즉시 '만드는 중'으로
     setEmblemPolls(0);
     void fetch('/api/guild/emblem/generate', { method: 'POST' })
-      .then((r) => {
-        if (!r.ok && r.status !== 429) showError('문양 만들기에 실패했어요. 다시 시도해 주세요.');
+      .then(async (r) => {
+        if (!r.ok && r.status !== 429) {
+          // 정지·점검·닫힌 서버(403 관문 코드)는 그 사유로 알린다(11-16 적대적 검수 F10).
+          const code = r.status === 403 ? ((await r.json().catch(() => null)) as { error?: string } | null)?.error : undefined;
+          showError(code === 'BANNED' || code === 'MAINTENANCE' || code === 'SERVER_CLOSED' ? gateMessage(code) : '문양 만들기에 실패했어요. 다시 시도해 주세요.');
+        }
         router.refresh();
       })
       .catch(() => {

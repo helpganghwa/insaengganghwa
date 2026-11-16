@@ -129,9 +129,10 @@ export async function GET(req: Request) {
           // 공개(소유권 플립)·방치 판정 직후 세계 피드 캐시 즉시 무효화 — 30s TTL 대기 없이 지도/피드 반영.
           if (rev.revealed > 0 || abandoned.abandoned > 0) revalidateTag(`world-feed:s${sid}`, 'max');
           // 백스톱이 공개를 가져간 경우의 단신 활약 칭호(2026-11-04) — 공개 뒤에만. 실패는 로그(소급 스크립트로 메움).
-          // 정밀 공개 크론이 플립을 가져갔지만 시간 예산·함수 종료로 칭호를 못 줬을 수 있어, 00:05 틱(공개 크론은 00:03 전에
-          // 반드시 끝난다)에 어제 몫을 한 번 더 부른다. PK 멱등이라 이미 받은 사람에겐 아무 일도 없다.
-          const titleBackstop = day === kstDay && new Date(startedAt).getUTCMinutes() === 5;
+          // 정밀 공개 크론이 플립을 가져갔지만 시간 예산·함수 종료로 칭호를 못 줬을 수 있어, 00:05·00:15·00:30 틱에 어제 몫을
+          // 다시 부른다(크론이 1~2분 늦게 떠도 한 번은 걸리게). PK 멱등이라 이미 받은 사람에겐 아무 일도 없고, 같은 틱 위에서
+          // revealConquest가 공개 커밋을 기다린 뒤라 공개 전 결과가 칭호로 새지 않는다.
+          const titleBackstop = day === kstDay && [5, 15, 30].includes(new Date(startedAt).getUTCMinutes());
           if (rev.revealed > 0 || titleBackstop) await grantConquestSoloTitles(sid, day).catch((e: unknown) => console.warn('[conquest-chronicle] 단신 활약 칭호', sid, e));
           // 공개 후 수비 배치 이월(안 뺏긴 구역만, 공격은 해제) — 재실행 안전. 실패해도 공개/연대기엔 무관.
           // 이월은 **당일 실행에서만**(전수 감사 2026-08-21) — 백필 날짜에 돌면 carryDay=과거+1의

@@ -317,7 +317,8 @@ export default async function HomePage() {
                (case when og.id is not null and exists (select 1 from guild_members gm where gm.guild_id = og.id and gm.user_id = ${userId}::uuid and gm.server_id = ${serverId})
                      then 0 else 1 end) as o2,
                (case when exists (select 1 from world_boss_party_members m where m.boss_id = b.id and m.user_id = ${userId}::uuid)
-                       or exists (select 1 from world_boss_solo_records r where r.boss_id = b.id and r.user_id = ${userId}::uuid and r.server_id = ${serverId})
+                       or exists (select 1 from world_boss_solo_records r where r.boss_id = b.id and r.user_id = ${userId}::uuid and r.server_id = ${serverId}
+                                     and r.best_at >= (select c.created_at from characters c where c.user_id = r.user_id and c.server_id = r.server_id))
                      then 1 else 0 end) as o3,
                b.spawn_at as at
                from world_bosses b join zones z on z.id = b.zone_id left join guilds og on og.id = z.owner_guild_id left join guilds sg on sg.id = b.settled_guild_id
@@ -326,7 +327,8 @@ export default async function HomePage() {
                      or (b.status = 'left' and b.leave_at > now() - ${WORLD_BOSS_LEFT_NOTE_MS} * interval '1 millisecond'
                          and (exists (select 1 from world_boss_party_members m join world_boss_parties p on p.id = m.party_id
                                       where m.boss_id = b.id and m.user_id = ${userId}::uuid and p.status = 'departed')
-                              or exists (select 1 from world_boss_solo_records r where r.boss_id = b.id and r.user_id = ${userId}::uuid and r.server_id = ${serverId}))))
+                              or exists (select 1 from world_boss_solo_records r where r.boss_id = b.id and r.user_id = ${userId}::uuid and r.server_id = ${serverId}
+                                     and r.best_at >= (select c.created_at from characters c where c.user_id = r.user_id and c.server_id = r.server_id)))))
                 and not (b.id = any(${`{${closedBossIds.join(',')}}`}::bigint[]))
               order by o1, o2, o3, at desc
               limit 5) x) as wb_banners,

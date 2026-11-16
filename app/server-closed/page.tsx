@@ -7,6 +7,7 @@ import { loadUserServers } from '@/lib/game/server-guard';
 import { listServersForUser, recommendedServerId } from '@/lib/game/server-select';
 import { NewCharacterChoice } from '@/app/login/new-character/NewCharacterChoice';
 import { WithdrawButton } from '@/app/(game)/me/settings/WithdrawButton';
+import { SignOutButton } from '@/components/SignOutButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,12 +74,10 @@ export default async function ServerClosedPage({
         </p>
       )}
 
-      <a
-        href="/auth/signout"
-        className="text-center text-[13px] font-semibold text-zinc-400 underline-offset-2 hover:underline"
-      >
+      {/* 계정 화면과 같은 로그아웃 — 기기에 남은 계정 상태(채팅 읽음 위치 등)를 지우고 나간다(11-16 적대적 검수 F6). */}
+      <SignOutButton className="text-center text-[13px] font-semibold text-zinc-400 underline-offset-2 hover:underline">
         로그아웃
-      </a>
+      </SignOutButton>
       {/* 탈퇴는 계정 단위 — 새 캐릭터를 만들지 않고도 여기서 할 수 있다(11-16 검수 C1). */}
       <WithdrawButton />
     </main>

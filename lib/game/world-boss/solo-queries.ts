@@ -209,7 +209,8 @@ export async function getSoloReplay(userId: string, serverId: number, bossId: st
          and u.created_at >= (select c.created_at from characters c where c.user_id = u.user_id and c.server_id = u.server_id)
        group by u.user_id),
     others as (
-      select a.best, (select min(x.created_at) from world_boss_solo_runs x where x.boss_id = ${bossId}::bigint and x.user_id = a.user_id and x.score = a.best and x.created_at <= ${run.at}::timestamptz) as best_at
+      select a.best, (select min(x.created_at) from world_boss_solo_runs x where x.boss_id = ${bossId}::bigint and x.user_id = a.user_id and x.score = a.best and x.created_at <= ${run.at}::timestamptz
+                and x.created_at >= (select c.created_at from characters c where c.user_id = x.user_id and c.server_id = x.server_id)) as best_at
         from asof a where a.user_id <> ${userId}::uuid),
     mine as (
       select max(score) filter (where created_at < ${run.at}::timestamptz) as prev_best,
@@ -218,8 +219,10 @@ export async function getSoloReplay(userId: string, serverId: number, bossId: st
         from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid
          and created_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})),
     mine_at as (
-      select (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.best and created_at <= ${run.at}::timestamptz) as best_at,
-             (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.prev_best and created_at < ${run.at}::timestamptz) as prev_at
+      select (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.best and created_at <= ${run.at}::timestamptz
+                and created_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})) as best_at,
+             (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.prev_best and created_at < ${run.at}::timestamptz
+                and created_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})) as prev_at
         from mine m)
     select m.prev_best::text as prev_best, m.best::text as best, m.dealt::text as dealt,
            (select coalesce(sum(score), 0) from world_boss_solo_runs where boss_id = ${bossId}::bigint and created_at < ${run.at}::timestamptz)::text as total_before,

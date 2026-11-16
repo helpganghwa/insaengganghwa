@@ -36,9 +36,11 @@ const GEN_KEY = 'guildEmblemGen';
  * 로직이라 그대로 옮겼다 — 레이아웃과 확인 방식만 바뀐다.
  */
 export function EmblemBoard({
+  guildId,
   guildName,
   emblems,
 }: {
+  guildId: string;
   guildName: string;
   emblems: EmblemItem[];
 }) {
@@ -106,10 +108,10 @@ export function EmblemBoard({
       let alive = false;
       let startAt: number | null = null;
       try {
-        // g = 생성을 건 길드 — 같은 기기에서 서버를 바꿔 다른 길드 문양 화면에 와도 '생성 중'이 옮겨 붙지 않게(11-16 검수 C8).
+        // g = 생성을 건 길드 id(이름은 바뀔 수 있어 id로) — 같은 기기에서 서버를 바꿔 다른 길드 문양 화면에 와도 '생성 중'이 옮겨 붙지 않게(11-16 검수 C8).
         // 다른 길드 표시는 지우지도 않는다 — 원래 길드로 돌아가면 그대로 이어 보여야 한다.
         const { at, base, g } = JSON.parse(raw) as { at: number; base: number; g?: string };
-        if (g != null && g !== guildName) return;
+        if (g != null && g !== guildId) return;
         alive = Date.now() - at < GEN_TTL_MS && emblems.length <= base;
         startAt = at;
       } catch {
@@ -128,7 +130,7 @@ export function EmblemBoard({
       }
     };
     sync();
-  }, [emblems, guildName]);
+  }, [emblems, guildId]);
 
   /** 생성 — 라우트 핸들러 fetch(서버 액션 트랜지션 밖)라 생성 중에도 앱이 안 멈춘다. */
   const generate = async () => {
@@ -139,7 +141,7 @@ export function EmblemBoard({
     const at = Date.now();
     setGenStartMs(at);
     try {
-      localStorage.setItem(GEN_KEY, JSON.stringify({ at, base: list.length, g: guildName }));
+      localStorage.setItem(GEN_KEY, JSON.stringify({ at, base: list.length, g: guildId }));
     } catch {
       /* noop */
     }

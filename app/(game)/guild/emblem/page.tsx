@@ -29,5 +29,5 @@ export default async function GuildEmblemPage() {
   ]);
   if (!guild) redirect('/guild');
 
-  return <EmblemBoard guildName={guild.name} emblems={emblems} />;
+  return <EmblemBoard guildId={String(m.guildId)} guildName={guild.name} emblems={emblems} />;
 }

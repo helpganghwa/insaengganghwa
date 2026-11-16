@@ -418,7 +418,18 @@ export function ChatDock() {
   const persistSeen = () => {
     const sid = seenSidRef.current;
     if (sid == null) return;
-    seenStoreRef.current = { ...seenStoreRef.current, [String(sid)]: seenRef.current };
+    // 저장 직전에 다시 읽어 합친다 — 다른 탭이 다른 서버 몫을 그새 저장했으면 덮어쓰지 않게(11-16 적대적 검수 F6).
+    let latest: Record<string, LatestIds> = seenStoreRef.current;
+    try {
+      const d = JSON.parse(localStorage.getItem(SEEN_KEY) ?? 'null') as { v?: unknown; by?: Record<string, Partial<LatestIds>> } | null;
+      if (d && d.v === 2 && d.by && typeof d.by === 'object') {
+        latest = {};
+        for (const [k, v] of Object.entries(d.by)) latest[k] = cleanSeen(v);
+      }
+    } catch {
+      /* 깨진 값 — 메모리 것으로 */
+    }
+    seenStoreRef.current = { ...latest, [String(sid)]: seenRef.current };
     localStorage.setItem(SEEN_KEY, JSON.stringify({ v: 2, by: seenStoreRef.current }));
   };
   /** 응답이 알려 준 서버의 '본 위치'를 불러온다 — 한 화면 안에서 서버는 바뀌지 않으므로(전환은 새로 불러오기) 처음 한 번만. */
