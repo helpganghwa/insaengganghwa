@@ -237,6 +237,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         return;
       }
       keyRef.current = null;
+      setReplay(null);
       // 재전송으로 돌려받은 판은 판 전 최고 기록·순위를 모른다 — 지금 값으로 채워 '첫 기록·새 기록'으로 잘못 보이지 않게(11-14 검수).
       const ru = r.run.replayed ? { ...r.run, prevBest: r.run.prevBest ?? r.run.best, prevRank: r.run.prevRank ?? r.run.rank } : r.run;
       // 판 수·내 기록·순위·누적 피해를 응답값으로 바로 맞춘다(결과 카드를 닫은 뒤 순위표가 기다리지 않게).
@@ -376,6 +377,8 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
           bgSrc={bgSrc}
           bossName={bossName}
           retry={retryButton(() => {
+            // 다시 보기에서 재도전으로 넘어가면 다시 보기 상태를 버린다 — 새 판이 옛 기록 경주·닫기 동작을 물려받지 않게.
+            setReplay(null);
             setRun(null);
             setView('prep');
           }, '재도전')}
