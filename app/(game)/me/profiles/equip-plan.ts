@@ -7,6 +7,8 @@
  *  - `no`  : 보유 목록에 없음(무기 교체로 사라졌거나 다른 서버 스냅샷) → 탭 불가
  * 세트 버튼은 `can`만 모아 장착하고, `no`는 건너뛰었다고 알린다.
  */
+import type { CatalogRegion } from '@/lib/game/equipment/catalog';
+
 export type EquipSlot = 'weapon' | 'armor' | 'accessory';
 
 export type SnapshotChip = {
@@ -15,6 +17,8 @@ export type SnapshotChip = {
   name: string;
   /** 같은 카탈로그 키를 지금 보유 중이면 user_equipment.id(문자열) — 장착 액션의 인자. 미보유 null. */
   userEquipmentId: string | null;
+  /** 카탈로그 지역(지역 필터·지역 점, 11-16) — 표시 이름·색은 catalogRegionUi로. */
+  region?: CatalogRegion;
 };
 
 /** 부위별 현재 장착(서버 상태 또는 낙관 상태). 비어 있는 부위는 키가 없다. */

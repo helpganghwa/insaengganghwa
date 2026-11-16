@@ -11,12 +11,15 @@ import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { snapshotEquipment } from '@/lib/game/expedition/engine';
+import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 
 import { AvatarSlotKicker } from './AvatarSlotKicker';
 import { ProfileSelector } from './ProfileSelector';
 import type { EquippedNow } from './equip-plan';
 
 const SLOT_ORDER = { weapon: 0, armor: 1, accessory: 2 } as const;
+// 생성 장비의 카탈로그 지역(지역 필터·칸의 지역 점, 11-16) — 정적 카탈로그라 DB 왕복 없음.
+const REGION_BY_KEY = new Map(CATALOG_ITEMS.map((c) => [c.key, c.region]));
 
 export default async function ProfileSelectPage() {
   const userId = await getSessionUserId();
@@ -32,6 +35,7 @@ export default async function ProfileSelectPage() {
         rotations: userProfiles.rotations,
         options: userProfiles.options,
         equipmentSnapshot: userProfiles.equipmentSnapshot,
+        createdAt: userProfiles.createdAt,
       })
       .from(userProfiles)
       .where(and(eq(userProfiles.userId, userId), eq(userProfiles.serverId, serverId)))
@@ -89,6 +93,7 @@ export default async function ProfileSelectPage() {
               rotations: r.rotations as Record<string, string>,
               // 기본 아바타는 반환 버튼 미노출(2026-09-01) — 서버 가드(DEFAULT_AVATAR)와 이중.
               isDefault: (r.options as { isDefault?: boolean } | null)?.isDefault === true,
+              createdAt: r.createdAt.toISOString(),
               // 생성 당시 착용 장비(2026-09-14, 문의 약속) — 스냅샷은 카탈로그 키만 담고 있어 정적 카탈로그로
               // 이름·부위를 푼다(DB 왕복 없음). 강화 수치는 일부러 넣지 않는다: 스냅샷에 없어서 '지금' 레벨이
               // 되는데, 그러면 "만들 때 +37이었나"로 읽힌다(시안 검토 결정). 기본 아바타는 빈 배열 → 줄 숨김.
@@ -96,7 +101,7 @@ export default async function ProfileSelectPage() {
               // 두면 화면마다 순서가 달라 보인다(로컬 검증에서 확인).
               // userEquipmentId — 지금도 보유 중이면 그 행의 id(장착 액션 인자), 아니면 null(미보유 칩).
               equipment: snapshotEquipment(r.equipmentSnapshot, new Map())
-                .map((e) => ({ key: e.key, slot: e.slot, name: e.name, userEquipmentId: ownedIdByKey.get(e.key) ?? null }))
+                .map((e) => ({ key: e.key, slot: e.slot, name: e.name, userEquipmentId: ownedIdByKey.get(e.key) ?? null, region: REGION_BY_KEY.get(e.key) }))
                 .sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]),
             }))}
             activeProfileId={p[0]?.activeProfileId ?? null}

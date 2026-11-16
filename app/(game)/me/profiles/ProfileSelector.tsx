@@ -8,6 +8,7 @@ import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
 import { atlasBgStyle } from '@/lib/game/equipment/sprite-atlas';
 import { DragScrollRow } from '@/components/ui/DragScrollRow';
+import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { setActiveProfile, returnProfile, flipProfile, equipSnapshotItems, reorderProfiles } from './actions';
@@ -21,7 +22,44 @@ type ProfileItem = {
   isDefault?: boolean;
   /** 생성 당시 착용 장비(부위 순, 최대 3) — 없으면(기본 아바타·레거시) 줄을 그리지 않는다. */
   equipment?: SnapshotChip[];
+  /** 만든 시각(ISO) — 칸의 날짜·최신/오래된순 정렬(11-16). */
+  createdAt?: string;
 };
+
+type SortKey = 'mine' | 'new' | 'old';
+const SORT_LABEL: Record<SortKey, string> = { mine: '내 순서', new: '최신순', old: '오래된순' };
+const COLS = [3, 4, 5] as const;
+type Cols = (typeof COLS)[number];
+// 정렬·열 수는 기기에 기억(편의 설정, 11-16) — 저장소가 막힌 환경에서도 기본값으로 동작.
+const PREF_KEY = 'ig:avatarListPref';
+function readPref(): { sort: SortKey; cols: Cols } {
+  try {
+    const v = JSON.parse(localStorage.getItem(PREF_KEY) ?? 'null') as { sort?: string; cols?: number } | null;
+    return {
+      sort: v?.sort === 'new' || v?.sort === 'old' ? v.sort : 'mine',
+      cols: v?.cols === 3 || v?.cols === 5 ? v.cols : 4,
+    };
+  } catch {
+    return { sort: 'mine', cols: 4 };
+  }
+}
+function writePref(p: { sort: SortKey; cols: Cols }) {
+  try {
+    localStorage.setItem(PREF_KEY, JSON.stringify(p));
+  } catch {
+    /* 저장 실패 — 이번 방문만 적용 */
+  }
+}
+/** KST 월.일 — 칸 아래 작은 날짜. */
+function kstMd(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(Date.parse(iso) + 9 * 3600_000);
+  return `${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+/** 생성 장비 지역 키(표시 단위, 레거시 값은 같은 키로 합쳐짐). */
+const regionKeys = (p: ProfileItem) => (p.equipment ?? []).map((e) => (e.region ? catalogRegionUi(e.region).key : 'general'));
+/** 필터 칩 — 세계지도 순 + 일반(표시 키 기준 중복 제거). */
+const REGION_CHIPS = REGION_FILTER_ORDER.map((r) => catalogRegionUi(r));
 
 const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
@@ -90,6 +128,31 @@ export function ProfileSelector({
       : list[0]!.id;
 
   const [selectedId, setSelectedId] = useState<string>(initId);
+  // 정렬·필터·열 수(11-16 1안) — 처음 렌더는 기본값(서버와 같게), 마운트 뒤 기기에 기억된 값으로.
+  const [sort, setSort] = useState<SortKey>('mine');
+  const [cols, setCols] = useState<Cols>(4);
+  const [region, setRegion] = useState<string | null>(null);
+  const [setOnly, setSetOnly] = useState(false);
+  useEffect(() => {
+    const p = readPref();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 기기 저장값 복원(하이드레이션 뒤 1회)
+    setSort(p.sort);
+    setCols(p.cols);
+  }, []);
+  const pickSort = (v: SortKey) => {
+    setSort(v);
+    writePref({ sort: v, cols });
+  };
+  const pickCols = (v: Cols) => {
+    haptic.tap();
+    setCols(v);
+    writePref({ sort, cols: v });
+  };
+  // 크게 보기 팝업(11-16 1안) — 좌우 반전·반환·생성 장비 장착이 이 안으로 옮겨 갔다.
+  const [bigOpen, setBigOpen] = useState(false);
+  // 대표 아바타 — 누르는 즉시 바꿔 보이고(낙관적), 실패하면 서버 값으로 되돌린다.
+  const [activeShown, setActiveShown] = useOptimistic(activeProfileId, (_s: string | null, next: string | null) => next);
+  const [repPending, startRep] = useTransition();
   const sel = list.find((p) => p.id === selectedId) ?? list[0]!;
   const [pending, startTransition] = useTransition();
   // 반환 확인(2026-09-01, 구 삭제) — 즉시 회수되는 동작이라 무엇이 벌어지는지 문장으로 읽히는
@@ -159,56 +222,48 @@ export function ProfileSelector({
     setFlipPreview((v) => !v);
   };
 
-  // 적용 → (반전 대기 중이면 먼저 서버 반전) + 선택 캐릭터를 대표로 커밋.
-  const activeDirty = selectedId !== activeProfileId;
-  const dirty = activeDirty || flipPreview;
-  const apply = () => {
-    if (!dirty || flipping) return;
+  // 대표로 설정(11-16 1안) — 화면에 머문 채 바로 바꾼다(종전엔 /me로 이동). 낙관 반영 후 실패하면 되돌림.
+  const setRep = () => {
+    if (repPending || selectedId === activeShown) return;
     haptic.success();
     const id = selectedId;
-    if (flipPreview) {
-      // 반전은 업로드가 걸려(~1초) 완료를 기다린다 — 완료 전 이동하면 /me 헤더가 옛 이미지로 그려진다.
-      setFlipping(true);
-      void flipProfile(id)
-        .then(async (r) => {
-          if (r.status === 'error') {
-            showError(r.message);
-            return;
-          }
-          // 새 반전본을 먼저 캐시에 올린 뒤(디코드까지) CSS 반전을 "옛 URL 표시 중"으로만 한정한다.
-          try {
-            const img = new Image();
-            img.src = r.south;
-            await img.decode();
-          } catch {
-            /* 프리로드 실패해도 진행 — 최악의 경우 기존 깜빡임 */
-          }
-          setFlipHold(frontSrc(sel));
-          setFlipPreview(false);
-          if (activeDirty) {
-            const a = await setActiveProfile(id);
-            if (a.status === 'error') {
-              showError(a.message);
-              return;
-            }
-          }
-          showHeaderToast({ title: activeDirty ? '대표 아바타 변경' : '아바타 좌우 반전' });
-          router.push('/me');
-          router.refresh();
-        })
-        .finally(() => setFlipping(false));
-      return;
-    }
-    // 낙관: 로딩 없이 즉시 /me로 이동 → 백그라운드 커밋 후 router.refresh로 보정.
-    router.push('/me');
-    void setActiveProfile(id).then((r) => {
+    startRep(async () => {
+      setActiveShown(id);
+      const r = await setActiveProfile(id).catch(() => ({ status: 'error' as const, message: '연결이 끊겨 바꾸지 못했어요. 다시 시도해 주세요.' }));
       if (r.status === 'error') {
         showError(r.message);
+        router.refresh();
         return;
       }
       showHeaderToast({ title: '대표 아바타 변경' });
-      router.refresh();
     });
+  };
+  // 반전 적용 — 크게 보기 팝업의 미리보기 반전을 서버에 저장(업로드 ~1초라 완료를 기다린다).
+  const applyFlip = () => {
+    if (!flipPreview || flipping) return;
+    haptic.success();
+    const id = selectedId;
+    setFlipping(true);
+    void flipProfile(id)
+      .then(async (r) => {
+        if (r.status === 'error') {
+          showError(r.message);
+          return;
+        }
+        // 새 반전본을 먼저 캐시에 올린 뒤(디코드까지) CSS 반전을 "옛 URL 표시 중"으로만 한정한다.
+        try {
+          const img = new Image();
+          img.src = r.south;
+          await img.decode();
+        } catch {
+          /* 프리로드 실패해도 진행 — 최악의 경우 깜빡임 */
+        }
+        setFlipHold(frontSrc(sel));
+        setFlipPreview(false);
+        showHeaderToast({ title: '아바타 좌우 반전' });
+      })
+      .catch(() => showError('연결이 끊겨 저장하지 못했어요. 다시 시도해 주세요.'))
+      .finally(() => setFlipping(false));
   };
   const cssFlipped = (p: ProfileItem) =>
     p.id === selectedId && (flipPreview || (flipHold !== null && frontSrc(p) === flipHold));
@@ -228,6 +283,7 @@ export function ProfileSelector({
       }
       setDeletedIds((s) => new Set(s).add(selectedId));
       setSelectedId(remaining[0]!.id);
+      setBigOpen(false);
       // refresh 제거(2026-08-20, §11.7) — returnProfile revalidatePath('/me/profiles')
       // 응답 재렌더가 커버(낙관 제거 + prop 갱신).
     });
@@ -237,7 +293,7 @@ export function ProfileSelector({
   // 편집 중에는 반전·반환·장착·적용을 감춘다(순서만 만진다). 취소는 draft를 버린다.
   const [reorderPending, startReorder] = useTransition();
   const beginEdit = () => {
-    if (editing || list.length < 2) return;
+    if (editing || list.length < 2 || sort !== 'mine' || region) return;
     haptic.tap();
     setFlipPreview(false);
     setDraft(list.map((p) => p.id));
@@ -273,260 +329,268 @@ export function ProfileSelector({
   // 옮긴 뒤 선택 썸네일이 띠 밖으로 나가면 보이게 스크롤(가로만 — block은 nearest라 세로는 건드리지 않음).
   const selRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
-    if (editing) selRef.current?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+    if (editing) selRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [editing, draft]);
 
+  // 보이는 목록 — 편집 중엔 순서 그대로(필터·정렬 없음). 지역 필터: 생성 장비 하나라도 그 지역이면 포함,
+  // '3부위 같은 지역만'이면 세 부위가 모두 그 지역. 정렬은 같은 값이면 지금 순서를 지킨다(안정 정렬).
+  const shown = editing
+    ? list
+    : (() => {
+        let xs = region
+          ? list.filter((p) => {
+              const ks = regionKeys(p);
+              return setOnly ? ks.length === 3 && ks.every((k) => k === region) : ks.includes(region);
+            })
+          : list;
+        if (sort !== 'mine') {
+          const t = (p: ProfileItem) => (p.createdAt ? Date.parse(p.createdAt) : 0);
+          xs = [...xs].sort((a, b) => (sort === 'new' ? t(b) - t(a) : t(a) - t(b)));
+        }
+        return xs;
+      })();
+  const isRep = sel.id === activeShown;
+  const canEditOrder = list.length > 1 && sort === 'mine' && !region;
+  const pill = 'rounded-full border px-2.5 py-1 text-[11px] font-bold transition active:scale-95 disabled:opacity-50';
+
   return (
-    <div className="space-y-4">
-      {/* 선택된 캐릭터 정면 프리뷰(회전 미사용). 편집 중에는 작게·흐리게(순서 편집 대상 확인용). */}
-      <div className="relative rounded-2xl border border-zinc-200 p-3 dark:border-zinc-800">
-        {/* 좌우 반전 — 프리뷰 좌상단 코너(삭제와 대칭). 편집 중 숨김. */}
-        {!editing ? (
-        <button
-          type="button"
-          onClick={doFlip}
-          disabled={pending || flipping}
-          aria-label="선택한 아바타 좌우 반전 미리보기"
-          aria-pressed={flipPreview}
-          className={`absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
-            flipPreview ? 'bg-violet-600/85 text-white' : 'bg-black/55 text-zinc-100'
-          }`}
-        >
-          좌우 반전
-        </button>
-        ) : null}
-        {/* 반환(구 삭제) — 프리뷰 컨테이너 우상단 코너. 모달 확인(마지막 1개·기본 아바타 숨김). 편집 중 숨김. */}
-        {!editing && list.length > 1 && !sel.isDefault ? (
+    <div className="space-y-3">
+      {/* 미리보기 줄(11-16 1안) — 목록을 내려도 헤더 아래에 붙어 있어, 아래쪽 아바타를 골라도 바로 보인다. */}
+      <div className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-20 -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
+        <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
           <button
             type="button"
-            onClick={() => setReturnAsk(true)}
-            disabled={pending}
-            aria-label="선택한 아바타 반환"
-            className="absolute right-2 top-2 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-amber-300 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
+            onClick={() => !editing && setBigOpen(true)}
+            aria-label="선택한 아바타 크게 보기"
+            className="relative flex h-[84px] w-[72px] shrink-0 items-end justify-center overflow-hidden rounded-xl bg-white dark:bg-zinc-950"
           >
-            반환
+            {frontSrc(sel) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={frontSrc(sel)}
+                alt="아바타"
+                draggable={false}
+                className="pointer-events-none h-full w-full object-contain object-bottom"
+                style={{ imageRendering: 'pixelated', transform: cssFlipped(sel) ? 'scaleX(-1)' : undefined }}
+              />
+            ) : null}
           </button>
-        ) : null}
-        <div
-          className={`relative mx-auto flex aspect-square w-full select-none items-center justify-center isolate overflow-hidden rounded-xl transition-[max-width,opacity] duration-200 ${
-            editing ? 'max-w-[120px] opacity-50' : 'max-w-[256px]'
-          }`}
-        >
-          {/* 발밑 타원 그림자 */}
-          <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
-          {frontSrc(sel) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={frontSrc(sel)}
-              alt="아바타"
-              draggable={false}
-              className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
-              style={{ imageRendering: 'pixelated', transform: cssFlipped(sel) ? 'scaleX(-1)' : undefined }}
-            />
-          ) : null}
-        </div>
-        {/* 생성 당시 착용 장비(2026-09-14, 문의 "어떤 장비로 만들었는지 항시 확인") — 파견 화면 칩과
-            같은 어휘(스프라이트·부위·이름). 탭 없이 항상 보이고, 썸네일을 넘길 때마다 바뀐다.
-            강화 수치는 넣지 않는다(스냅샷엔 키만 있어 '지금' 값이 되어 오해를 부른다).
-            칩 우하단 라벨이 상태를 말한다: 장착(탭 가능) / 장착 중 / 미보유. 세트 버튼은 장착 가능한
-            부위가 하나라도 있을 때만 보인다. */}
-        {!editing && sel.equipment && sel.equipment.length > 0 ? (() => {
-          const plan = setPlan(sel.equipment, nowShown);
-          return (
-            <div className="mt-2.5" aria-label="생성에 사용된 장비">
-              <div className="flex h-5 items-center justify-between px-0.5">
-                <span className="text-[10px] text-zinc-400 dark:text-zinc-500">생성에 사용된 장비</span>
-                {plan.equip.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => askEquipSet(sel.equipment!)}
-                    disabled={equipPending}
-                    className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-amber-600 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-amber-400"
-                  >
-                    이 세트 장착
-                  </button>
-                ) : plan.skipped.length === 0 ? (
-                  <span className="text-[10px] font-bold text-violet-500">모두 장착 중</span>
-                ) : null}
-              </div>
-              <div className="mt-1 grid grid-cols-3 gap-1.5">
+          <div className="min-w-0 flex-1">
+            {editing ? (
+              <p className="text-[11px] leading-snug break-keep text-zinc-500 dark:text-zinc-400">아바타를 선택한 뒤 아래 버튼으로 옮기고 완료를 눌러 저장하세요.</p>
+            ) : sel.equipment && sel.equipment.length > 0 ? (
+              <ul className="space-y-0.5">
                 {sel.equipment.map((e) => {
-                  const bg = atlasBgStyle(e.key, 26);
-                  const st = chipState(e, nowShown);
+                  const ui = e.region ? catalogRegionUi(e.region) : null;
                   return (
-                    <button
-                      key={e.key}
-                      type="button"
-                      onClick={() => askEquipOne(e)}
-                      disabled={st !== 'can' || equipPending}
-                      aria-label={`${SLOT_KO[e.slot]} ${e.name} — ${st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}`}
-                      className={`relative flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 pb-4 pt-1.5 text-left transition active:scale-[0.98] ${
-                        st === 'on'
-                          ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'
-                          : st === 'can'
-                            ? 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950'
-                            : 'border-zinc-200 bg-zinc-50 opacity-45 dark:border-zinc-800 dark:bg-zinc-950'
-                      }`}
-                    >
-                      {bg ? (
-                        <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
-                      ) : (
-                        <span aria-hidden className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[9px] font-bold text-zinc-500 dark:bg-zinc-900">
-                          {SLOT_KO[e.slot].slice(0, 1)}
-                        </span>
-                      )}
-                      <span className="flex min-w-0 flex-col leading-tight">
-                        <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[e.slot]}</span>
-                        <span className="truncate text-[11px] font-bold text-zinc-800 dark:text-zinc-100">{e.name}</span>
-                      </span>
-                      <span
-                        aria-hidden
-                        className={`absolute bottom-1 right-1 rounded px-1 text-[8.5px] font-extrabold leading-[1.3] ${
-                          st === 'on'
-                            ? 'bg-violet-600 text-white'
-                            : st === 'can'
-                              ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
-                              : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                        }`}
-                      >
-                        {st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}
-                      </span>
-                    </button>
+                    <li key={e.key} className="flex min-w-0 items-center gap-1.5 text-[11.5px]">
+                      <i aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: ui?.color ?? '#a1a1aa' }} />
+                      <span className="truncate text-zinc-700 dark:text-zinc-200">{e.name}</span>
+                    </li>
                   );
                 })}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">기본 아바타</p>
+            )}
+            {!editing ? (
+              <div className="mt-1.5 flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={setRep}
+                  disabled={isRep || repPending || flipping}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition active:scale-95 ${
+                    isRep ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500' : 'bg-violet-600 text-white'
+                  }`}
+                >
+                  {isRep ? '현재 대표' : '대표로 설정'}
+                </button>
+                <button type="button" onClick={() => setBigOpen(true)} className={`${pill} border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300`}>
+                  크게 보기
+                </button>
               </div>
+            ) : null}
+          </div>
+        </div>
+        {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼. 미리보기 줄과 함께 붙어 있어 목록 어디서든 쓸 수 있다. */}
+        {editing && draft ? (
+          <div className="mt-2 space-y-1.5">
+            <div className="flex gap-1.5" role="group" aria-label="아바타 순서 이동">
+              {(
+                [
+                  ['first', '맨 앞으로', true],
+                  ['prev', '앞으로', true],
+                  ['next', '뒤로', false],
+                  ['last', '맨 뒤로', false],
+                ] as const
+              ).map(([dir, label, iconFirst]) => {
+                const ok = canMove(draft, selectedId, dir);
+                return (
+                  <button
+                    key={dir}
+                    type="button"
+                    onClick={() => moveSel(dir)}
+                    disabled={!ok}
+                    className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl border px-1 py-2 text-[11px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
+                      ok
+                        ? 'border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100'
+                        : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
+                    }`}
+                  >
+                    {iconFirst ? MOVE_ICON[dir] : null}
+                    <span>{label}</span>
+                    {iconFirst ? null : MOVE_ICON[dir]}
+                  </button>
+                );
+              })}
             </div>
-          );
-        })() : null}
-      </div>
-
-      {/* 목록 라벨 줄 + 띠(2026-09-15) — 한 블록으로 묶어 간격 8px. (space-y는 앞 형제의 margin-bottom이라
-          음수 마진으로 당기면 겹친다 — 스테이징 검증 지적.) 라벨 줄: 왼쪽 개수, 오른쪽 순서 편집 진입(2개 이상). */}
-      <div className="space-y-2">
-      {list.length > 1 ? (
-        <div className="flex min-h-6 items-center justify-between gap-2 px-0.5">
-          <span className="min-w-0 text-[10px] leading-tight text-zinc-400 dark:text-zinc-500">
-            {editing ? '아바타를 선택한 후 버튼으로 옮긴 뒤 완료를 눌러 저장하세요' : `보유 아바타 ${list.length}`}
-          </span>
-          {editing ? (
-            <span className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={cancelEdit}
-                disabled={reorderPending}
-                className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-zinc-500 transition active:scale-95 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400"
-              >
+            <div className="flex justify-end gap-1.5">
+              <button type="button" onClick={cancelEdit} disabled={reorderPending} className={`${pill} border-zinc-300 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400`}>
                 취소
               </button>
-              <button
-                type="button"
-                onClick={finishEdit}
-                disabled={reorderPending}
-                className="rounded-full bg-violet-600 px-2.5 py-0.5 text-[10px] font-bold text-white transition active:scale-95"
-              >
+              <button type="button" onClick={finishEdit} disabled={reorderPending} className={`${pill} border-violet-600 bg-violet-600 text-white`}>
                 완료
               </button>
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={beginEdit}
-              disabled={pending || flipping || reorderPending}
-              className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-violet-600 transition active:scale-95 dark:border-zinc-700 dark:bg-zinc-950 dark:text-violet-400"
-            >
-              순서 편집
-            </button>
-          )}
-        </div>
-      ) : null}
-
-      {/* 보유 목록 — 탭하면 미리보기(적용 버튼으로 확정). 편집 중에는 탭 = 옮길 아바타 선택.
-          DragScrollRow — PC에서 드래그·휠로도 넘겨진다(문의: 키보드 화살표가 유일했음). */}
-      <DragScrollRow className="flex gap-2 pb-1">
-        {list.map((p) => (
-          <button
-            key={p.id}
-            ref={p.id === selectedId ? selRef : undefined}
-            type="button"
-            onClick={() => selectChar(p)}
-            className={`relative flex aspect-square w-16 shrink-0 items-center justify-center isolate overflow-hidden rounded-lg border-2 bg-white dark:bg-zinc-950 ${
-              p.id === selectedId
-                ? 'border-violet-500'
-                : 'border-zinc-200 dark:border-zinc-800'
-            }`}
-          >
-            {/* 대표 배지 — 선택 테두리(보라)만으로는 '지금 보는 것'과 '대표로 쓰는 것'이
-                구분되지 않는다. 하단 버튼은 결과만 알려줄 뿐 어느 썸네일인지는 말하지
-                않았다(2026-08-02). */}
-            {p.id === activeProfileId ? (
-              <span className="absolute left-0 top-0 z-10 rounded-br-md bg-amber-500 px-1 py-px text-[8px] font-bold leading-tight text-white">
-                대표
-              </span>
-            ) : null}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={frontSrc(p)}
-              alt="아바타"
-              draggable={false}
-              className="h-full w-full object-contain"
-              style={{ imageRendering: 'pixelated', transform: cssFlipped(p) ? 'scaleX(-1)' : undefined }}
-            />
-          </button>
-        ))}
-      </DragScrollRow>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼, 같은 너비. 아이콘은 SVG(이모지는 기기마다
-          폭이 달라 버튼 너비가 어긋난다 — 스테이징 검증 지적). 끝에 있으면 톤 다운(투명도 대신 톤, 앱 규칙). */}
-      {editing && draft ? (
-        <div className="flex gap-1.5" role="group" aria-label="아바타 순서 이동">
-          {(
-            [
-              ['first', '맨 앞으로', true],
-              ['prev', '앞으로', true],
-              ['next', '뒤로', false],
-              ['last', '맨 뒤로', false],
-            ] as const
-          ).map(([dir, label, iconFirst]) => {
-            const ok = canMove(draft, selectedId, dir);
-            return (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => moveSel(dir)}
-                disabled={!ok}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl border px-1 py-2.5 text-[11px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
-                  ok
-                    ? 'border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100'
-                    : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
-                }`}
+      {/* 정렬·순서 편집·열 수 / 지역 필터(11-16 1안 B). 편집 중에는 숨긴다(순서만 만진다). */}
+      {!editing ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <label className="relative">
+              <span className="sr-only">정렬</span>
+              <select
+                value={sort}
+                onChange={(e) => pickSort(e.target.value as SortKey)}
+                className="appearance-none rounded-full border border-zinc-300 bg-white py-1 pr-6 pl-2.5 text-[11.5px] font-bold text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
               >
-                {iconFirst ? MOVE_ICON[dir] : null}
-                <span>{label}</span>
-                {iconFirst ? null : MOVE_ICON[dir]}
+                {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+                  <option key={k} value={k}>
+                    {SORT_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+              <span aria-hidden className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[9px] text-zinc-400">▼</span>
+            </label>
+            {list.length > 1 ? (
+              <button
+                type="button"
+                onClick={beginEdit}
+                disabled={!canEditOrder || pending || flipping || reorderPending}
+                title={canEditOrder ? undefined : '내 순서·전체 지역에서만 편집할 수 있어요'}
+                className={`${pill} border-zinc-300 bg-white text-violet-600 disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-violet-400 dark:disabled:text-zinc-600`}
+              >
+                순서 편집
               </button>
-            );
-          })}
+            ) : null}
+            <span className="ml-auto text-[10.5px] text-zinc-400 dark:text-zinc-500">보유 {list.length}</span>
+            <span className="flex gap-0.5 rounded-lg bg-zinc-100 p-0.5 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800" role="group" aria-label="한 줄에 보일 개수">
+              {COLS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => pickCols(c)}
+                  aria-pressed={cols === c}
+                  className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold ${
+                    cols === c ? 'bg-white text-zinc-800 shadow-sm dark:bg-zinc-700 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </span>
+          </div>
+          <DragScrollRow className="flex gap-1.5 pb-0.5">
+            {[null, ...REGION_CHIPS.map((u) => u.key)].map((k) => {
+              const ui = k ? REGION_CHIPS.find((u) => u.key === k)! : null;
+              const on = region === k;
+              return (
+                <button
+                  key={k ?? 'all'}
+                  type="button"
+                  onClick={() => {
+                    haptic.tap();
+                    setRegion(k);
+                    if (!k) setSetOnly(false);
+                  }}
+                  aria-pressed={on}
+                  className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                    on
+                      ? 'border-violet-400 bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-100'
+                      : 'border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400'
+                  }`}
+                >
+                  {ui ? <i aria-hidden className="h-[7px] w-[7px] rounded-full" style={{ background: ui.color }} /> : null}
+                  {ui ? ui.label : '전체'}
+                </button>
+              );
+            })}
+          </DragScrollRow>
+          {region ? (
+            <div className="flex items-center justify-between px-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <span>
+                {REGION_CHIPS.find((u) => u.key === region)?.label} 장비로 만든 아바타 <b className="text-zinc-800 dark:text-zinc-100">{shown.length}</b>개
+              </span>
+              <button type="button" onClick={() => setSetOnly((v) => !v)} aria-pressed={setOnly} className="flex items-center gap-1">
+                <i aria-hidden className={`inline-block h-3 w-3 rounded-[3px] border ${setOnly ? 'border-violet-500 bg-violet-500' : 'border-zinc-400 dark:border-zinc-600'}`} />
+                3부위 같은 지역만
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {/* 적용 — 선택 캐릭터를 대표 프로필로 커밋(편집 중 숨김) */}
-      {!editing ? (
-      <button
-        type="button"
-        onClick={apply}
-        disabled={pending || flipping || !dirty}
-        className={`w-full rounded-xl py-3.5 text-sm font-bold transition-colors ${
-          pending || flipping || !dirty
-            ? 'bg-zinc-200 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600'
-            : 'bg-violet-600 text-white'
-        }`}
-      >
-        {flipping ? '적용 중…' : !dirty ? '현재 대표 아바타' : activeDirty ? '이 아바타로 적용' : '반전 적용'}
-      </button>
-      ) : null}
+      {/* 보유 목록(격자) — 탭하면 위 미리보기 줄이 바뀐다. 편집 중에는 탭 = 옮길 아바타 선택.
+          칸 아래: 만든 날짜(월.일)와 생성 장비 지역 점(무기·방어구·장신구 순, 11-16 1안 C). */}
+      {shown.length === 0 ? (
+        <p className="py-10 text-center text-[12px] text-zinc-400 dark:text-zinc-500">조건에 맞는 아바타가 없어요.</p>
+      ) : (
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+          {shown.map((p) => (
+            <button
+              key={p.id}
+              ref={p.id === selectedId ? selRef : undefined}
+              type="button"
+              onClick={() => selectChar(p)}
+              className={`relative isolate overflow-hidden rounded-xl border text-left ${
+                p.id === selectedId
+                  ? 'border-violet-500 bg-violet-50 ring-1 ring-violet-500 dark:bg-violet-950/30'
+                  : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
+              }`}
+            >
+              {/* 대표 배지 — 선택 테두리(보라)와 '대표로 쓰는 것'을 구분(2026-08-02). */}
+              {p.id === activeShown ? (
+                <span className="absolute top-0 left-0 z-10 rounded-br-md bg-amber-500 px-1 py-px text-[8px] leading-tight font-bold text-white">대표</span>
+              ) : null}
+              <span className="flex aspect-square w-full items-end justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={frontSrc(p)}
+                  alt="아바타"
+                  loading="lazy"
+                  decoding="async"
+                  draggable={false}
+                  className="h-full w-full object-contain object-bottom"
+                  style={{ imageRendering: 'pixelated', transform: cssFlipped(p) ? 'scaleX(-1)' : undefined }}
+                />
+              </span>
+              <span className="flex items-center justify-between gap-1 px-1.5 pt-0.5 pb-1">
+                <span className={`font-mono text-zinc-400 dark:text-zinc-500 ${cols === 5 ? 'text-[8.5px]' : 'text-[9.5px]'}`}>{kstMd(p.createdAt)}</span>
+                <span className="flex gap-[2px]">
+                  {(p.equipment ?? []).map((e) => (
+                    <i key={e.key} aria-hidden className="h-[6px] w-[6px] rounded-full" style={{ background: e.region ? catalogRegionUi(e.region).color : '#a1a1aa' }} />
+                  ))}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* 아바타 생성 — 페이지에서 옮겨 옴(2026-09-16): 순서 편집 중에는 숨긴다(사용자 지시). */}
+      {/* 아바타 생성 — 편집 중에는 숨긴다(사용자 지시 2026-09-16). */}
       {!editing ? (
         <Link
           prefetch={false}
@@ -537,10 +601,154 @@ export function ProfileSelector({
         </Link>
       ) : null}
 
+      {/* 크게 보기(11-16 1안) — 큰 이미지·좌우 반전·반환·생성 장비 장착. 반전은 미리보기 후 '반전 적용'으로 저장. */}
+      {bigOpen && (
+        <ModalShell
+          onClose={() => {
+            setBigOpen(false);
+            setFlipPreview(false);
+          }}
+          label="아바타 크게 보기"
+        >
+          <ModalLayout
+            title="아바타 크게 보기"
+            bodyPad="sm"
+            footer={
+              <>
+                <ModalButton
+                  tone="ghost"
+                  onClick={() => {
+                    setBigOpen(false);
+                    setFlipPreview(false);
+                  }}
+                >
+                  닫기
+                </ModalButton>
+                {flipPreview ? (
+                  <ModalButton tone="primary" onClick={applyFlip} disabled={flipping}>
+                    {flipping ? '저장 중…' : '반전 적용'}
+                  </ModalButton>
+                ) : (
+                  <ModalButton tone="primary" onClick={setRep} disabled={isRep || repPending}>
+                    {isRep ? '현재 대표' : '대표로 설정'}
+                  </ModalButton>
+                )}
+              </>
+            }
+          >
+            <div className="relative px-1">
+              <button
+                type="button"
+                onClick={doFlip}
+                disabled={pending || flipping}
+                aria-pressed={flipPreview}
+                className={`absolute top-0 left-1 z-10 rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-sm transition active:scale-95 disabled:opacity-50 ${
+                  flipPreview ? 'bg-violet-600/85 text-white' : 'bg-black/55 text-zinc-100'
+                }`}
+              >
+                좌우 반전
+              </button>
+              {list.length > 1 && !sel.isDefault ? (
+                <button
+                  type="button"
+                  onClick={() => setReturnAsk(true)}
+                  disabled={pending}
+                  className="absolute top-0 right-1 z-10 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-bold text-amber-300 backdrop-blur-sm transition active:scale-95 disabled:opacity-50"
+                >
+                  반환
+                </button>
+              ) : null}
+              <div className="relative mx-auto flex aspect-square w-full max-w-[256px] items-center justify-center overflow-hidden rounded-xl">
+                <div className="pointer-events-none absolute bottom-[6%] left-1/2 h-[6%] w-1/2 -translate-x-1/2 rounded-[50%] bg-black/45 blur-[6px]" />
+                {frontSrc(sel) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={frontSrc(sel)}
+                    alt="아바타"
+                    draggable={false}
+                    className="pointer-events-none absolute inset-0 h-full w-full object-contain object-bottom"
+                    style={{ imageRendering: 'pixelated', transform: cssFlipped(sel) ? 'scaleX(-1)' : undefined }}
+                  />
+                ) : null}
+              </div>
+              {sel.equipment && sel.equipment.length > 0
+                ? (() => {
+                    const plan = setPlan(sel.equipment, nowShown);
+                    return (
+                      <div className="mt-2.5" aria-label="생성에 사용된 장비">
+                        <div className="flex h-5 items-center justify-between px-0.5">
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">생성에 사용된 장비</span>
+                          {plan.equip.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => askEquipSet(sel.equipment!)}
+                              disabled={equipPending}
+                              className="rounded-full border border-zinc-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-amber-600 transition active:scale-95 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-amber-400"
+                            >
+                              이 세트 장착
+                            </button>
+                          ) : plan.skipped.length === 0 ? (
+                            <span className="text-[10px] font-bold text-violet-500">모두 장착 중</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-1 grid grid-cols-3 gap-1.5">
+                          {sel.equipment.map((e) => {
+                            const bg = atlasBgStyle(e.key, 26);
+                            const st = chipState(e, nowShown);
+                            return (
+                              <button
+                                key={e.key}
+                                type="button"
+                                onClick={() => askEquipOne(e)}
+                                disabled={st !== 'can' || equipPending}
+                                aria-label={`${SLOT_KO[e.slot]} ${e.name} — ${st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}`}
+                                className={`relative flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 pt-1.5 pb-4 text-left transition active:scale-[0.98] ${
+                                  st === 'on'
+                                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'
+                                    : st === 'can'
+                                      ? 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950'
+                                      : 'border-zinc-200 bg-zinc-50 opacity-45 dark:border-zinc-800 dark:bg-zinc-950'
+                                }`}
+                              >
+                                {bg ? (
+                                  <span aria-hidden className="shrink-0 rounded-md bg-zinc-200 dark:bg-zinc-900" style={bg} />
+                                ) : (
+                                  <span aria-hidden className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-md bg-zinc-200 text-[9px] font-bold text-zinc-500 dark:bg-zinc-900">
+                                    {SLOT_KO[e.slot].slice(0, 1)}
+                                  </span>
+                                )}
+                                <span className="flex min-w-0 flex-col leading-tight">
+                                  <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{SLOT_KO[e.slot]}</span>
+                                  <span className="truncate text-[11px] font-bold text-zinc-800 dark:text-zinc-100">{e.name}</span>
+                                </span>
+                                <span
+                                  aria-hidden
+                                  className={`absolute right-1 bottom-1 rounded px-1 text-[8.5px] leading-[1.3] font-extrabold ${
+                                    st === 'on'
+                                      ? 'bg-violet-600 text-white'
+                                      : st === 'can'
+                                        ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
+                                        : 'bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                  }`}
+                                >
+                                  {st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()
+                : null}
+            </div>
+          </ModalLayout>
+        </ModalShell>
+      )}
       {/* 장비 장착 확인 — 무엇이 장착되고 같은 부위의 무엇이 해제되는지 부위별로 보여준다.
           장착은 외형 전용(강화·랭킹 무관)이라 경고 톤은 쓰지 않는다. */}
       {equipAsk && (
-        <ModalShell onClose={() => setEquipAsk(null)} onSubmit={doEquip} label="장비 장착 확인">
+        <ModalShell onClose={() => setEquipAsk(null)} onSubmit={doEquip} label="장비 장착 확인" stacked={bigOpen}>
           <ModalLayout
             title={equipAsk.kind === 'set' ? '이 세트 장착' : '장비 장착'}
             subtitle={equipAsk.kind === 'set' ? `${equipAsk.items.length}개 부위` : SLOT_KO[equipAsk.items[0]!.slot]}
@@ -591,6 +799,7 @@ export function ProfileSelector({
           onClose={() => setReturnAsk(false)}
           onSubmit={doReturn}
           label="아바타 반환 확인"
+          stacked={bigOpen}
         >
           <ModalLayout
             title="아바타 반환"
