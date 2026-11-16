@@ -289,10 +289,10 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
   function closeBattle() {
     setRun(null);
     setView('board');
-    // 다시 보기는 아무것도 바뀌지 않았다 — 다시 읽지 않고 기록 목록으로 돌아간다.
+    // 다시 보기는 아무것도 바뀌지 않았다 — 다시 읽지 않고 순위표로 돌아간다. (기록 팝업을 바로 다시 여는 건 전투 화면의
+    // 히스토리 칸 되돌리기와 엇갈려 열리지 않았다 — 11-16 검수. 일반 도전과 같은 동선으로 둔다.)
     if (replay) {
       setReplay(null);
-      setSheet('records');
       return;
     }
     router.refresh();
@@ -308,10 +308,21 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         showError(r.message);
         return;
       }
+      // 기록 팝업을 먼저 닫고, 그 팝업의 히스토리 칸 되돌리기(popstate)가 끝난 **뒤에** 전투 화면을 연다 — 같은 커밋에
+      // 닫고 열면 되돌리기와 새 칸 쌓기가 엇갈려, 전투를 닫을 때 한 칸 더 되돌아가 이전 페이지로 튕겼다(11-16 검수).
       setSheet(null);
-      setReplay({ ladder: r.ladder });
-      setRun(r.run);
-      setView('battle');
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('popstate', onPop);
+        setReplay({ ladder: r.ladder });
+        setRun(r.run);
+        setView('battle');
+      };
+      const onPop = () => setTimeout(go, 0);
+      window.addEventListener('popstate', onPop);
+      setTimeout(go, 600);
     });
   }
 
@@ -376,12 +387,16 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
           fx={fx}
           bgSrc={bgSrc}
           bossName={bossName}
-          retry={retryButton(() => {
-            // 다시 보기에서 재도전으로 넘어가면 다시 보기 상태를 버린다 — 새 판이 옛 기록 경주·닫기 동작을 물려받지 않게.
-            setReplay(null);
-            setRun(null);
-            setView('prep');
-          }, '재도전')}
+          // 다시 보기는 지난 판을 보는 것뿐이라 재도전 버튼을 두지 않는다(11-16 사용자) — '확인'만 남아 기록 팝업으로 돌아간다.
+          retry={
+            replay
+              ? null
+              : retryButton(() => {
+                  setReplay(null);
+                  setRun(null);
+                  setView('prep');
+                }, '재도전')
+          }
           onDone={closeBattle}
           ctl={battleCtl}
         />
