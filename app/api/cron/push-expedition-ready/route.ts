@@ -26,6 +26,11 @@ export async function GET(req: Request) {
   if (!isCronAuthorized(req)) return new Response('forbidden', { status: 403 });
   let sent = 0;
   let failed = 0;
+  // 묵은 귀환(24시간 넘게 못 보낸 것)은 보내지 않고 정리한다 — 강화 완료 알림과 같은 이유(11-16 검수 B7).
+  await db
+    .execute(sql`update expeditions set push_sent = true
+                   where status = 'running' and push_sent = false and complete_at < now() - interval '24 hours'`)
+    .catch((e: unknown) => console.warn('[push-expedition-ready] stale mark failed', e));
   for (;;) {
     const claimed = (await db.execute(sql`
       with target as (

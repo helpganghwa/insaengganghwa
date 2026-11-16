@@ -151,7 +151,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ mode: 'full', messages: [], users: {}, latestIds: EMPTY_LATEST });
     }
     const { mode, messages } = slice(full);
-    return NextResponse.json({ mode, ...normalize(messages as ChatMessageDto[]), latestIds });
+    // serverId — 클라가 노티점 '본 위치'를 서버별로 저장한다(11-16 검수 C8). lite가 첫 응답일 수 있어 여기에도 싣는다.
+    return NextResponse.json({ mode, ...normalize(messages as ChatMessageDto[]), latestIds, serverId });
   }
 
   const [blocked, [meChar], guild] = await Promise.all([

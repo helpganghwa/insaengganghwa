@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { josa } from 'josa';
 
 import { afterResponse } from '@/lib/push/defer';
+import { SENDABLE_SQL } from '@/lib/game/account/ban';
 import { logGuildAudit } from '@/lib/game/guild/audit';
 
 import { db } from '@/lib/db/client';
@@ -52,7 +53,9 @@ export async function activateDueBosses(serverId: number, scope?: CronScope): Pr
       // 구독이 있고 지금 이 서버에 있는 사람 전부(경계규칙 1). 토글(push_world_boss)은 sendPushToUsers가 다시 거른다.
       const members = (await db.execute(sql`
         select distinct p.id::text as user_id from profiles p join push_subscriptions ps on ps.user_id = p.id
-         where p.last_server_id = ${serverId} and p.push_world_boss`)) as unknown as { user_id: string }[];
+         where p.last_server_id = ${serverId} and p.push_world_boss and ${SENDABLE_SQL('p')}
+           -- 탈퇴·정지 계정과 그 서버에 캐릭터가 없는 계정은 뺀다(11-16 검수 B6).
+           and exists (select 1 from characters c where c.user_id = p.id and c.server_id = ${serverId})`)) as unknown as { user_id: string }[];
       await sendPushToUsers(members.map((m) => m.user_id), {
         title: '월드보스 출현',
         body: josa(`${b.zone_name}에 ${bossName}#{이} 나타났어요.`), // 짧게(10-11 사용자 B안) — 누르면 보스 상세.

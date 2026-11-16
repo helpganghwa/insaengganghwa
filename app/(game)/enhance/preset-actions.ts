@@ -8,6 +8,7 @@ import { makeErr, type ActionResult } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
+import { hasCharacterOn } from '@/lib/game/server-guard';
 import { db } from '@/lib/db/client';
 import { catalogItems, userEquipment, type Slot } from '@/lib/db/schema/equipment';
 import { liberatedItemRanks } from '@/lib/game/codex/ranking';
@@ -71,7 +72,10 @@ async function gate(bucket: 'enhance' | 'enhancePreset'): Promise<{ userId: stri
   if (await rateLimited(userId, bucket)) return { code: 'RATE_LIMITED' };
   const blocked = await actionBlock();
   if (blocked) return { code: blocked };
-  return { userId, serverId: await getActiveServerId() };
+  const serverId = await getActiveServerId();
+  // 그 서버에 캐릭터가 있을 때만(11-16 검수 A-L1) — 캐릭터 없는 서버를 가리키는 쿠키로 빈 프리셋 행이 생기지 않게.
+  if (!(await hasCharacterOn(userId, serverId))) return { code: 'NO_CHARACTER_ON_SERVER' };
+  return { userId, serverId };
 }
 
 function toCode(e: unknown): string {

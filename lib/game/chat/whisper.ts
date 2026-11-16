@@ -5,6 +5,7 @@ import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { actionBlock } from '@/lib/game/action-gate';
+import { gateMessage } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -157,7 +158,7 @@ export async function sendWhisperCore(peerUserId: string, raw: string): Promise<
   if (blocked) {
     return {
       status: 'error',
-      message: blocked === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.',
+      message: gateMessage(blocked),
     };
   }
 

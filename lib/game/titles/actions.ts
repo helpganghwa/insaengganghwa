@@ -25,6 +25,9 @@ export async function setRepresentativeTitleAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false, error: 'UNAUTHENTICATED' };
+  // 정지·점검·닫힌 서버(11-16 검수 C7).
+  const blocked = await actionBlock();
+  if (blocked) return { ok: false, error: blocked };
 
   const serverId = await getActiveServerId();
   if (code !== null) {
@@ -60,6 +63,8 @@ export async function toggleFavoriteTitleAction(
 ): Promise<{ ok: true; favorited: boolean } | { ok: false; error: string }> {
   const userId = await getSessionUserId();
   if (!userId) return { ok: false, error: 'UNAUTHENTICATED' };
+  const blocked = await actionBlock(); // 11-16 검수 C7
+  if (blocked) return { ok: false, error: blocked };
   const serverId = await getActiveServerId();
 
   return db.transaction(async (tx) => {

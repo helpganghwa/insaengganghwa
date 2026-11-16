@@ -5,6 +5,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { actionBlock } from '@/lib/game/action-gate';
+import { gateMessage } from '@/lib/game/action-result';
 import { dualWindowLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -43,7 +44,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   const __b = await actionBlock(); // 밴·점검 캐시 — 저비용.
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
 
   // 본문 필터 먼저(동기·무비용) — 필터 탈락 입력이 쿨다운 토큰을 소모하지 않게.
   const check = checkAndFilterChatBody(raw);

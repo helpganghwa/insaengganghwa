@@ -7,6 +7,7 @@ import { and, count, desc, eq, ne, sql } from 'drizzle-orm';
 
 import { getSessionUserId } from '@/lib/auth/session';
 import { actionBlock } from '@/lib/game/action-gate';
+import { gateMessage } from '@/lib/game/action-result';
 import { activateProfile } from '@/lib/game/profile/active';
 import { flipProfileImage } from '@/lib/game/profile/flip';
 import { requestAvatarReturn, AvatarReturnError, type AvatarReturnReason } from '@/lib/game/profile/return';
@@ -53,7 +54,7 @@ export async function setActiveProfile(profileId: string): Promise<ActionState> 
   if (await rateLimited(userId, 'profileEdit'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
 
   // 아바타는 서버별 자산(생성비도 그 서버 지갑에서 차감) — 다른 서버 아바타를 활성 서버 캐릭터 대표로 다는 교차 설정 차단.
   // 규칙(유지 시작 리셋·도전 과제 마킹)은 lib/game/profile/active.ts — 월드보스 추천 장착(장비+아바타 한 번에)과 같은 함수(10-12).
@@ -75,7 +76,7 @@ export async function flipProfile(
   if (await rateLimited(userId, 'profileEdit'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
   const serverId = await getActiveServerId();
   const h = await headers();
   const origin = `${h.get('x-forwarded-proto') ?? 'https'}://${h.get('x-forwarded-host') ?? h.get('host') ?? 'ganghwa.app'}`;
@@ -99,7 +100,7 @@ export async function returnProfile(profileId: string, reason = 'etc'): Promise<
   if (await rateLimited(userId, 'profileEdit'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
 
   const serverId = await getActiveServerId();
   const safeReason: AvatarReturnReason = ['equipment_mismatch', 'quality', 'etc'].includes(reason)
@@ -130,7 +131,7 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
   if (await rateLimited(userId, 'profileEdit'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
   if (!(await ownedProfileId(userId, profileId)))
     return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
 
@@ -148,7 +149,8 @@ export async function deleteProfile(profileId: string): Promise<ActionState> {
     .from(userProfiles)
     .where(and(eq(userProfiles.id, profileId), eq(userProfiles.userId, userId)))
     .limit(1);
-  if (!target) return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
+  // 지금 서버의 아바타만(11-16 검수 C7) — 다른 서버(닫힌 서버 포함, 자산 동결) 아바타를 id로 지우지 않게.
+  if (!target || target.serverId !== (await getActiveServerId())) return { status: 'error', message: '아바타를 찾을 수 없습니다.' };
   // 기본 아바타(대장장이)는 삭제 불가 — 신고 처리 시 폴백으로 보존.
   if ((target.options as { isDefault?: boolean } | null)?.isDefault === true) {
     return { status: 'error', message: '기본 아바타는 삭제할 수 없습니다.' };
@@ -206,7 +208,7 @@ export async function equipSnapshotItems(
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.', equipped: 0 };
   const __b = await actionBlock();
   if (__b)
-    return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.', equipped: 0 };
+    return { status: 'error', message: gateMessage(__b), equipped: 0 };
 
   // bigint id 문자열만, 중복 제거, 부위 수(3) 상한 — 소유 검증은 equipItem(user_id 조건)이 한다.
   const uniq = [...new Set(ids.filter((s) => typeof s === 'string' && /^\d{1,19}$/.test(s)))].slice(0, 3);
@@ -217,12 +219,14 @@ export async function equipSnapshotItems(
     SLOT_TAKEN: '같은 부위를 방금 다른 곳에서 장착했어요. 다시 시도해 주세요.',
     SERVER_CLOSED: '운영을 종료한 서버의 장비예요.',
   };
+  // 지금 서버 장비만(11-16 검수 L2) — 다른 서버의 내 장비 id를 보내도 그 서버 장착이 바뀌지 않게.
+  const serverId = await getActiveServerId();
   let equipped = 0;
   let equippedSid: number | null = null;
   let failure: string | null = null;
   for (const id of uniq) {
     try {
-      equippedSid = await equipItem(userId, BigInt(id));
+      equippedSid = await equipItem(userId, BigInt(id), serverId);
       equipped += 1;
     } catch (e) {
       failure = e instanceof EquipError ? MSG[e.code] : '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
@@ -256,7 +260,7 @@ export async function reorderProfiles(ids: string[]): Promise<ActionState> {
   if (await rateLimited(userId, 'profileEdit'))
     return { status: 'error', message: '잠시 후 다시 시도해 주세요.' };
   const __b = await actionBlock();
-  if (__b) return { status: 'error', message: __b === 'BANNED' ? '이용이 제한된 계정입니다.' : '서버 점검 중입니다.' };
+  if (__b) return { status: 'error', message: gateMessage(__b) };
 
   const serverId = await getActiveServerId();
   const r = await db.transaction((tx) => reorderUserProfiles(tx, userId, serverId, ids));

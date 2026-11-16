@@ -73,6 +73,8 @@ describe.skipIf(!USER)('닫힌 서버 — 캐릭터가 있어도 운영 중인 �
       await tempServer(tx, 9105, 'open');
       expect(await countServers()).toBe(before + 1);
       expect(await isServerClosedCached(9105)).toBe(false);
+      // 없는 서버(위조 쿠키)도 닫힌 것으로 막는다(11-16 검수 C3).
+      expect(await isServerClosedCached(9199)).toBe(true);
     });
   });
 });

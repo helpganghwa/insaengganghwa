@@ -16,9 +16,9 @@ export class EquipError extends Error {
 }
 
 /** 장착한 장비의 서버 id를 돌려준다 — 호출부가 장비 칭호 즉시 확인(grantEquipmentTitles)에 쓴다. */
-export async function equipItem(userId: string, userEquipmentId: bigint): Promise<number> {
+export async function equipItem(userId: string, userEquipmentId: bigint, serverId?: number): Promise<number> {
   try {
-    return await equipItemTx(userId, userEquipmentId);
+    return await equipItemTx(userId, userEquipmentId, serverId);
   } catch (e) {
     // 동시 장착 레이스 — 다른 요청이 같은 슬롯을 먼저 점유(부분 UNIQUE ue_user_slot_uq 충돌). 재시도 여지 안내.
     if (isUniqueViolation(e)) throw new EquipError('SLOT_TAKEN');
@@ -49,8 +49,8 @@ export async function equipItems(userId: string, userEquipmentIds: bigint[], ser
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-function equipItemTx(userId: string, userEquipmentId: bigint): Promise<number> {
-  return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId));
+function equipItemTx(userId: string, userEquipmentId: bigint, serverId?: number): Promise<number> {
+  return db.transaction((tx) => equipInTx(tx, userId, userEquipmentId, serverId));
 }
 
 /** serverId를 주면 그 서버 장비만(아니면 NOT_FOUND) — 무한의 탑처럼 지금 서버 장비만 다루는 곳. */

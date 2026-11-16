@@ -4,6 +4,8 @@ import { eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { actionBlock } from '@/lib/game/action-gate';
+import { gateMessage } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { db } from '@/lib/db/client';
 import { isUniqueViolation } from '@/lib/db/errors';
@@ -29,6 +31,9 @@ export async function reportProfile(
 ): Promise<ReportState> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
+  // 정지·점검·닫힌 서버(11-16 검수 C7) — 정지 계정이 신고로 남의 아바타 신고 수를 올리지 못하게.
+  const blocked = await actionBlock();
+  if (blocked) return { status: 'error', message: gateMessage(blocked) };
   // 신고 스팸·reportCount 인플레이션 방어(대상만 바꿔 무제한 신고 차단).
   if (await rateLimited(userId, 'report'))
     return { status: 'error', message: '신고가 너무 잦습니다. 잠시 후 다시 시도해 주세요.' };

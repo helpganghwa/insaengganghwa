@@ -1,7 +1,5 @@
 import 'server-only';
 
-import { inArray } from 'drizzle-orm';
-
 import { db } from '@/lib/db/client';
 import { servers } from '@/lib/db/schema/server';
 
@@ -11,11 +9,9 @@ import { servers } from '@/lib/db/schema/server';
  * closed만 제외.
  */
 export async function openServerIds(): Promise<number[]> {
-  const rows = await db
-    .select({ id: servers.id })
-    .from(servers)
-    .where(inArray(servers.status, ['open', 'full']))
-    .orderBy(servers.id);
-  const ids = rows.map((r) => r.id);
-  return ids.length > 0 ? ids : [1];
+  const rows = await db.select({ id: servers.id, status: servers.status }).from(servers).orderBy(servers.id);
+  // 서버 표가 비어 있을 때(초기 로컬 DB)만 1번으로 본다. 행이 있는데 전부 닫혔으면 빈 목록 — 닫힌 서버에서 크론이
+  // 돌면 동결된 자산에 보상·우편이 쌓인다(11-16 검수 B9).
+  if (rows.length === 0) return [1];
+  return rows.filter((r) => r.status === 'open' || r.status === 'full').map((r) => r.id);
 }

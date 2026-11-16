@@ -6,6 +6,7 @@
  * 유저 랭킹 6종 1위 교체는 준실시간(15분)이라 별도 cron(/api/cron/rank-leader)으로 분리됨.
  */
 import { isCronAuthorized } from '@/lib/auth/cron-auth';
+import { beatCron } from '@/lib/cron/heartbeat';
 import { openServerIds } from '@/lib/game/server-list';
 import { runGuildRankAchievements } from '@/lib/game/guild/rank-achievements';
 
@@ -27,6 +28,8 @@ export async function GET(req: Request) {
       }
     }
     const ok = results.every((r) => !('error' in r));
+    // 성공 시에만 — 정지(한 서버라도 실패 포함)를 dead-man이 잡는다(11-16 검수 B8).
+    if (ok) await beatCron('guild-rank-achv');
     return Response.json({ ok, results, kind: 'guild-rank-achv' }, { status: ok ? 200 : 500 });
   } catch (e) {
     console.error('[guild-rank-achv]', e);

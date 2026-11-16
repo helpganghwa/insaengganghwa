@@ -78,7 +78,7 @@ export async function countServers(): Promise<number> {
 }
 
 /**
- * 활성 서버가 닫혔는가 — 서버 액션 공통 관문(action-gate)이 요청마다 부른다. 20초 모듈 캐시(system-mode와 같은 방식)라
+ * 활성 서버가 닫혔거나 없는가 — 서버 액션 공통 관문(action-gate)이 요청마다 부른다. 20초 모듈 캐시(system-mode와 같은 방식)라
  * DB 왕복은 서버당 20초에 1번. 조회 실패는 '열림'으로 본다(fail-open — 관문 하나가 전 액션을 멈추지 않게).
  */
 const closedCache = new Map<number, { closed: boolean; at: number }>();
@@ -87,8 +87,10 @@ export async function isServerClosedCached(serverId: number): Promise<boolean> {
   const hit = closedCache.get(serverId);
   if (hit && Date.now() - hit.at < CLOSED_TTL_MS) return hit.closed;
   try {
-    const rows = (await db.execute(sql`select 1 as ok from servers where id = ${serverId} and status = 'closed' limit 1`)) as unknown as unknown[];
-    const closed = rows.length > 0;
+    // 없는 서버도 닫힌 것으로 본다(11-16 검수 C3) — 위조한 srv 쿠키로 액션을 부르면 없는 서버 번호로 파견·프리셋 같은
+    // 빈 행이 생겼다. 서버 행은 지우지 않으므로(닫기만 한다) 정상 유저가 여기에 걸릴 일은 없다.
+    const rows = (await db.execute(sql`select status from servers where id = ${serverId} limit 1`)) as unknown as { status: string }[];
+    const closed = rows.length === 0 || rows[0]!.status === 'closed';
     closedCache.set(serverId, { closed, at: Date.now() });
     return closed;
   } catch {

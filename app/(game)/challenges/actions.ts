@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId, shouldHidePaidContent } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
+import { hasCharacterOn } from '@/lib/game/server-guard';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
 import { claimChallenge, claimAllChallenges } from '@/lib/game/challenges/claim';
@@ -69,6 +70,8 @@ export async function markClientChallengeAction(eventId: string): Promise<boolea
   const userId = await getSessionUserId();
   if (!userId) return false;
   const serverId = await getActiveServerId();
+  // 그 서버에 캐릭터가 있을 때만(11-16 검수 C7) — 위조 쿠키·닫힌 서버에 빈 행이 생기지 않게. false면 클라가 다음에 다시 보낸다.
+  if (!(await hasCharacterOn(userId, serverId))) return false;
   await markChallengeEvent(db, userId, serverId, eventId);
   return true;
 }

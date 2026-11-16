@@ -136,6 +136,11 @@ export const WHISPER_OPEN_EVENT = 'ig:whisper-open';
 
 type LatestIds = { all: string | null; guild: string | null; whisper: string | null };
 const EMPTY_IDS: LatestIds = { all: null, guild: null, whisper: null };
+/** 저장된 '본 위치'에서 숫자 id만 살린다 — 수정 전 저장된 시스템 라인 id(gsys-/sys-)는 어떤 최신 id와도 맞지 않아 버린다. */
+function cleanSeen(d: Partial<LatestIds> | null | undefined): LatestIds {
+  const num = (v: unknown) => (typeof v === 'string' && /^\d+$/.test(v) ? v : null);
+  return { all: num(d?.all), guild: num(d?.guild), whisper: num(d?.whisper) };
+}
 
 type MiniProfile = {
   userId: string;
@@ -280,6 +285,10 @@ export function ChatDock() {
   const seenRef = useRef<LatestIds>(EMPTY_IDS);
   // 저장된 seen이 없는 첫 방문 — 첫 응답의 최신 id를 그대로 확인 처리(설치 직후 점 방지).
   const seenPrimedRef = useRef(false);
+  // 서버별 '본 위치' 저장소와, 지금 seenRef가 어느 서버 것인지(null = 아직 첫 응답 전).
+  const seenStoreRef = useRef<Record<string, LatestIds>>({});
+  const seenLegacyRef = useRef<LatestIds | null>(null);
+  const seenSidRef = useRef<number | null>(null);
   const whisperUnreadRef = useRef<number | null>(null);
   const myGuildIdRef = useRef<string | null>(null);
   // 길드 채널 id 로컬 캐시(서버별) — 아래 rememberGid/GID_KEY 주석 참조.
@@ -327,11 +336,15 @@ export function ChatDock() {
     try {
       const raw = localStorage.getItem(SEEN_KEY);
       if (raw) {
-        const d = JSON.parse(raw) as Partial<LatestIds>;
-        // 숫자 id만 복원 — 수정 전 저장된 시스템 라인 id(gsys-/sys-)는 버린다(어떤 최신 id와도 못 맞음).
-        const num = (v: unknown) => (typeof v === 'string' && /^\d+$/.test(v) ? v : null);
-        seenRef.current = { all: num(d.all), guild: num(d.guild), whisper: num(d.whisper) };
-        seenPrimedRef.current = true;
+        // 서버별 저장(11-16 검수 C8) — { v: 2, by: { [serverId]: ids } }. 채팅 id는 전 서버 공통 순번이라 한 값으로 두면
+        // 같은 기기에서 서버를 바꿀 때마다 점이 잘못 켜졌다. 어느 서버 것인지는 첫 응답의 serverId로 정한다(loadSeenFor).
+        // 옛 모양(서버 구분 없는 한 값)은 처음 확인되는 서버 몫으로 한 번만 쓴다.
+        const d = JSON.parse(raw) as { v?: unknown; by?: Record<string, Partial<LatestIds>> } & Partial<LatestIds>;
+        if (d.v === 2 && d.by && typeof d.by === 'object') {
+          for (const [k, v] of Object.entries(d.by)) seenStoreRef.current[k] = cleanSeen(v);
+        } else {
+          seenLegacyRef.current = cleanSeen(d);
+        }
       }
     } catch {
       /* ignore */
@@ -401,6 +414,22 @@ export function ChatDock() {
       return next;
     }
   };
+  /** 지금 서버의 '본 위치'를 저장소에 넣고 통째로 저장한다. 서버가 아직 정해지지 않았으면 저장하지 않는다. */
+  const persistSeen = () => {
+    const sid = seenSidRef.current;
+    if (sid == null) return;
+    seenStoreRef.current = { ...seenStoreRef.current, [String(sid)]: seenRef.current };
+    localStorage.setItem(SEEN_KEY, JSON.stringify({ v: 2, by: seenStoreRef.current }));
+  };
+  /** 응답이 알려 준 서버의 '본 위치'를 불러온다 — 한 화면 안에서 서버는 바뀌지 않으므로(전환은 새로 불러오기) 처음 한 번만. */
+  const loadSeenFor = (sid: number) => {
+    if (seenSidRef.current === sid) return;
+    seenSidRef.current = sid;
+    const saved = seenStoreRef.current[String(sid)] ?? seenLegacyRef.current;
+    seenLegacyRef.current = null;
+    seenRef.current = saved ?? EMPTY_IDS;
+    seenPrimedRef.current = !!saved;
+  };
   const recomputeDot = useCallback(() => {
     const ids = latestIdsRef.current;
     const s = seenRef.current;
@@ -416,7 +445,7 @@ export function ChatDock() {
       if (!id || !/^\d+$/.test(id) || seenRef.current[ch] === id) return;
       seenRef.current = { ...seenRef.current, [ch]: id };
       try {
-        localStorage.setItem(SEEN_KEY, JSON.stringify(seenRef.current));
+        persistSeen();
       } catch {
         /* ignore */
       }
@@ -433,7 +462,7 @@ export function ChatDock() {
       seenPrimedRef.current = true;
       seenRef.current = { ...ids };
       try {
-        localStorage.setItem(SEEN_KEY, JSON.stringify(seenRef.current));
+        persistSeen();
       } catch {
         /* ignore */
       }
@@ -737,8 +766,10 @@ export function ChatDock() {
           ...m,
         }));
         setEnabled(true);
+        // 서버 번호는 노티점보다 먼저 — '본 위치'를 그 서버 것으로 불러와야 비교가 맞는다(11-16 검수 C8).
+        if (typeof data.serverId === 'number' && Number.isInteger(data.serverId)) loadSeenFor(data.serverId);
         // 미니바 노티점 — 채널별 최신 id는 탭과 무관하게 항상 흡수한다.
-        if (data.latestIds) {
+        if (data.latestIds && seenSidRef.current != null) {
           latestIdsRef.current = {
             all: newerId(latestIdsRef.current.all, data.latestIds.all ?? null),
             guild: newerId(latestIdsRef.current.guild, data.latestIds.guild ?? null),

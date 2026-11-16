@@ -29,7 +29,8 @@ export async function claimSongpyeonStepAction(
 ): Promise<ActionResult<{ step: number; diamond: number; boxes: number }>> {
   const userId = await getSessionUserId();
   if (!userId) return err('AUTH');
-  if (await actionBlock()) return err('BLOCKED');
+  const blocked = await actionBlock(); // 관문 코드 그대로 — 닫힌 서버·점검·정지 문구가 갈린다(11-16 검수 C6)
+  if (blocked) return err(blocked);
   if (await rateLimited(userId, 'chuseok')) return err('RATE');
   const serverId = await getActiveServerId();
   const r = await claimSongpyeonStep(userId, serverId, Math.floor(Number(step)));
@@ -46,7 +47,8 @@ export async function exchangeSongpyeonAction(
 ): Promise<ActionResult<{ cost: number; diamond: number; boxes: number; available: number }>> {
   const userId = await getSessionUserId();
   if (!userId) return err('AUTH');
-  if (await actionBlock()) return err('BLOCKED');
+  const blocked = await actionBlock(); // 관문 코드 그대로 — 닫힌 서버·점검·정지 문구가 갈린다(11-16 검수 C6)
+  if (blocked) return err(blocked);
   if (await rateLimited(userId, 'chuseok')) return err('RATE');
   if (!(Object.hasOwn(SONGPYEON_EXCHANGE, kind))) return err('BAD_COUNT');
   const serverId = await getActiveServerId();

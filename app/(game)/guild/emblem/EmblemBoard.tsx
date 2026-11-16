@@ -106,7 +106,10 @@ export function EmblemBoard({
       let alive = false;
       let startAt: number | null = null;
       try {
-        const { at, base } = JSON.parse(raw) as { at: number; base: number };
+        // g = 생성을 건 길드 — 같은 기기에서 서버를 바꿔 다른 길드 문양 화면에 와도 '생성 중'이 옮겨 붙지 않게(11-16 검수 C8).
+        // 다른 길드 표시는 지우지도 않는다 — 원래 길드로 돌아가면 그대로 이어 보여야 한다.
+        const { at, base, g } = JSON.parse(raw) as { at: number; base: number; g?: string };
+        if (g != null && g !== guildName) return;
         alive = Date.now() - at < GEN_TTL_MS && emblems.length <= base;
         startAt = at;
       } catch {
@@ -125,7 +128,7 @@ export function EmblemBoard({
       }
     };
     sync();
-  }, [emblems]);
+  }, [emblems, guildName]);
 
   /** 생성 — 라우트 핸들러 fetch(서버 액션 트랜지션 밖)라 생성 중에도 앱이 안 멈춘다. */
   const generate = async () => {
@@ -136,7 +139,7 @@ export function EmblemBoard({
     const at = Date.now();
     setGenStartMs(at);
     try {
-      localStorage.setItem(GEN_KEY, JSON.stringify({ at, base: list.length }));
+      localStorage.setItem(GEN_KEY, JSON.stringify({ at, base: list.length, g: guildName }));
     } catch {
       /* noop */
     }

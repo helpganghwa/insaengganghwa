@@ -22,6 +22,21 @@ export type ActionResult<T = unknown> = ({ status: 'success' } & T) | ErrorResul
  */
 const FALLBACK_MESSAGE = '지금은 처리할 수 없어요. 잠시 후 다시 시도해 주세요.';
 
+/**
+ * 공통 관문(actionBlock) 코드의 기본 문구 — 도메인 맵에 없으면 이것을 쓴다(11-16 검수 C6). 종전엔 닫힌 서버도
+ * '서버 점검 중'이나 일반 안내로 떴다.
+ */
+const GATE_MESSAGES: Record<string, string> = {
+  BANNED: '이용이 제한된 계정입니다.',
+  MAINTENANCE: '서버 점검 중입니다.',
+  SERVER_CLOSED: '운영을 종료한 서버예요.',
+};
+
+/** 공통 관문 코드 → 유저 문구(관문 코드가 아니면 일반 안내). */
+export function gateMessage(code: string): string {
+  return GATE_MESSAGES[code] ?? FALLBACK_MESSAGE;
+}
+
 export function makeErr(msg: Record<string, string>) {
-  return (code: string): ErrorResult => ({ status: 'error', code, message: msg[code] ?? FALLBACK_MESSAGE });
+  return (code: string): ErrorResult => ({ status: 'error', code, message: msg[code] ?? GATE_MESSAGES[code] ?? FALLBACK_MESSAGE });
 }

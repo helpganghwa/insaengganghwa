@@ -7,6 +7,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { makeErr } from '@/lib/game/action-result';
 import { rateLimited } from '@/lib/ratelimit';
 import { actionBlock } from '@/lib/game/action-gate';
+import { getActiveServerId } from '@/lib/game/servers';
 import { equipItem, unequipItem, EquipError } from '@/lib/game/equipment/equip';
 import { grantEquipmentTitles } from '@/lib/game/titles/equipment-titles';
 
@@ -40,7 +41,8 @@ export async function equipAction(id: string) {
   const __b = await actionBlock();
   if (__b) return err(__b);
   try {
-    const sid = await equipItem(u, BigInt(id));
+    // 지금 서버 장비만(11-16 검수) — 다른 서버의 내 장비 id로 그 서버 장착을 바꾸지 않게.
+    const sid = await equipItem(u, BigInt(id), await getActiveServerId());
     // 장비 칭호 즉시 확인(2026-11-06) — 바꿔 낀 조합이 칭호 화면을 열지 않아도 바로 발견된다(응답 뒤, 알림 없음).
     after(() => grantEquipmentTitles(u, sid));
     revalidate();

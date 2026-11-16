@@ -49,6 +49,13 @@ export async function GET(req: Request) {
   let sent = 0;
   let failed = 0;
 
+  // 묵은 완료(24시간 넘게 못 보낸 것)는 보내지 않고 정리한다(11-16 검수 B7) — 다른 서버에 가 있거나 알림을 끈 사람의 잡이
+  // 쌓여, 그 서버로 돌아온 순간 며칠 치 '강화 완료'가 한꺼번에 오고 매분 조회 범위도 계속 넓어졌다.
+  await db
+    .execute(sql`update enhancement_jobs set push_sent = true
+                   where status = 'running' and push_sent = false and complete_at < now() - interval '24 hours'`)
+    .catch((e: unknown) => console.warn('[push-enhance-ready] stale mark failed', e));
+
   for (;;) {
   // 원자 클레임: 단일 UPDATE 문으로 push_sent=true 마킹하면서 발송 대상 RETURNING.
   // 같은 잡이 동시 cron에서 두 번 select되지 않도록 FOR UPDATE SKIP LOCKED.

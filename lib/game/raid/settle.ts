@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { raids, raidParticipants, raidRewards } from '@/lib/db/schema/raid';
 import { sendPushToUsers } from '@/lib/push/send';
+import { afterResponse } from '@/lib/push/defer';
 import { aggregatePhaseDrops, raidPhasesCleared } from './drops';
 import { RAID_BOSSES } from './bosses';
 import { RAID_TIERS, raidTierOf } from '@/lib/game/balance';
@@ -128,14 +129,16 @@ export async function settleRaid(
       .where(
         and(inArray(profiles.id, result.winnerIds!), eq(profiles.lastServerId, result.serverId!)),
       );
-    sendPushToUsers(targets.map((t) => t.uid), {
+    // 응답 뒤에 보낸다(11-16 검수 B5) — 종전엔 기다리지 않는 약속이라 크론이 마지막 레이드를 정산하고 바로 끝나면 알림이 버려질 수 있었다.
+    const ids = targets.map((t) => t.uid);
+    afterResponse(() => sendPushToUsers(ids, {
       title: '레이드 종료',
       body: `${bossName} 레이드(${RAID_TIERS[result.tier].label})가 종료되었습니다 — 보상 확인 (페이즈 ${result.phasesCleared}돌파)`,
       url: `/raid/${input.raidId.toString()}`,
       serverId: result.serverId!,
       tag: `raid-${input.raidId.toString()}`,
       category: 'raid',
-    }).catch((e) => console.warn('[push] raid settle send failed', e));
+    }));
   }
 
   return {

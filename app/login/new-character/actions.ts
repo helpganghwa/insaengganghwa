@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { actionBlock } from '@/lib/game/action-gate';
 import { CharacterError, createCharacterAuto, touchLastServer, canEnterServer } from '@/lib/game/server-select';
 import { listServers } from '@/lib/game/servers';
 
@@ -14,6 +15,10 @@ import { listServers } from '@/lib/game/servers';
 export async function startOnServerAction(serverId: number): Promise<void> {
   const userId = await getSessionUserId();
   if (!userId) redirect('/login');
+  // 정지·점검 중에는 새 캐릭터를 만들지 않는다(11-16 검수 C7). 닫힌 서버(SERVER_CLOSED)는 통과 — /server-closed에서
+  // 새 서버로 시작하는 길이 바로 이 액션이고, 그때 쿠키는 아직 닫힌 서버를 가리킨다.
+  const blocked = await actionBlock();
+  if (blocked === 'BANNED' || blocked === 'MAINTENANCE') redirect('/login');
   const open = (await listServers()).find((s) => s.id === serverId && s.status === 'open');
   if (!open) redirect('/login');
 

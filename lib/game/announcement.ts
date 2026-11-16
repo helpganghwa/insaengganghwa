@@ -130,13 +130,15 @@ export async function castPollVote(
   userId: string,
   announcementId: bigint,
   optionId: string,
+  serverId: number,
 ): Promise<{ ok: true } | { ok: false; reason: 'NOT_FOUND' | 'BAD_OPTION' | 'CLOSED' }> {
   const [a] = await db
-    .select({ poll: announcements.poll, published: announcements.published })
+    .select({ poll: announcements.poll, published: announcements.published, serverId: announcements.serverId })
     .from(announcements)
     .where(eq(announcements.id, announcementId))
     .limit(1);
-  if (!a || !a.published || !a.poll) return { ok: false, reason: 'NOT_FOUND' };
+  // 서버를 정한 공지는 그 서버에서만 투표한다(11-16 검수 C7) — 화면에 안 보이는 다른 서버 공지에 id로 투표하던 길.
+  if (!a || !a.published || !a.poll || (a.serverId != null && a.serverId !== serverId)) return { ok: false, reason: 'NOT_FOUND' };
   const opt = a.poll.options.find((o) => o.id === optionId);
   if (!opt) return { ok: false, reason: 'BAD_OPTION' };
   if (a.poll.closesAtIso && new Date(a.poll.closesAtIso).getTime() < Date.now())

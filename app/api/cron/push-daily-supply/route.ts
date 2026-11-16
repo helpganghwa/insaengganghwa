@@ -70,6 +70,8 @@ export async function GET(req: Request) {
     from profiles p
     inner join push_subscriptions s on s.user_id = p.id
     where p.id > ${cursor}::uuid and ${SENDABLE_SQL('p')}
+      -- 운영 중인 서버에 캐릭터가 있는 계정만(11-16 검수 B4) — 닫힌 서버에만 있거나 캐릭터를 만들지 않은 계정은 받을 보급이 없다.
+      and exists (select 1 from characters c join servers sv on sv.id = c.server_id where c.user_id = p.id and sv.status <> 'closed')
     order by user_id
   `)) as unknown as Row[];
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 
 import { getSessionUserId } from '@/lib/auth/session';
+import { actionBlock } from '@/lib/game/action-gate';
 import { getActiveServerId } from '@/lib/game/servers';
 import { rateLimited } from '@/lib/ratelimit';
 import { getGuildPermState } from '@/lib/game/guild/perm-guard';
@@ -26,6 +27,9 @@ export const maxDuration = 180;
 export async function POST() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+  // 정지·점검·닫힌 서버(11-16 검수 C4) — 라우트라 서버 액션 관문을 거치지 않아 유료 생성(Pixellab)이 그대로 돌았다.
+  const blocked = await actionBlock();
+  if (blocked) return NextResponse.json({ ok: false, error: blocked }, { status: 403 });
   if (await rateLimited(userId, 'guild')) {
     return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
   }
