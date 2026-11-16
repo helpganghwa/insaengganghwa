@@ -1,7 +1,7 @@
 import { getSessionUserId } from '@/lib/auth/session';
 import { getActiveServerId } from '@/lib/game/servers';
 import { withTimeout } from '@/lib/db/with-timeout';
-import { FRIEND_CAP, getFriends, getRequests, type FriendUser } from '@/lib/game/friends';
+import { FRIEND_CAP, getFriends, getRequests, getTitleBriefsByUsers, type FriendUser } from '@/lib/game/friends';
 import { getGuildBriefsByUsers } from '@/lib/game/guild';
 
 import { FriendsTabs } from './FriendsTabs';
@@ -24,12 +24,17 @@ export default async function FriendsPage() {
   // 길드 문양 일괄 부착(목록·받은·보낸 전체 1쿼리). 실패해도 목록은 표시.
   const ids = [...friends, ...requests.incoming, ...requests.outgoing].map((u) => u.userId);
   const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
-    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+    () => new Map<string, { emblemUrl: string | null; name: string; executorZone?: string | null; executorZoneRegion?: string | null }>(),
+  );
+  // 대표 칭호(11-16 IIIIIIII 건의) — 채팅과 같은 재검증. 실패해도 목록은 표시.
+  const titleMap = await getTitleBriefsByUsers(ids, serverId, guildMap).catch(
+    () => new Map<string, { titleCode: string | null; executorZone: string | null; executorZoneRegion: string | null }>(),
   );
   const attach = (u: FriendUser): FriendUser => ({
     ...u,
     guildEmblemUrl: guildMap.get(u.userId)?.emblemUrl ?? null,
     guildName: guildMap.get(u.userId)?.name ?? null,
+    ...(titleMap.get(u.userId) ?? {}),
   });
 
   return (

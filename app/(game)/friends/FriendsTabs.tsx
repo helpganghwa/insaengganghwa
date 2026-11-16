@@ -8,6 +8,7 @@ import { ModalShell } from '@/components/ModalShell';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
 import { GuildBadge } from '@/components/GuildBadge';
+import { TitleTag } from '@/components/TitleTag';
 import { LastSeen } from '@/components/LastSeen';
 import { Avatar } from './Avatar';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
@@ -74,8 +75,8 @@ function Row({
 }) {
   return (
     <li>
-      {/* 한 줄 밀도 — 종전엔 닉네임과 길드를 2줄로 써 한 화면에 6명뿐이었다. 길드를 같은 줄로
-          옮기고 접속 표시를 우측으로 보내 10명이 들어온다(2026-08-02). */}
+      {/* 밀도 — 접속 표시를 우측으로 보내고 행 높이를 아바타(h-9)에 맞춰 한 화면에 10명이 들어온다(2026-08-02).
+          이름 칸은 두 줄(닉네임·칭호 / 길드)이지만 높이는 그대로다(11-16). */}
       <div
         role="button"
         tabIndex={0}
@@ -83,14 +84,20 @@ function Row({
         className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 transition active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:active:bg-zinc-900"
       >
         <Avatar src={u.profileSouth} box={u.faceBox} size="h-9 w-9" />
-        <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-          <span className="truncate text-[13px] font-bold">{u.nickname}</span>
-          <GuildBadge
-            emblemUrl={u.guildEmblemUrl ?? null}
-            name={u.guildName ?? null}
-            size={11}
-            className="min-w-0 text-[10px] font-medium text-zinc-400"
-          />
+        {/* 두 줄(11-16 사용자 B안) — 윗줄 닉네임·대표 칭호, 아랫줄 길드. 줄 높이는 아바타(h-9)와 같아 한 화면 인원은 그대로,
+            한 줄에 칭호까지 넣으면 닉네임·길드가 잘리던 것을 피한다. */}
+        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-[13px] font-bold">{u.nickname}</span>
+            {u.titleCode ? (
+              <TitleTag code={u.titleCode} executorZone={u.executorZone ?? null} executorZoneRegion={u.executorZoneRegion ?? null} className="min-w-0 shrink-0 text-[10px]" />
+            ) : null}
+          </span>
+          {u.guildName ? (
+            <span className="mt-0.5 flex min-w-0">
+              <GuildBadge emblemUrl={u.guildEmblemUrl ?? null} name={u.guildName} size={11} className="min-w-0 text-[10px] font-medium text-zinc-400" />
+            </span>
+          ) : null}
         </span>
         {showSeen && (
           <LastSeen at={u.lastSeenAt ?? null} plain className="shrink-0 text-[10px] text-zinc-400" />

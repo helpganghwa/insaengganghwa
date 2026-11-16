@@ -9,6 +9,7 @@ import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { userProfiles } from '@/lib/db/schema/avatar';
 import { getGuildBriefsByUsers } from '@/lib/game/guild/badge';
+import { resolveRepTitlesBatch } from '@/lib/game/titles/display';
 import { parseFaceBox, type FaceBox } from '@/components/faceCrop';
 
 /**
@@ -58,6 +59,36 @@ export interface FriendUser {
   guildName?: string | null;
   /** 마지막 접속(ISO) — 접속 상태 표시용. 기록 없으면 null. */
   lastSeenAt?: string | null;
+  /** 대표 칭호(표시 시점 재검증한 코드) — 없거나 미자격이면 null(11-16 IIIIIIII 건의). 집행관 칭호는 구역을 함께 쓴다. */
+  titleCode?: string | null;
+  executorZone?: string | null;
+  executorZoneRegion?: string | null;
+}
+
+/**
+ * 친구 행의 대표 칭호 일괄 해석 — 채팅과 같은 재검증(resolveRepTitlesBatch)을 쓴다. 집행관 구역은 길드 배지 조회에서 받는다.
+ * 실패해도 목록은 살린다(빈 지도).
+ */
+export async function getTitleBriefsByUsers(
+  ids: string[],
+  serverId: number,
+  guildMap: Map<string, { executorZone?: string | null; executorZoneRegion?: string | null }>,
+): Promise<Map<string, { titleCode: string | null; executorZone: string | null; executorZoneRegion: string | null }>> {
+  const out = new Map<string, { titleCode: string | null; executorZone: string | null; executorZoneRegion: string | null }>();
+  if (ids.length === 0) return out;
+  const rows = await db
+    .select({ userId: characters.userId, rep: characters.representativeTitleCode })
+    .from(characters)
+    .where(and(eq(characters.serverId, serverId), inArray(characters.userId, [...new Set(ids)])));
+  const resolved = await resolveRepTitlesBatch(
+    rows.map((r) => ({ userId: r.userId, repCode: r.rep ?? null, executorZone: guildMap.get(r.userId)?.executorZone ?? null })),
+    serverId,
+  );
+  for (const r of rows) {
+    const g = guildMap.get(r.userId);
+    out.set(r.userId, { titleCode: resolved.get(r.userId) ?? null, executorZone: g?.executorZone ?? null, executorZoneRegion: g?.executorZoneRegion ?? null });
+  }
+  return out;
 }
 
 const SOUTH = sql<string | null>`${userProfiles.rotations} ->> 'south'`;
@@ -162,7 +193,10 @@ export async function searchUsers(
   for (const b of myBlocks) rel.set(b.blocked, 'blocked');
   // 길드(문양+이름) 일괄 부착 — 찾기 결과도 닉네임 아래 길드 노출. 실패해도 진행.
   const guildMap = await getGuildBriefsByUsers(ids, serverId).catch(
-    () => new Map<string, { emblemUrl: string | null; name: string }>(),
+    () => new Map<string, { emblemUrl: string | null; name: string; executorZone?: string | null; executorZoneRegion?: string | null }>(),
+  );
+  const titleMap = await getTitleBriefsByUsers(ids, serverId, guildMap).catch(
+    () => new Map<string, { titleCode: string | null; executorZone: string | null; executorZoneRegion: string | null }>(),
   );
   return rows.map(({ faceBoxRaw, ...r }) => {
     const relation = rel.get(r.userId) ?? 'none';
@@ -175,6 +209,7 @@ export async function searchUsers(
       relation,
       guildEmblemUrl: guildMap.get(r.userId)?.emblemUrl ?? null,
       guildName: guildMap.get(r.userId)?.name ?? null,
+      ...(titleMap.get(r.userId) ?? {}),
     };
   });
 }
