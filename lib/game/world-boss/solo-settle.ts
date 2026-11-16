@@ -31,9 +31,9 @@ export function soloSettleLines(rows: { userId: string; best: number; dealt: num
 export async function settleSoloBoss(tx: Tx, input: { serverId: number; bossId: string; bossName: string; zoneName: string; stage: number; leavePolite: string }): Promise<number> {
   const rows = (await tx.execute(sql`
     select r.user_id::text as uid, r.best::text as best,
-           (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id) as dealt
+           (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id and u.created_at >= (select c.created_at from characters c where c.user_id = r.user_id and c.server_id = r.server_id)) as dealt
       from world_boss_solo_records r
-     where r.boss_id = ${input.bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
+     where r.boss_id = ${input.bossId}::bigint and exists (select 1 from characters cc where cc.user_id = r.user_id and cc.server_id = r.server_id and cc.created_at <= r.best_at)
      order by r.best desc, r.best_at asc, r.user_id`)) as unknown as { uid: string; best: string; dealt: string }[];
   if (rows.length === 0) return 0;
   const [t] = (await tx.execute(sql`select coalesce(sum(score), 0)::text as s from world_boss_solo_runs where boss_id = ${input.bossId}::bigint`)) as unknown as { s: string }[];

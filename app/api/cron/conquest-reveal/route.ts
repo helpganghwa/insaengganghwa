@@ -27,6 +27,9 @@ export const maxDuration = 300;
 const MAX_WAIT_MS = 270_000;
 /** 자정 직후 이 시간 안에 떴으면(기동 지연) 즉시 공개. 그보다 늦으면 백스톱에 맡긴다. */
 const LATE_WINDOW_MS = 5 * 60_000;
+/** 공개 뒤 작업을 시작할 때 남아 있어야 하는 시간 — 칭호 집계(수 초)·시대 요약(AI 호출, 수십 초). */
+const TITLE_RESERVE_MS = 30_000;
+const ERA_RESERVE_MS = 90_000;
 /** 정각 통과 보장 여유 — 타이머 조기 발화·시계 오차 대비. */
 const GUARD_MS = 150;
 
@@ -68,8 +71,17 @@ export async function GET(req: Request) {
   }
   // 단신 활약 칭호(2026-11-04, 숨김 — 혈혈단신·최후의 보루) — 모든 서버의 공개·방치 판정·세율이 끝난 **뒤에** 준다(집계가
   // 무거워 정각 공개를 밀지 않게). 직접 공개한 서버만. 실패하면 다음 틱에서 다시 돌지 않으니 로그를 보고 scripts/backfill-titles-u17.ts로 메운다.
+  // 시간 예산(11-16) — 정각까지 최대 270초를 자고 깨므로 남은 시간이 30초 남짓일 수 있다. 서버가 늘어 공개 뒤 작업이
+  // 함수 제한(300초)에 걸리면 뒤 서버 몫이 끊긴다. 칭호는 백스톱(conquest-chronicle 00:05 틱)이 다시 주고,
+  // 시대 요약은 다음 날 공개 때 사실표 해시 비교로 따라잡으므로 남은 시간이 모자라면 건너뛴다.
+  const deadline = firedAt + maxDuration * 1000;
+  const skipped: string[] = [];
   for (const r of results) {
     if (r.error || !r.revealed) continue;
+    if (deadline - Date.now() < TITLE_RESERVE_MS) {
+      skipped.push(`titles:s${r.serverId}`);
+      continue;
+    }
     await grantConquestSoloTitles(r.serverId, battleDay).catch((e: unknown) => console.warn('[conquest-reveal] 단신 활약 칭호', r.serverId, e));
   }
   // 역사 페이지 시대 요약(0202·0203) — 새 날이 공개됐으니 사실표가 바뀐 시대에 이야기꾼 제안을 쌓는다(적용은 어드민에서). 실패해도 공개는 유효.
@@ -83,6 +95,10 @@ export async function GET(req: Request) {
   for (const r of results) {
     if (r.error) continue;
     if (!r.revealed && !isPrimaryTick) continue;
+    if (deadline - Date.now() < ERA_RESERVE_MS) {
+      skipped.push(`eras:s${r.serverId}`);
+      continue;
+    }
     await syncHistoryEras(r.serverId).catch((e: unknown) => console.warn('[conquest-reveal] syncHistoryEras', r.serverId, e));
   }
   const ok = results.every((r) => !r.error);
@@ -96,6 +112,7 @@ export async function GET(req: Request) {
       waitedMs: lateStart ? 0 : revealAt - firedAt,
       lateStart,
       results,
+      skipped,
     },
     { status: ok ? 200 : 500 },
   );

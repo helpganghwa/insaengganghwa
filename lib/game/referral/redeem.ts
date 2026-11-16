@@ -5,7 +5,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { isUniqueViolation } from '@/lib/db/errors';
 import { profiles } from '@/lib/db/schema/profiles';
-import { characters } from '@/lib/db/schema/server';
+import { characters, servers } from '@/lib/db/schema/server';
 import { mailbox } from '@/lib/db/schema/mailbox';
 import { referralAttributions } from '@/lib/db/schema/social';
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
@@ -57,9 +57,10 @@ export async function attributeReferralFromShare(
     // 읽는다(서버 수만큼이라 몇 행) — 맨 앞 = 마지막으로 하던 서버, 그다음 서버 번호순. 닉네임 표시와
     // 보상 서버 결정(아래)에 같이 쓴다.
     const referrerRows = await tx
-      .select({ id: profiles.id, nickname: characters.nickname, serverId: characters.serverId })
+      .select({ id: profiles.id, nickname: characters.nickname, serverId: characters.serverId, serverStatus: servers.status })
       .from(profiles)
       .innerJoin(characters, eq(characters.userId, profiles.id))
+      .innerJoin(servers, eq(servers.id, characters.serverId))
       .where(eq(profiles.publicCode, shareCode))
       .orderBy(sql`(${characters.serverId} = ${profiles.lastServerId}) desc`, characters.serverId);
     const referrer = referrerRows[0];
@@ -124,8 +125,10 @@ export async function attributeReferralFromShare(
     // 단 **추천인 캐릭터가 있는 서버에만** 넣는다 — 링크의 서버 번호는 쿼리스트링이라 누구나 바꿀 수
     // 있고, 캐릭터 없는 서버 우편함에 들어간 보상은 열어 볼 방법이 없다(우편함은 접속 서버 것만 보인다).
     // 링크 서버에 캐릭터가 없거나 레거시 쿠키(서버 미전달)면 마지막으로 하던 서버 → 가장 낮은 서버 순.
-    const rewardServerId =
-      referrerRows.find((r) => r.serverId === linkServerId)?.serverId ?? referrer.serverId;
+    // 닫힌(closed) 서버는 우편을 받을 수 없어(자산 동결, 10-12 결정 ⑤) 후보에서 먼저 뺀다 — 운영 중인 서버가 하나도 없을 때만 그대로.
+    const liveRows = referrerRows.filter((r) => r.serverStatus !== 'closed');
+    const pool = liveRows.length > 0 ? liveRows : referrerRows;
+    const rewardServerId = pool.find((r) => r.serverId === linkServerId)?.serverId ?? pool[0]!.serverId;
     const invitePerSlot = INVITE_BOX_PER_REFERRAL / 3;
     await tx.insert(mailbox).values({
       userId: referrer.id,

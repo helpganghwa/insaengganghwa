@@ -60,6 +60,7 @@ async function todayRuns(tx: Tx, userId: string, serverId: number, bossId: strin
       from world_bosses b
       left join world_bosses z on z.server_id = b.server_id and z.zone_id = b.zone_id
       left join world_boss_solo_runs u on u.boss_id = z.id and u.user_id = ${userId}::uuid and u.server_id = ${serverId} and u.kst_date = ${day}::date
+            and u.created_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})
      where b.id = ${bossId}::bigint
      group by b.zone_id`)) as unknown as { free: number; paid: number; zone_id: number }[];
   const bought = r ? await extrasToday(tx, userId, serverId, 'wb_retry', Number(r.zone_id), day) : 0;
@@ -96,7 +97,7 @@ export async function wbRetrySlotOf(tx: Tx, serverId: number, bossId: string): P
 
 /** 이 보스에 내가 넣은 누적 피해(모든 판). */
 async function dealtOf(tx: Tx, userId: string, bossId: string): Promise<number> {
-  const [r] = (await tx.execute(sql`select coalesce(sum(score), 0)::text as s from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid`)) as unknown as { s: string }[];
+  const [r] = (await tx.execute(sql`select coalesce(sum(u.score), 0)::text as s from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= (select c.created_at from characters c where c.user_id = u.user_id and c.server_id = u.server_id)`)) as unknown as { s: string }[];
   return Number(r?.s ?? 0);
 }
 
@@ -105,7 +106,7 @@ async function rankOf(tx: Tx, serverId: number, bossId: string, best: number, be
   const [r] = (await tx.execute(sql`
     select count(*)::int + 1 as rank from world_boss_solo_records o
      where o.boss_id = ${bossId}::bigint and o.server_id = ${serverId} and (o.best > ${best}::bigint or (o.best = ${best}::bigint and o.best_at < ${bestAt}::timestamptz))
-       and not exists (select 1 from profiles p where p.id = o.user_id and p.withdrawn_at is not null)`)) as unknown as { rank: number }[];
+       and exists (select 1 from characters cc where cc.user_id = o.user_id and cc.server_id = o.server_id and cc.created_at <= o.best_at)`)) as unknown as { rank: number }[];
   return Number(r?.rank ?? 1);
 }
 
@@ -172,6 +173,11 @@ export async function runSolo(userId: string, serverId: number, bossId: string, 
     // ④ 굴리고 저장.
     const hits = rollSoloRun(power, rand);
     const score = soloRunScore(hits);
+    // 재가입 전 캐릭터의 기록(11-16 검수 C2)이 남아 있으면 지우고 새로 센다 — 두면 옛 최고 기록이 greatest로 이어진다.
+    await tx.execute(sql`
+      delete from world_boss_solo_records
+       where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid
+         and best_at < (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})`);
     const [old] = (await tx.execute(sql`
       select best::text as best, best_at::text as best_at from world_boss_solo_records where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and server_id = ${serverId}`)) as unknown as { best: string; best_at: string }[];
     const prevBest = old ? Number(old.best) : null;

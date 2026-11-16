@@ -6,6 +6,7 @@ import { getSessionUserId } from '@/lib/auth/session';
 import { loadUserServers } from '@/lib/game/server-guard';
 import { listServersForUser, recommendedServerId } from '@/lib/game/server-select';
 import { NewCharacterChoice } from '@/app/login/new-character/NewCharacterChoice';
+import { WithdrawButton } from '@/app/(game)/me/settings/WithdrawButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,8 @@ export default async function ServerClosedPage({
       >
         로그아웃
       </a>
+      {/* 탈퇴는 계정 단위 — 새 캐릭터를 만들지 않고도 여기서 할 수 있다(11-16 검수 C1). */}
+      <WithdrawButton />
     </main>
   );
 }

@@ -1,9 +1,10 @@
 import 'server-only';
 
-import { sql, eq } from 'drizzle-orm';
+import { and, sql, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
+import { servers } from '@/lib/db/schema/server';
 import { guilds } from '@/lib/db/schema/guild';
 import { removeAllInquiryImagesForUser } from '@/lib/game/support/inquiry';
 import { clearWorldBossOnExit } from '@/lib/game/world-boss/party';
@@ -46,8 +47,7 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
   world_bosses: '월드보스 엔티티(서버 단위, 유저 축 없음, 0228)',
   world_boss_parties: '원정대 기록 — 대장이 탈퇴해도 다른 원정대원의 전투 기록·보상 근거(레이드와 같은 원칙). 모집 중이던 것은 탈퇴 훅이 해산 처리, 표시는 "탈퇴한 대장장이"',
   world_boss_party_members: '원정대 참가·피해 기록 — 보스 누적 피해·원정대 보상의 원천. PII 없음',
-  world_boss_solo_runs: '개인 월드보스 도전 기록(0253) — 보스 누적 피해(공동 페이즈)의 원천. PII 없음',
-  world_boss_solo_records: '개인 월드보스 최고 기록·순위·보상(0253) — 다른 참가자의 순위와 정산 근거(원정대 기록과 같은 원칙). PII 없음',
+  world_boss_solo_runs: '개인 월드보스 도전 기록(0253) — 보스 누적 피해(공동 페이즈)의 원천. PII 없음. 재가입 캐릭터의 집계는 캐릭터 생성 이후 판만 센다',
   world_boss_weak_reveals: '약점 공개 기록 — 보스별 공개 상태의 원천(0230). finder_user_id·닉네임은 탈퇴 때 비운다(함수 내 update)',
   // 아래 둘은 이 브랜치 스키마에 없는 스테이징 전용 표(다른 브랜치 마이그레이션) — 그 기능을 머지할 때 삭제/보존을 다시 분류한다(10-11 3차 감사에서 탈퇴 분류 테스트가 스테이징 표 목록으로 돌아 걸렸다).
   familiars: '패밀리어 P1(0188, feat/familiar) — 스테이징 전용, 머지 때 재분류',
@@ -80,10 +80,13 @@ export const WITHDRAW_PRESERVED: Record<string, string> = {
 
 export async function withdrawAccount(userId: string): Promise<void> {
   // 길드장이면 탈퇴 불가(위임/해산 먼저) — guilds.leader_user_id는 NO ACTION FK.
+  // 닫힌(closed) 서버의 길드는 빼고 본다 — 닫힌 서버는 액션이 모두 막혀 위임·해산을 할 수 없고, 자산이 동결된
+  // 서버라 길드장이 비어도 다룰 사람이 없다(profiles 행은 남으므로 FK도 깨지지 않는다).
   const [led] = await db
     .select({ id: guilds.id })
     .from(guilds)
-    .where(eq(guilds.leaderUserId, userId))
+    .innerJoin(servers, eq(servers.id, guilds.serverId))
+    .where(and(eq(guilds.leaderUserId, userId), ne(servers.status, 'closed')))
     .limit(1);
   if (led) throw new WithdrawError('LEADER_MUST_TRANSFER');
 
@@ -109,6 +112,9 @@ export async function withdrawAccount(userId: string): Promise<void> {
     await tx.execute(sql`delete from world_boss_join_requests where user_id = ${uid}`); // 월드보스 참가 신청(0228) — 본인 귀속
     await tx.execute(sql`update world_boss_weak_reveals set finder_user_id = null, finder_nickname = '' where finder_user_id = ${uid}`); // 발견자 익명화(0230, 공개 상태는 보존)
     await tx.execute(sql`delete from world_boss_invites where user_id = ${uid} or from_user_id = ${uid}`); // 오간 초대(0234) — 본인 귀속
+    // 개인 월드보스 최고 기록(0253) — 순위·정산은 이미 탈퇴자를 빼고 세므로 남길 이유가 없고, 남기면 재가입한 새 캐릭터가
+    // 옛 최고 기록·순위 보상을 이어받는다(11-16 검수 C2). 도전 판(runs)은 보스 누적 피해의 원천이라 남긴다.
+    await tx.execute(sql`delete from world_boss_solo_records where user_id = ${uid}`);
     // 대장인 모집 중 원정대 해산(참가자는 다시 참가 가능). 싸운 기록은 보존(WITHDRAW_PRESERVED).
     await clearWorldBossOnExit(tx, userId, null);
     await tx.execute(sql`delete from raid_daily_counts where user_id = ${uid}`);

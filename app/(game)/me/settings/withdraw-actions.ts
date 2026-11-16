@@ -62,8 +62,10 @@ export async function withdrawAction(): Promise<{ status: 'error'; code: string 
   // 제재·점검 중 탈퇴 차단(전수 감사 2026-08-21) — 레이아웃(BanScreen)은 서버 액션 직접
   // POST를 못 막는다. 정지 유저가 탈퇴하면 user_profiles CASCADE로 신고 증거(profile_reports)가
   // 전멸하고 문제 닉네임이 즉시 해방된다 — 제재 심사 중 데이터 파기 금지.
+  // 닫힌 서버(SERVER_CLOSED)는 막지 않는다 — 탈퇴는 계정 단위이고, 닫힌 서버에만 캐릭터가 있는 사람은
+  // 새 캐릭터를 만들지 않고는 탈퇴할 길이 없었다(11-16 검수 C1). 정지·점검은 그대로 막는다.
   const blocked = await actionBlock();
-  if (blocked) return { status: 'error', code: blocked };
+  if (blocked && blocked !== 'SERVER_CLOSED') return { status: 'error', code: blocked };
 
   try {
     await withdrawAccount(userId);

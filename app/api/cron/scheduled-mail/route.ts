@@ -62,32 +62,61 @@ export async function GET(req: Request) {
     }[];
 
     let sent = 0;
+    let failed = 0;
     for (const m of due) {
       // 대상 서버(0208): 숫자면 그 서버 캐릭터 보유자에게만 그 서버 우편함으로(즉시 발송과 동일),
       // null이면 전 서버 = **캐릭터가 있는 서버마다 1통**(2026-09-21 결정 D2). 종전에는 계정당 1통을
       // last_server_id로 보내, 두 서버를 하는 사람은 한쪽에서만 받고 캐릭터가 없는 서버 우편함에
       // 떨어지면 영영 못 받았다. 일일 보급·출석과 같은 기준(캐릭터마다)이 된다. 알림은 계정당 한 번.
+      // 전 서버 발송은 닫힌(closed) 서버 캐릭터를 뺀다 — 닫힌 서버는 자산이 동결돼 받을 수 없다(10-12 결정 ⑤).
       const target = m.server_id;
       const label = target == null ? '전체(예약)' : `${target}서버(예약)`;
-      const rows = (await db.execute(sql`
-        with lg as (
-          insert into admin_mail_logs (admin_id, mode, recipient_count, target_label, title, body, payload)
-          values (${m.admin_id}::uuid, 'broadcast', 0, ${label}, ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb)
-          returning id
-        ),
-        dest as (
-          select c.user_id, c.server_id
-            from characters c
-            join profiles p on p.id = c.user_id
-           where p.withdrawn_at is null
-             and (${target}::smallint is null or c.server_id = ${target}::smallint)
-        )
-        insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
-        select d.user_id, d.server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
-        from dest d, lg
-        returning id
-      `)) as unknown as { id: string }[];
-      sent += rows.length;
+      let count = 0;
+      try {
+        // 적재와 발송 기록은 한 문장(원자) — 실패하면 아무것도 남지 않아 다시 보내도 중복이 없다. 수신자 수도 함께 기록한다.
+        const [row] = (await db.execute(sql`
+          with dest as (
+            select c.user_id, c.server_id
+              from characters c
+              join profiles p on p.id = c.user_id
+              join servers s on s.id = c.server_id
+             where p.withdrawn_at is null
+               and (${target}::smallint is not null or s.status <> 'closed')
+               and (${target}::smallint is null or c.server_id = ${target}::smallint)
+          ),
+          ins as (
+            insert into mailbox (user_id, server_id, type, title, body, sender_label, payload)
+            select d.user_id, d.server_id, 'admin'::mailbox_type, ${m.title}, ${m.body}, '인생강화', ${JSON.stringify(m.payload)}::jsonb
+            from dest d
+            returning 1
+          ),
+          lg as (
+            insert into admin_mail_logs (admin_id, mode, recipient_count, target_label, title, body, payload)
+            values (${m.admin_id}::uuid, 'broadcast', (select count(*)::int from ins), ${label}, ${m.title}, ${m.body}, ${JSON.stringify(m.payload)}::jsonb)
+            returning 1
+          )
+          select (select count(*)::int from ins) as n, (select count(*)::int from lg) as l
+        `)) as unknown as { n: number; l: number }[];
+        count = Number(row?.n ?? 0);
+      } catch (e) {
+        // 한 통이 실패해도 뒤 우편·공지 발행은 계속한다(종전엔 남은 우편이 '발송됨'으로 찍힌 채 영영 안 나갔다).
+        // 클레임을 풀어 다음 틱(5분)에 다시 보낸다. 1시간 넘게 실패하면 풀지 않고 경보만 남긴다(무한 재시도 방지).
+        failed += 1;
+        console.error('[scheduled-mail] mail failed', m.id, e);
+        const [rel] = (await db
+          .execute(sql`
+            update admin_scheduled_mails set sent_at = null
+             where id = ${m.id}::bigint and scheduled_at > now() - interval '1 hour'
+            returning id
+          `)
+          .catch(() => [])) as unknown as { id: string }[];
+        await raiseOpsAlert(
+          '예약 우편 발송 실패',
+          `scheduled-mail #${m.id} '${m.title}': ${(e as Error)?.message ?? String(e)} — ${rel ? '다음 틱에 다시 보냄' : '재시도 포기, 어드민에서 다시 보내기'}`,
+        ).catch(() => undefined);
+        continue;
+      }
+      sent += count;
       if (m.push) {
         try {
           // 경계규칙1 — 서버 지정 예약이면 활성 서버가 그 서버인 사람에게만(즉시 발송과 동일).
@@ -161,11 +190,11 @@ export async function GET(req: Request) {
       console.error('[scheduled-mail] announcement publish', e);
     }
 
-    await beatCron('scheduled-mail', `mail=${sent} ann=${announcementsPublished}`);
-    return Response.json({ ok: true, dispatched: due.length, mailed: sent, announcementsPublished });
+    await beatCron('scheduled-mail', `mail=${sent} failed=${failed} ann=${announcementsPublished}`);
+    return Response.json({ ok: failed === 0, dispatched: due.length, mailed: sent, failed, announcementsPublished });
   } catch (e) {
     console.error('[scheduled-mail]', e);
-    // 우편은 sent_at을 먼저 찍고 적재하므로 여기서 죽으면 그 통은 재발송되지 않는다 — 경보로 알려 어드민 재발송(2026-09-23 감사).
+    // 우편 한 통의 실패는 위에서 잡아 클레임을 푼다. 여기 오는 건 클레임 자체가 실패했거나 함수가 그 밖에서 죽은 경우다.
     await raiseOpsAlert('예약 우편 크론 실패', `scheduled-mail: ${(e as Error)?.message ?? String(e)} — 어드민에서 해당 우편 발송 여부 확인`).catch(() => undefined);
     return Response.json({ ok: false }, { status: 500 });
   }

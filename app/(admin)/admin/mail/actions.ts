@@ -241,7 +241,9 @@ export async function broadcastMailAction(opts: {
         select c.user_id, c.server_id, 'admin'::mailbox_type, ${title}, ${body}, '인생강화', ${JSON.stringify(payload)}::jsonb
         from characters c
         join profiles p on p.id = c.user_id
+        join servers s on s.id = c.server_id
         where p.withdrawn_at is null
+          and s.status <> 'closed' -- 닫힌 서버는 자산 동결(10-12 결정 ⑤)이라 전 서버 발송에서 뺀다
         returning id
       `,
       )) as unknown as { id: string }[];

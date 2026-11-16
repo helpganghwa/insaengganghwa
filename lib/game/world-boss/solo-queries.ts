@@ -31,20 +31,20 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
   const [top, ladderRows, mineRows] = await Promise.all([
     db.execute(sql`
       select r.user_id::text as uid, c.nickname, (select p.public_code from profiles p where p.id = r.user_id) as code, r.best::text as best, r.final_rank, r.reward_diamond, r.reward_boxes, c.representative_title_code as title,
-             (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id) as dealt,
+             (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = r.boss_id and u.user_id = r.user_id and u.created_at >= c.created_at) as dealt,
              up.rotations->>'south' as avatar, up.options->'faceBox' as fb, g.name as gname, g.emblem_url as gemblem
         from world_boss_solo_records r left join characters c on c.user_id = r.user_id and c.server_id = r.server_id
         left join user_profiles up on up.id = c.active_profile_id
         left join guild_members gm on gm.user_id = r.user_id and gm.server_id = r.server_id
         left join guilds g on g.id = gm.guild_id
-       where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null)
+       where r.boss_id = ${bossId}::bigint and exists (select 1 from characters cc where cc.user_id = r.user_id and cc.server_id = r.server_id and cc.created_at <= r.best_at)
        order by r.best desc, r.best_at asc, r.user_id limit ${SOLO_TOP_SHOWN}`) as unknown as Promise<{
       uid: string; nickname: string | null; code: string | null; best: string; dealt: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; title: string | null; avatar: string | null; fb: unknown; gname: string | null; gemblem: string | null;
     }[]>,
     // 기록 경주(공격 화면) — 다른 사람들의 최고 기록 상위 40개(내 기록 제외). 판 도중 '지금 N위권·다음 순위까지'를 화면이 계산한다.
     db.execute(sql`
       select r.best::text as best from world_boss_solo_records r
-       where r.boss_id = ${bossId}::bigint and not exists (select 1 from profiles p where p.id = r.user_id and p.withdrawn_at is not null) ${userId ? sql`and r.user_id <> ${userId}::uuid` : sql``}
+       where r.boss_id = ${bossId}::bigint and exists (select 1 from characters cc where cc.user_id = r.user_id and cc.server_id = r.server_id and cc.created_at <= r.best_at) ${userId ? sql`and r.user_id <> ${userId}::uuid` : sql``}
        order by r.best desc limit 40`) as unknown as Promise<{ best: string }[]>,
     userId
       ? (db.execute(sql`
@@ -53,17 +53,17 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                  (select json_build_object('name', g.name, 'emblem', g.emblem_url) from guild_members gm join guilds g on g.id = gm.guild_id where gm.user_id = c.user_id and gm.server_id = c.server_id) as guild,
                  (select row_to_json(x) from (
                     select r.best::text as best, r.best_at, r.final_rank, r.reward_diamond, r.reward_boxes,
-                           (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at)) and not exists (select 1 from profiles p where p.id = o.user_id and p.withdrawn_at is not null)) as rank
-                      from world_boss_solo_records r where r.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid) x) as rec,
-                 (select coalesce(sum(score), 0)::text from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid) as dealt,
+                           (select count(*)::int + 1 from world_boss_solo_records o where o.boss_id = r.boss_id and (o.best > r.best or (o.best = r.best and o.best_at < r.best_at)) and exists (select 1 from characters cc where cc.user_id = o.user_id and cc.server_id = o.server_id and cc.created_at <= o.best_at)) as rank
+                      from world_boss_solo_records r where r.boss_id = ${bossId}::bigint and r.user_id = ${userId}::uuid and r.best_at >= c.created_at) x) as rec,
+                 (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= c.created_at) as dealt,
                  -- 내 도전 기록(11-16 스타·지인 건의) — 최근 30판, 10타 그대로(다시 보기).
                  coalesce((select json_agg(x order by x.at desc) from (
                     select u.id::text as id, u.created_at as at, u.paid, u.score::text as score, u.hits, u.power
-                      from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid
+                      from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= c.created_at
                      order by u.created_at desc limit 30) x), '[]'::json) as runs,
-                 (select count(*) filter (where not paid)::int from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and kst_date = ${day}::date) as free_used,
+                 (select count(*) filter (where not u.paid)::int from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.kst_date = ${day}::date and u.created_at >= c.created_at) as free_used,
                  (select count(*) filter (where u.paid)::int from world_boss_solo_runs u join world_bosses z on z.id = u.boss_id
-                   where z.server_id = ${serverId} and z.zone_id = ${b.zone_id} and u.user_id = ${userId}::uuid and u.kst_date = ${day}::date) as paid_used,
+                   where z.server_id = ${serverId} and z.zone_id = ${b.zone_id} and u.user_id = ${userId}::uuid and u.kst_date = ${day}::date and u.created_at >= c.created_at) as paid_used,
                  (select coalesce(sum(count), 0)::int from point_extra_buys where user_id = ${userId}::uuid and server_id = ${serverId} and kst_date = ${day}::date and item = 'wb_retry' and slot = ${b.zone_id}) as bought,
                  (select json_build_object('south', up.rotations->>'south', 'snap', up.equipment_snapshot, 'isDefault', coalesce((up.options->>'isDefault')::boolean, false))
                     from user_profiles up where up.id = c.active_profile_id) as avatar,
@@ -191,13 +191,14 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
 /**
  * 다시 보기(11-16) — 지난 한 판을 그때 모습 그대로 전투 화면에 넣을 값. 10타는 저장된 그대로, 순위·최고 기록·누적 피해·
  * 기록 경주(다른 사람 최고 기록)는 그 판 시각 기준으로 도전 기록에서 다시 센다(지금 값이 아니라).
- * 같은 최고 기록이면 먼저 낸 쪽이 앞(순위표와 같은 규칙). 탈퇴한 유저는 뺀다. 내 판이 아니면 null.
+ * 같은 최고 기록이면 먼저 낸 쪽이 앞(순위표와 같은 규칙). 탈퇴한 유저와 재가입 전 캐릭터의 판은 뺀다(지금 캐릭터 생성 이후만). 내 판이 아니면 null.
  */
 export async function getSoloReplay(userId: string, serverId: number, bossId: string, runId: string) {
   const [run] = (await db.execute(sql`
     select u.id::text as id, u.hits, u.power, u.score::text as score, u.paid, u.created_at::text as at
       from world_boss_solo_runs u join world_bosses b on b.id = u.boss_id
-     where u.id = ${runId}::bigint and u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and b.server_id = ${serverId}`)) as unknown as {
+     where u.id = ${runId}::bigint and u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and b.server_id = ${serverId}
+       and u.created_at >= (select c.created_at from characters c where c.user_id = u.user_id and c.server_id = u.server_id)`)) as unknown as {
     id: string; hits: SoloHit[]; power: SoloPower; score: string; paid: boolean; at: string;
   }[];
   if (!run) return null;
@@ -205,7 +206,7 @@ export async function getSoloReplay(userId: string, serverId: number, bossId: st
     with asof as (
       select u.user_id, max(u.score) as best from world_boss_solo_runs u
        where u.boss_id = ${bossId}::bigint and u.created_at <= ${run.at}::timestamptz
-         and not exists (select 1 from profiles p where p.id = u.user_id and p.withdrawn_at is not null)
+         and u.created_at >= (select c.created_at from characters c where c.user_id = u.user_id and c.server_id = u.server_id)
        group by u.user_id),
     others as (
       select a.best, (select min(x.created_at) from world_boss_solo_runs x where x.boss_id = ${bossId}::bigint and x.user_id = a.user_id and x.score = a.best and x.created_at <= ${run.at}::timestamptz) as best_at
@@ -214,7 +215,8 @@ export async function getSoloReplay(userId: string, serverId: number, bossId: st
       select max(score) filter (where created_at < ${run.at}::timestamptz) as prev_best,
              max(score) filter (where created_at <= ${run.at}::timestamptz) as best,
              coalesce(sum(score) filter (where created_at <= ${run.at}::timestamptz), 0) as dealt
-        from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid),
+        from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid
+         and created_at >= (select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})),
     mine_at as (
       select (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.best and created_at <= ${run.at}::timestamptz) as best_at,
              (select min(created_at) from world_boss_solo_runs where boss_id = ${bossId}::bigint and user_id = ${userId}::uuid and score = m.prev_best and created_at < ${run.at}::timestamptz) as prev_at

@@ -132,6 +132,15 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     expect(r).toMatchObject({ ok: false, code: 'SOLO_BUSY' });
   }, 20_000);
 
+  it('재가입 전 캐릭터의 기록(캐릭터 생성 전 best_at)은 순위표·정산에 들지 않는다(11-16 검수 C2)', async () => {
+    // 규규가 이 캐릭터를 만들기 전에 세운 것처럼 — 아주 큰 기록을 2000년 시각으로 넣는다. 들어가면 테스트 계정이 1위를 잃는다.
+    await testDb.execute(sql`
+      insert into world_boss_solo_records (boss_id, user_id, server_id, best, best_at, best_run_id, runs)
+      values (${bossId}::bigint, ${G}::uuid, ${S}, 999999999999, '2000-01-01T00:00:00Z'::timestamptz, 0, 1)`);
+    const d = await getSoloBossDetail(bossId, S, T);
+    expect(d!.top.some((r) => r.userId === G)).toBe(false);
+  });
+
   it('사라질 때 순위·보상을 적고 결과 우편을 보낸다', async () => {
     await testDb.execute(sql`update world_bosses set leave_at = now() - interval '1 second' where id=${bossId}::bigint`);
     const out = await settleLeftBosses(S, { onlyBossIds: [bossId] });
@@ -151,5 +160,12 @@ describe.skipIf(!T)('개인 월드보스 — 도전·정산(DB 통합)', () => {
     expect(mails[0]!.payload.boxes.weapon * 3).toBe(rec!.reward_boxes);
     const [b] = await q<{ status: string }>(sql`select status from world_bosses where id=${bossId}::bigint`);
     expect(b!.status).toBe('left');
+    // 재가입 전 기록은 정산에서도 빠진다 — 순위·보상 없음, 우편 없음.
+    const [gRec] = await q<{ final_rank: number | null; reward_diamond: number }>(sql`
+      select final_rank, reward_diamond from world_boss_solo_records where boss_id=${bossId}::bigint and user_id=${G}::uuid`);
+    expect(gRec!.final_rank).toBeNull();
+    expect(gRec!.reward_diamond).toBe(0);
+    const gMails = await q(sql`select 1 from mailbox where user_id=${G}::uuid and type='world_boss' and created_at >= ${t0.toISOString()}::timestamptz`);
+    expect(gMails).toHaveLength(0);
   });
 });

@@ -36,16 +36,18 @@ type Target = { userId: string; nicknames: string; mailServerId: number };
 
 export async function reclaimInactiveNicknames(): Promise<{ reclaimed: number; failed: number }> {
   // 계정 단위 후보 — 전 서버 통틀어 마지막 활동이 기준보다 오래됐고, 기본형이 아닌 이름이 하나라도 있는 계정.
-  // 우편함은 마지막 접속 서버로(그 서버에 캐릭터가 없으면 가장 낮은 서버).
+  // 우편함은 마지막 접속 서버로(그 서버에 캐릭터가 없으면 가장 낮은 서버). 닫힌 서버는 우편을 받을 수 없어 운영 중인 서버를 먼저 고른다.
   const targets = (await db.execute(sql`
     select c.user_id::text as "userId",
            string_agg(distinct c.nickname, ', ' order by c.nickname) as nicknames,
            coalesce(
-             max(c.server_id) filter (where c.server_id = p.last_server_id),
+             max(c.server_id) filter (where c.server_id = p.last_server_id and s.status <> 'closed'),
+             min(c.server_id) filter (where s.status <> 'closed'),
              min(c.server_id)
            )::int as "mailServerId"
       from characters c
       join profiles p on p.id = c.user_id
+      join servers s on s.id = c.server_id
      group by c.user_id
     having max(coalesce(c.last_seen_at, c.created_at)) < now() - interval '${sql.raw(String(INACTIVE_DAYS))} days'
        and bool_or(c.nickname !~ ${sql.raw(DEFAULT_NICK_RE)})
