@@ -202,11 +202,12 @@ export default async function RaidDetail({
     if (isHost) {
       if (parts.length === 1) {
         // 돌려받을 소환비 — 원장의 이 레이드 소환 지출(11-16부터 ref, 그 전엔 같은 시각의 소환 지출).
+        // 시각은 DB 값끼리 비교한다 — JS Date는 밀리초까지라 마이크로초 시각과 같아지지 않는다(cancel.ts와 같은 조건).
         const [paid] = (await withTimeout(
           db.execute(sql`
             select coalesce(-sum(delta), 0)::int as paid from diamond_ledger
              where user_id = ${userId}::uuid and server_id = ${raid.serverId} and reason = 'raid_open'
-               and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = ${raid.openedAt.toISOString()}::timestamptz))`),
+               and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = (select opened_at from raids where id = ${raidId}::bigint)))`),
           3000,
           'raid.cancelCost',
         ).catch(() => [])) as unknown as { paid: number }[];

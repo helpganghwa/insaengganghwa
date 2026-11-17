@@ -402,7 +402,7 @@ export function SoloBossView({ detail, spriteSrc, bgSrc, fx, bossName }: { detai
         />
       )}
 
-      {sheet === 'records' && me && <RecordsSheet runs={me.runs} loading={replaying} onReplay={openReplay} onClose={() => setSheet(null)} />}
+      {sheet === 'records' && me && <RecordsSheet runs={me.runs} total={me.runsTotal} best={me.best} loading={replaying} onReplay={openReplay} onClose={() => setSheet(null)} />}
       {sheet === 'pattern' && <PatternSheet spriteSrc={spriteSrc} fx={fx} onClose={() => setSheet(null)} />}
       {sheet === 'reward' && <RewardSheet stage={phase.stage} share={me && me.best != null ? soloShareOf(me.dealt, d.total) : null} rank={me?.rank ?? null} onClose={() => setSheet(null)} />}
       {sheet === 'avatar' && me && <AvatarSheet me={me} onPick={pickAvatar} onClose={() => setSheet(null)} />}
@@ -1438,12 +1438,14 @@ function HitStrip({ hits }: { hits: RunRow['hits'] }) {
   );
 }
 
-function RecordsSheet({ runs, loading, onReplay, onClose }: { runs: RunRow[]; loading: string | null; onReplay: (id: string) => void; onClose: () => void }) {
-  const best = Math.max(...runs.map((r) => r.score));
+function RecordsSheet({ runs, total, best: recBest, loading, onReplay, onClose }: { runs: RunRow[]; total: number; best: number | null; loading: string | null; onReplay: (id: string) => void; onClose: () => void }) {
+  // '최고' 표시는 순위에 쓰이는 실제 최고 기록과 같은 판에만 — 목록(최근 30판) 밖의 판이 최고면 아무 판에도 붙지 않는다.
+  const best = recBest ?? Math.max(...runs.map((r) => r.score));
+  const more = total > runs.length;
   const legend: [string, string][] = [['bg-slate-500', '보통'], ['bg-rose-500', '약점 노출'], ['bg-amber-500', '웅크리기'], ['bg-violet-500', '옭아매기']];
   return (
     <ModalShell onClose={onClose} label="내 도전 기록">
-      <ModalLayout title="내 도전 기록" subtitle={`이 원정에서 한 도전 ${runs.length}회 · 순위는 가장 높은 한 판으로 정해져요.`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
+      <ModalLayout title="내 도전 기록" subtitle={more ? `이 원정에서 한 도전 ${total}회 중 최근 ${runs.length}회 · 순위는 가장 높은 한 판으로 정해져요.` : `이 원정에서 한 도전 ${runs.length}회 · 순위는 가장 높은 한 판으로 정해져요.`} footer={<ModalButton onClick={onClose}>닫기</ModalButton>} bodyPad="sm">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-1 pb-2 text-[10px] text-slate-400">
           {legend.map(([c, t]) => (
             <span key={t} className="flex items-center gap-1">

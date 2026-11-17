@@ -58,9 +58,11 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
                  (select coalesce(sum(u.score), 0)::text from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= c.created_at) as dealt,
                  -- 내 도전 기록(11-16 스타·지인 건의) — 최근 30판, 10타 그대로(다시 보기).
                  coalesce((select json_agg(x order by x.at desc) from (
-                    select u.id::text as id, u.created_at as at, u.paid, u.score::text as score, u.hits, u.power
+                    select u.id::text as id, u.created_at as at, u.paid, u.score::text as score, u.hits
                       from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= c.created_at
                      order by u.created_at desc limit 30) x), '[]'::json) as runs,
+                 -- 30판을 넘으면 목록은 최근 30판만이라 전체 판 수는 따로 센다(팝업 문구가 '최근 30회'로 바뀐다).
+                 (select count(*)::int from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.created_at >= c.created_at) as runs_total,
                  (select count(*) filter (where not u.paid)::int from world_boss_solo_runs u where u.boss_id = ${bossId}::bigint and u.user_id = ${userId}::uuid and u.kst_date = ${day}::date and u.created_at >= c.created_at) as free_used,
                  (select count(*) filter (where u.paid)::int from world_boss_solo_runs u join world_bosses z on z.id = u.boss_id
                    where z.server_id = ${serverId} and z.zone_id = ${b.zone_id} and u.user_id = ${userId}::uuid and u.kst_date = ${day}::date and u.created_at >= c.created_at) as paid_used,
@@ -83,7 +85,7 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
           {
             nickname: string | null; code: string | null; title: string | null; fb: unknown; guild: { name: string; emblem: string | null } | null;
             rec: { best: string; best_at: string; final_rank: number | null; reward_diamond: number; reward_boxes: number; rank: number } | null;
-            dealt: string | null; runs: { id: string; at: string; paid: boolean; score: string; hits: SoloHit[]; power: SoloPower }[]; free_used: number; paid_used: number; bought: number;
+            dealt: string | null; runs: { id: string; at: string; paid: boolean; score: string; hits: SoloHit[] }[]; runs_total: number; free_used: number; paid_used: number; bought: number;
             avatar: { south: string | null; snap: unknown; isDefault: boolean } | null;
             eq: { key: string; name: string; slot: SoloSlot; level: number; transcend: number }[];
             owned: { ueid: string; key: string; name: string; slot: SoloSlot; level: number; transcend: number; on: boolean }[];
@@ -146,7 +148,8 @@ export async function getSoloBossDetail(bossId: string, serverId: number, userId
       guildEmblem: m.guild?.emblem ?? null,
       best: m.rec ? Number(m.rec.best) : null,
       dealt: Number(m.dealt ?? 0),
-      runs: (m.runs ?? []).map((r) => ({ id: r.id, at: new Date(r.at).toISOString(), paid: r.paid, score: Number(r.score), hits: r.hits, power: r.power })),
+      runs: (m.runs ?? []).map((r) => ({ id: r.id, at: new Date(r.at).toISOString(), paid: r.paid, score: Number(r.score), hits: r.hits })),
+      runsTotal: Number(m.runs_total ?? 0),
       rank: m.rec ? Number(m.rec.rank) : null,
       finalRank: m.rec?.final_rank ?? null,
       reward: m.rec && m.rec.final_rank ? { diamond: Number(m.rec.reward_diamond), boxes: Number(m.rec.reward_boxes) } : null,

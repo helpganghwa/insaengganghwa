@@ -48,11 +48,15 @@ export async function GET(req: Request) {
     type Due = { id: string; admin_id: string; title: string; body: string; payload: unknown; push: boolean; server_id: number | null };
     // 클레임은 **한 통씩**(11-16 적대적 검수 F1) — 한꺼번에 찍으면 함수가 시간 제한에 걸려 죽을 때 남은 우편이
     // '발송됨'으로 찍힌 채 영영 안 나갔다. 행 잠금(skip locked)이라 동시 발화도 한 통을 두 번 집지 않는다.
+    // 이번 틱에 실패해 클레임을 푼 우편은 다시 집지 않는다 — 안 그러면 같은 우편을 곧바로 다시 집어 60초 내내
+    // 실패·경보를 되풀이하고 뒤 우편이 막힌다(11-17 검수). 다음 틱(5분)에 다시 시도한다.
+    const failedIds: string[] = [];
     const claimNext = async (): Promise<Due | null> => {
       const [row] = (await db.execute(sql`
         update admin_scheduled_mails set sent_at = now()
          where id = (select id from admin_scheduled_mails
                       where scheduled_at <= now() and sent_at is null and canceled_at is null
+                        and not (id::text = any(${`{${failedIds.join(',')}}`}::text[]))
                       order by scheduled_at, id limit 1 for update skip locked)
         returning id::text as id, admin_id, title, body, payload, push, server_id
       `)) as unknown as Due[];
@@ -114,6 +118,7 @@ export async function GET(req: Request) {
         // 한 통이 실패해도 뒤 우편·공지 발행은 계속한다(종전엔 남은 우편이 '발송됨'으로 찍힌 채 영영 안 나갔다).
         // 클레임을 풀어 다음 틱(5분)에 다시 보낸다. 1시간 넘게 실패하면 풀지 않고 경보만 남긴다(무한 재시도 방지).
         failed += 1;
+        failedIds.push(m.id);
         console.error('[scheduled-mail] mail failed', m.id, e);
         const [rel] = (await db
           .execute(sql`
