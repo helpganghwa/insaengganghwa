@@ -3,11 +3,24 @@
 import { useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import * as haptic from '@/lib/game/haptic';
 import { ModalShell } from '@/components/ModalShell';
 import { atlasBgStyle } from '@/lib/game/equipment/sprite-atlas';
-import { DragScrollRow } from '@/components/ui/DragScrollRow';
 import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 import { ModalLayout, ModalButton } from '@/components/ModalLayout';
 import { useResourceToast } from '@/components/ResourceToast';
@@ -56,29 +69,28 @@ function kstMd(iso?: string): string {
   const d = new Date(Date.parse(iso) + 9 * 3600_000);
   return `${String(d.getUTCMonth() + 1).padStart(2, '0')}.${String(d.getUTCDate()).padStart(2, '0')}`;
 }
-/** 생성 장비 지역 키(표시 단위, 레거시 값은 같은 키로 합쳐짐). */
-const regionKeys = (p: ProfileItem) => (p.equipment ?? []).map((e) => (e.region ? catalogRegionUi(e.region).key : 'general'));
-/** 필터 칩 — 세계지도 순 + 일반(표시 키 기준 중복 제거). */
+type Slot = 'weapon' | 'armor' | 'accessory';
+const SLOTS: readonly Slot[] = ['weapon', 'armor', 'accessory'];
+type SlotRegion = Record<Slot, string | null>;
+const NO_FILTER: SlotRegion = { weapon: null, armor: null, accessory: null };
+/** 그 부위 생성 장비의 지역 키(표시 단위, 레거시 값은 같은 키로 합쳐짐). 그 부위가 없으면 null. */
+const slotRegionKey = (p: ProfileItem, slot: Slot) => {
+  const e = (p.equipment ?? []).find((x) => x.slot === slot);
+  return e ? (e.region ? catalogRegionUi(e.region).key : 'general') : null;
+};
+/** 지역 선택 목록 — 세계지도 순 + 일반. */
 const REGION_CHIPS = REGION_FILTER_ORDER.map((r) => catalogRegionUi(r));
+/** 부위 필터 칸에 들어가는 짧은 지역명 — 세 칸이 한 줄이라 긴 이름(타락 천사 부유섬)은 잘린다. */
+const REGION_SHORT: Record<string, string> = { swamp: '늪', orc: '오크', kingdom: '왕국', temple: '신전', volcano: '화산', angel: '부유섬', general: '일반' };
 
-const SLOT_KO: Record<'weapon' | 'armor' | 'accessory', string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+const SLOT_KO: Record<Slot, string> = { weapon: '무기', armor: '방어구', accessory: '장신구' };
 
-/** 순서 이동 버튼 아이콘(2026-09-15) — 14px, currentColor. 맨 앞/맨 뒤는 막대 + 삼각형, 앞/뒤는 삼각형만. */
-const MOVE_ICON: Record<MoveDir, React.ReactNode> = {
+/** 순서 이동 버튼 아이콘(2026-09-15) — 14px, currentColor. 막대 + 삼각형. 한 칸 이동은 드래그로 대신한다(11-17). */
+const MOVE_ICON: Record<'first' | 'last', React.ReactNode> = {
   first: (
     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
       <path d="M3.5 3v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M13 3.5v9L6.5 8z" fill="currentColor" />
-    </svg>
-  ),
-  prev: (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-      <path d="M11.5 3v10L4.5 8z" fill="currentColor" />
-    </svg>
-  ),
-  next: (
-    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" aria-hidden>
-      <path d="M4.5 3v10l7-5z" fill="currentColor" />
     </svg>
   ),
   last: (
@@ -131,8 +143,10 @@ export function ProfileSelector({
   // 정렬·필터·열 수(11-16 1안) — 처음 렌더는 기본값(서버와 같게), 마운트 뒤 기기에 기억된 값으로.
   const [sort, setSort] = useState<SortKey>('mine');
   const [cols, setCols] = useState<Cols>(4);
-  const [region, setRegion] = useState<string | null>(null);
-  const [setOnly, setSetOnly] = useState(false);
+  // 부위별 지역 필터(11-17) — 고른 부위끼리는 모두 맞아야 나온다. regionPick = 지역 목록 시트를 연 부위.
+  const [slotRegion, setSlotRegion] = useState<SlotRegion>(NO_FILTER);
+  const [regionPick, setRegionPick] = useState<Slot | null>(null);
+  const filtering = SLOTS.some((s) => slotRegion[s] !== null);
   useEffect(() => {
     const p = readPref();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 기기 저장값 복원(하이드레이션 뒤 1회)
@@ -289,11 +303,12 @@ export function ProfileSelector({
     });
   };
 
-  // 순서 편집 — 진입은 목록 라벨 줄의 알약, 이동은 네 버튼(맨 앞으로·앞으로·뒤로·맨 뒤로, 선택 아바타 기준).
+  // 순서 편집 — 진입은 목록 라벨 줄의 알약. 옮기기는 꾹 눌러 끌어 놓기(11-17, dnd-kit)와
+  // 선택 아바타를 맨 앞·맨 뒤로 보내는 두 버튼(수백 개를 끝에서 끝까지 끌기는 오래 걸려서 남김).
   // 편집 중에는 반전·반환·장착·적용을 감춘다(순서만 만진다). 취소는 draft를 버린다.
   const [reorderPending, startReorder] = useTransition();
   const beginEdit = () => {
-    if (editing || list.length < 2 || sort !== 'mine' || region) return;
+    if (editing || list.length < 2 || sort !== 'mine' || filtering) return;
     haptic.tap();
     setFlipPreview(false);
     setDraft(list.map((p) => p.id));
@@ -308,6 +323,31 @@ export function ProfileSelector({
     if (next === draft) return;
     haptic.tap();
     setDraft(next);
+    // 옮긴 아바타가 보이게 — 끌어 놓기는 이미 손가락 아래라 버튼 이동에만 스크롤한다.
+    requestAnimationFrame(() => selRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  };
+  // 끌어 놓기 — 터치는 0.2초 누르고 있어야 시작(짧게 쓸면 스크롤), 마우스는 5px 움직이면 시작.
+  // 화면 끝으로 끌면 dnd-kit 자동 스크롤이 목록을 따라 움직인다.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const [dragId, setDragId] = useState<string | null>(null);
+  const onDragStart = (e: DragStartEvent) => {
+    haptic.tap();
+    const id = String(e.active.id);
+    setDragId(id);
+    setSelectedId(id); // 든 아바타가 선택 — 맨 앞·맨 뒤 버튼과 미리보기가 그 아바타를 가리킨다
+  };
+  const onDragEnd = (e: DragEndEvent) => {
+    setDragId(null);
+    if (!draft || !e.over || e.active.id === e.over.id) return;
+    const from = draft.indexOf(String(e.active.id));
+    const to = draft.indexOf(String(e.over.id));
+    if (from < 0 || to < 0) return;
+    haptic.success();
+    setDraft(arrayMove([...draft], from, to));
   };
   const finishEdit = () => {
     if (!draft || reorderPending) return;
@@ -326,22 +366,15 @@ export function ProfileSelector({
       showHeaderToast({ title: '아바타 순서 저장' });
     });
   };
-  // 옮긴 뒤 선택 썸네일이 띠 밖으로 나가면 보이게 스크롤(가로만 — block은 nearest라 세로는 건드리지 않음).
   const selRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    if (editing) selRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [editing, draft]);
 
-  // 보이는 목록 — 편집 중엔 순서 그대로(필터·정렬 없음). 지역 필터: 생성 장비 하나라도 그 지역이면 포함,
-  // '3부위 같은 지역만'이면 세 부위가 모두 그 지역. 정렬은 같은 값이면 지금 순서를 지킨다(안정 정렬).
+  // 보이는 목록 — 편집 중엔 순서 그대로(필터·정렬 없음). 지역 필터: 고른 부위마다 그 부위 생성 장비가
+  // 그 지역이어야 한다(AND). 정렬은 같은 값이면 지금 순서를 지킨다(안정 정렬).
   const shown = editing
     ? list
     : (() => {
-        let xs = region
-          ? list.filter((p) => {
-              const ks = regionKeys(p);
-              return setOnly ? ks.length === 3 && ks.every((k) => k === region) : ks.includes(region);
-            })
+        let xs = filtering
+          ? list.filter((p) => SLOTS.every((s) => slotRegion[s] === null || slotRegionKey(p, s) === slotRegion[s]))
           : list;
         if (sort !== 'mine') {
           const t = (p: ProfileItem) => (p.createdAt ? Date.parse(p.createdAt) : 0);
@@ -350,13 +383,15 @@ export function ProfileSelector({
         return xs;
       })();
   const isRep = sel.id === activeShown;
-  const canEditOrder = list.length > 1 && sort === 'mine' && !region;
+  const canEditOrder = list.length > 1 && sort === 'mine' && !filtering;
   const pill = 'rounded-full border px-2.5 py-1 text-[11px] font-bold transition active:scale-95 disabled:opacity-50';
 
   return (
     <div className="space-y-3">
-      {/* 미리보기 줄(11-16 1안) — 목록을 내려도 헤더 아래에 붙어 있어, 아래쪽 아바타를 골라도 바로 보인다. */}
-      <div className="sticky top-[calc(3rem+env(safe-area-inset-top))] z-20 -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
+      {/* 미리보기 줄(11-16 1안) — 목록을 내리면 맨 위 헤더 자리까지 올라가 헤더를 덮고 붙는다(11-17,
+          헤더 높이만큼 목록이 더 보이게). 헤더(z-30) 위·채팅 패널(z-40) 아래. top은 상태 표시줄(safe-area)
+          아래 — 그 위는 헤더 자기 배경이 그대로 덮고 있다. */}
+      <div className="sticky top-[env(safe-area-inset-top)] z-[35] -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
         <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
           <button
             type="button"
@@ -377,7 +412,7 @@ export function ProfileSelector({
           </button>
           <div className="min-w-0 flex-1">
             {editing ? (
-              <p className="text-[11px] leading-snug break-keep text-zinc-500 dark:text-zinc-400">아바타를 선택한 뒤 아래 버튼으로 옮기고 완료를 눌러 저장하세요.</p>
+              <p className="text-[11px] leading-snug break-keep text-zinc-500 dark:text-zinc-400">아바타를 꾹 누른 채 끌어서 원하는 자리에 놓고 완료를 눌러 저장하세요.</p>
             ) : sel.equipment && sel.equipment.length > 0 ? (
               <ul className="space-y-0.5">
                 {sel.equipment.map((e) => {
@@ -412,46 +447,40 @@ export function ProfileSelector({
             ) : null}
           </div>
         </div>
-        {/* 순서 편집 도구(편집 중) — 선택 아바타를 옮기는 네 버튼. 미리보기 줄과 함께 붙어 있어 목록 어디서든 쓸 수 있다. */}
+        {/* 순서 편집 도구(편집 중) — 선택 아바타를 맨 앞·맨 뒤로 보내는 두 버튼과 취소·완료. 미리보기 줄과 함께 붙어 있다. */}
         {editing && draft ? (
-          <div className="mt-2 space-y-1.5">
-            <div className="flex gap-1.5" role="group" aria-label="아바타 순서 이동">
-              {(
-                [
-                  ['first', '맨 앞으로', true],
-                  ['prev', '앞으로', true],
-                  ['next', '뒤로', false],
-                  ['last', '맨 뒤로', false],
-                ] as const
-              ).map(([dir, label, iconFirst]) => {
-                const ok = canMove(draft, selectedId, dir);
-                return (
-                  <button
-                    key={dir}
-                    type="button"
-                    onClick={() => moveSel(dir)}
-                    disabled={!ok}
-                    className={`flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-xl border px-1 py-2 text-[11px] font-bold transition active:scale-[0.98] disabled:active:scale-100 ${
-                      ok
-                        ? 'border-zinc-300 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100'
-                        : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
-                    }`}
-                  >
-                    {iconFirst ? MOVE_ICON[dir] : null}
-                    <span>{label}</span>
-                    {iconFirst ? null : MOVE_ICON[dir]}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="flex justify-end gap-1.5">
-              <button type="button" onClick={cancelEdit} disabled={reorderPending} className={`${pill} border-zinc-300 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400`}>
-                취소
-              </button>
-              <button type="button" onClick={finishEdit} disabled={reorderPending} className={`${pill} border-violet-600 bg-violet-600 text-white`}>
-                완료
-              </button>
-            </div>
+          <div className="mt-2 flex items-center gap-1.5" role="group" aria-label="아바타 순서 이동">
+            {(
+              [
+                ['first', '맨 앞으로'],
+                ['last', '맨 뒤로'],
+              ] as const
+            ).map(([dir, label]) => {
+              const ok = canMove(draft, selectedId, dir);
+              return (
+                <button
+                  key={dir}
+                  type="button"
+                  onClick={() => moveSel(dir)}
+                  disabled={!ok}
+                  className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-bold transition active:scale-95 disabled:active:scale-100 ${
+                    ok
+                      ? 'border-zinc-300 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200'
+                      : 'border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-600'
+                  }`}
+                >
+                  {dir === 'first' ? MOVE_ICON.first : null}
+                  <span>{label}</span>
+                  {dir === 'last' ? MOVE_ICON.last : null}
+                </button>
+              );
+            })}
+            <button type="button" onClick={cancelEdit} disabled={reorderPending} className={`${pill} ml-auto border-zinc-300 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400`}>
+              취소
+            </button>
+            <button type="button" onClick={finishEdit} disabled={reorderPending} className={`${pill} border-violet-600 bg-violet-600 text-white`}>
+              완료
+            </button>
           </div>
         ) : null}
       </div>
@@ -480,7 +509,7 @@ export function ProfileSelector({
                 type="button"
                 onClick={beginEdit}
                 disabled={!canEditOrder || pending || flipping || reorderPending}
-                title={canEditOrder ? undefined : '내 순서·전체 지역에서만 편집할 수 있어요'}
+                title={canEditOrder ? undefined : '내 순서·필터 없음에서만 편집할 수 있어요'}
                 className={`${pill} border-zinc-300 bg-white text-violet-600 disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-violet-400 dark:disabled:text-zinc-600`}
               >
                 순서 편집
@@ -503,56 +532,82 @@ export function ProfileSelector({
               ))}
             </span>
           </div>
-          <DragScrollRow className="flex gap-1.5 pb-0.5">
-            {[null, ...REGION_CHIPS.map((u) => u.key)].map((k) => {
-              const ui = k ? REGION_CHIPS.find((u) => u.key === k)! : null;
-              const on = region === k;
+          <div className="flex gap-1.5" role="group" aria-label="부위별 지역 필터">
+            {SLOTS.map((slot) => {
+              const k = slotRegion[slot];
+              const ui = k ? REGION_CHIPS.find((u) => u.key === k) : null;
               return (
                 <button
-                  key={k ?? 'all'}
+                  key={slot}
                   type="button"
                   onClick={() => {
                     haptic.tap();
-                    setRegion(k);
-                    if (!k) setSetOnly(false);
+                    setRegionPick(slot);
                   }}
-                  aria-pressed={on}
-                  className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold ${
-                    on
+                  aria-label={`${SLOT_KO[slot]} 지역 ${ui ? ui.label : '전체'}`}
+                  className={`flex min-w-0 flex-1 items-center gap-1 rounded-full border py-1 pr-1.5 pl-2 text-[11px] font-bold ${
+                    ui
                       ? 'border-violet-400 bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-100'
                       : 'border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400'
                   }`}
                 >
-                  {ui ? <i aria-hidden className="h-[7px] w-[7px] rounded-full" style={{ background: ui.color }} /> : null}
-                  {ui ? ui.label : '전체'}
+                  <span className={`shrink-0 ${ui ? 'text-violet-500 dark:text-violet-300/80' : ''}`}>{SLOT_KO[slot]}</span>
+                  {ui ? <i aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: ui.color }} /> : null}
+                  <span className={`truncate ${ui ? '' : 'font-medium text-zinc-400 dark:text-zinc-500'}`}>{ui ? REGION_SHORT[ui.key] ?? ui.label : '전체'}</span>
+                  <span aria-hidden className={`ml-auto pl-0.5 text-[8px] ${ui ? 'text-violet-400 dark:text-violet-300' : 'text-zinc-400'}`}>▼</span>
                 </button>
               );
             })}
-          </DragScrollRow>
-          {region ? (
+          </div>
+          {filtering ? (
             <div className="flex items-center justify-between px-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
               <span>
-                {REGION_CHIPS.find((u) => u.key === region)?.label} 장비로 만든 아바타 <b className="text-zinc-800 dark:text-zinc-100">{shown.length}</b>개
+                조건에 맞는 아바타 <b className="text-zinc-800 dark:text-zinc-100">{shown.length}</b>개
               </span>
-              <button type="button" onClick={() => setSetOnly((v) => !v)} aria-pressed={setOnly} className="flex items-center gap-1">
-                <i aria-hidden className={`inline-block h-3 w-3 rounded-[3px] border ${setOnly ? 'border-violet-500 bg-violet-500' : 'border-zinc-400 dark:border-zinc-600'}`} />
-                3부위 같은 지역만
+              <button
+                type="button"
+                onClick={() => {
+                  haptic.tap();
+                  setSlotRegion(NO_FILTER);
+                }}
+                className="font-bold text-violet-600 dark:text-violet-300"
+              >
+                초기화
               </button>
             </div>
           ) : null}
         </div>
       ) : null}
 
-      {/* 보유 목록(격자) — 탭하면 위 미리보기 줄이 바뀐다. 편집 중에는 탭 = 옮길 아바타 선택.
-          칸 아래: 만든 날짜(월.일)와 생성 장비 지역 점(무기·방어구·장신구 순, 11-16 1안 C). */}
+      {/* 보유 목록(격자) — 탭하면 위 미리보기 줄이 바뀐다. 편집 중에는 꾹 눌러 끌어 옮긴다(탭 = 선택).
+          칸 아래: 만든 날짜(월.일)와 생성 장비 지역 점(무기·방어구·장신구 순, 11-16 1안 C).
+          아래 여백 pb-20 — 떠 있는 아바타 생성 버튼이 마지막 줄을 가리지 않게. */}
       {shown.length === 0 ? (
-        <p className="py-10 text-center text-[12px] text-zinc-400 dark:text-zinc-500">조건에 맞는 아바타가 없어요.</p>
+        <p className="py-10 pb-24 text-center text-[12px] text-zinc-400 dark:text-zinc-500">조건에 맞는 아바타가 없어요.</p>
+      ) : editing && draft ? (
+        <DndContext id="avatar-reorder" sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragId(null)}>
+          <SortableContext items={draft as string[]} strategy={rectSortingStrategy}>
+            <div className="grid gap-1.5 pb-20" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+              {shown.map((p) => (
+                <SortableCell key={p.id} id={p.id} selected={p.id === selectedId} cellRef={p.id === selectedId ? selRef : undefined} onSelect={() => selectChar(p)}>
+                  <AvatarCellBody p={p} cols={cols} rep={p.id === activeShown} flipped={cssFlipped(p)} />
+                </SortableCell>
+              ))}
+            </div>
+          </SortableContext>
+          <DragOverlay>
+            {dragId && byId.get(dragId) ? (
+              <div className="relative isolate -rotate-3 scale-105 overflow-hidden rounded-xl border border-violet-500 bg-violet-50 shadow-[0_14px_28px_-8px_rgba(0,0,0,.55)] ring-1 ring-violet-500 dark:bg-violet-950">
+                <AvatarCellBody p={byId.get(dragId)!} cols={cols} rep={dragId === activeShown} flipped={false} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       ) : (
-        <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <div className="grid gap-1.5 pb-20" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
           {shown.map((p) => (
             <button
               key={p.id}
-              ref={p.id === selectedId ? selRef : undefined}
               type="button"
               onClick={() => selectChar(p)}
               className={`relative isolate overflow-hidden rounded-xl border text-left ${
@@ -561,45 +616,70 @@ export function ProfileSelector({
                   : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
               }`}
             >
-              {/* 대표 배지 — 선택 테두리(보라)와 '대표로 쓰는 것'을 구분(2026-08-02). */}
-              {p.id === activeShown ? (
-                <span className="absolute top-0 left-0 z-10 rounded-br-md bg-amber-500 px-1 py-px text-[8px] leading-tight font-bold text-white">대표</span>
-              ) : null}
-              <span className="flex aspect-square w-full items-end justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={frontSrc(p)}
-                  alt="아바타"
-                  loading="lazy"
-                  decoding="async"
-                  draggable={false}
-                  className="h-full w-full object-contain object-bottom"
-                  style={{ imageRendering: 'pixelated', transform: cssFlipped(p) ? 'scaleX(-1)' : undefined }}
-                />
-              </span>
-              <span className="flex items-center justify-between gap-1 px-1.5 pt-0.5 pb-1">
-                <span className={`font-mono text-zinc-400 dark:text-zinc-500 ${cols === 5 ? 'text-[8.5px]' : 'text-[9.5px]'}`}>{kstMd(p.createdAt)}</span>
-                <span className="flex gap-[2px]">
-                  {(p.equipment ?? []).map((e) => (
-                    <i key={e.key} aria-hidden className="h-[6px] w-[6px] rounded-full" style={{ background: e.region ? catalogRegionUi(e.region).color : '#a1a1aa' }} />
-                  ))}
-                </span>
-              </span>
+              <AvatarCellBody p={p} cols={cols} rep={p.id === activeShown} flipped={cssFlipped(p)} />
             </button>
           ))}
         </div>
       )}
 
-      {/* 아바타 생성 — 편집 중에는 숨긴다(사용자 지시 2026-09-16). */}
+      {/* 아바타 생성 — 하단 메뉴·채팅 미니바 위에 떠 있어 목록 어디서든 누른다(11-17). 편집 중에는 숨긴다(2026-09-16). */}
       {!editing ? (
-        <Link
-          prefetch={false}
-          href="/me/create"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.99]"
+        <div
+          className="pointer-events-none fixed inset-x-0 z-20 mx-auto flex w-full max-w-[390px] justify-center"
+          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px) + 3rem)' }}
         >
-          <span aria-hidden>✨</span> 아바타 생성
-        </Link>
+          <Link
+            prefetch={false}
+            href="/me/create"
+            className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(0,0,0,.6)] ring-1 ring-amber-400/40 transition active:scale-95"
+          >
+            <span aria-hidden>✨</span> 아바타 생성
+          </Link>
+        </div>
       ) : null}
+
+      {/* 부위 지역 고르기 — 아래에서 올라오는 목록. 고르면 바로 닫힌다. */}
+      {regionPick && (
+        <ModalShell
+          onClose={() => setRegionPick(null)}
+          label={`${SLOT_KO[regionPick]} 지역`}
+          align="bottom"
+          className="w-full max-w-[390px] overflow-hidden rounded-2xl bg-white pb-[env(safe-area-inset-bottom)] dark:bg-zinc-900"
+        >
+          <div className="flex items-center justify-between px-4 pt-3.5 pb-1.5">
+            <b className="text-[14px]">{SLOT_KO[regionPick]} 지역</b>
+            <span className="text-[11px] text-zinc-400 dark:text-zinc-500">생성에 쓴 {SLOT_KO[regionPick]} 기준</span>
+          </div>
+          <ul>
+            {[null, ...REGION_CHIPS.map((u) => u.key)]
+              .filter((k, i, a) => a.indexOf(k) === i)
+              .map((k) => {
+                const ui = k ? REGION_CHIPS.find((u) => u.key === k)! : null;
+                const on = slotRegion[regionPick] === k;
+                return (
+                  <li key={k ?? 'all'}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic.tap();
+                        setSlotRegion((v) => ({ ...v, [regionPick]: k }));
+                        setRegionPick(null);
+                      }}
+                      aria-pressed={on}
+                      className={`flex w-full items-center gap-2 border-t border-zinc-100 px-4 py-3 text-left text-[13px] dark:border-zinc-800 ${
+                        on ? 'font-bold text-violet-700 dark:text-violet-200' : 'text-zinc-700 dark:text-zinc-200'
+                      }`}
+                    >
+                      <i aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ background: ui ? ui.color : 'transparent' }} />
+                      {ui ? ui.label : '전체'}
+                      {on ? <span aria-hidden className="ml-auto text-violet-500 dark:text-violet-300">✓</span> : null}
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </ModalShell>
+      )}
 
       {/* 크게 보기(11-16 1안) — 큰 이미지·좌우 반전·반환·생성 장비 장착. 반전은 미리보기 후 '반전 적용'으로 저장. */}
       {bigOpen && (
@@ -864,5 +944,85 @@ function EquipCell({
         </span>
       </span>
     </div>
+  );
+}
+
+/** 목록 한 칸의 내용 — 대표 띠·이미지·날짜·지역 점. 일반 칸·끌기 칸·끌리는 그림자가 함께 쓴다. */
+function AvatarCellBody({ p, cols, rep, flipped }: { p: ProfileItem; cols: Cols; rep: boolean; flipped: boolean }) {
+  return (
+    <>
+      {/* 대표 배지 — 선택 테두리(보라)와 '대표로 쓰는 것'을 구분(2026-08-02). */}
+      {rep ? <span className="absolute top-0 left-0 z-10 rounded-br-md bg-amber-500 px-1 py-px text-[8px] leading-tight font-bold text-white">대표</span> : null}
+      <span className="flex aspect-square w-full items-end justify-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={frontSrc(p)}
+          alt="아바타"
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          className="pointer-events-none h-full w-full object-contain object-bottom"
+          style={{ imageRendering: 'pixelated', transform: flipped ? 'scaleX(-1)' : undefined }}
+        />
+      </span>
+      <span className="flex items-center justify-between gap-1 px-1.5 pt-0.5 pb-1">
+        <span className={`font-mono text-zinc-400 dark:text-zinc-500 ${cols === 5 ? 'text-[8.5px]' : 'text-[9.5px]'}`}>{kstMd(p.createdAt)}</span>
+        <span className="flex gap-[2px]">
+          {(p.equipment ?? []).map((e) => (
+            <i key={e.key} aria-hidden className="h-[6px] w-[6px] rounded-full" style={{ background: e.region ? catalogRegionUi(e.region).color : '#a1a1aa' }} />
+          ))}
+        </span>
+      </span>
+    </>
+  );
+}
+
+/**
+ * 순서 편집 칸(11-17) — 꾹 눌러 끌기. 끌리는 동안 제자리는 점선 칸(놓일 자리)으로 남고, 손가락을 따라가는
+ * 그림자는 DragOverlay가 그린다. 길게 누를 때 iOS 이미지 메뉴·글자 선택이 뜨지 않게 막는다.
+ * scroll-margin — 맨 앞·맨 뒤 버튼으로 옮긴 뒤 scrollIntoView가 위에 붙은 미리보기 줄 밑으로 숨지 않게.
+ */
+function SortableCell({
+  id,
+  selected,
+  cellRef,
+  onSelect,
+  children,
+}: {
+  id: string;
+  selected: boolean;
+  cellRef?: React.RefObject<HTMLButtonElement | null>;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <button
+      ref={(el) => {
+        setNodeRef(el);
+        if (cellRef) cellRef.current = el;
+      }}
+      type="button"
+      onClick={onSelect}
+      {...attributes}
+      {...listeners}
+      style={{
+        transform: CSS.Translate.toString(transform),
+        transition,
+        touchAction: 'manipulation',
+        WebkitTouchCallout: 'none',
+        scrollMarginTop: 200,
+        scrollMarginBottom: 120,
+      }}
+      className={`relative isolate overflow-hidden rounded-xl border text-left select-none ${
+        isDragging
+          ? 'border-2 border-dashed border-violet-500/70 bg-violet-50/60 dark:bg-violet-950/20 [&>*]:invisible'
+          : selected
+            ? 'border-violet-500 bg-violet-50 ring-1 ring-violet-500 dark:bg-violet-950/30'
+            : 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
