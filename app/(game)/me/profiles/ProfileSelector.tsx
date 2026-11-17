@@ -414,7 +414,10 @@ export function ProfileSelector({
                 src={frontSrc(sel)}
                 alt="아바타"
                 draggable={false}
-                className="pointer-events-none h-full w-full object-contain object-bottom"
+                // cover: 원본은 정사각(256, 위아래 여백 2~4%)이라 세로로 긴 칸에 contain하면 칸 높이의 16%가
+                // 머리 위 빈 공간이 된다(11-17). 높이에 맞추면 좌우가 칸 폭의 8%씩 잘리는데, 원본 좌우 투명
+                // 여백(15% 이상)보다 작아 그림은 거의 잘리지 않는다.
+                className="pointer-events-none h-full w-full object-cover object-bottom"
                 style={{ imageRendering: 'pixelated', transform: cssFlipped(sel) ? 'scaleX(-1)' : undefined }}
               />
             ) : null}
