@@ -213,8 +213,15 @@ export function ProfileSelector({
   };
 
   // 캐릭터 선택 → 로컬 미리보기만(서버 반영은 "적용" 버튼).
+  // 이미 선택한 칸을 한 번 더 누르면 크게 보기(11-17). 순서 편집 중에는 선택만 한다(누르기 = 옮길 아바타).
   const selectChar = (p: ProfileItem) => {
-    if (p.id === selectedId) return;
+    if (p.id === selectedId) {
+      if (!editing) {
+        haptic.tap();
+        setBigOpen(true);
+      }
+      return;
+    }
     setSelectedId(p.id);
     setFlipPreview(false); // 반전은 확인용 미리보기 — 다른 아바타로 옮기면 초기화
     setFlipHold(null);
