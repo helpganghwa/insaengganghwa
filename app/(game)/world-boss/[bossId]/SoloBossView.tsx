@@ -1466,10 +1466,6 @@ function RecordsSheet({ runs, total, best: recBest, loading, onReplay, onClose }
           {runs.map((r) => {
             const top = r.score === best;
             const at = new Date(r.at);
-            const crit = r.hits.filter((h) => h.c).length;
-            const miss = r.hits.filter((h) => h.p === 'dodge').length;
-            const exp = r.hits.filter((h) => h.p === 'expose').length;
-            const notes = [exp ? `약점 노출 ${exp}` : '', crit ? `치명 ${crit}` : '', miss ? `빗나감 ${miss}` : ''].filter(Boolean).join(' · ');
             return (
               <li key={r.id} className={`flex items-center gap-2.5 border-b border-slate-800/70 px-1.5 py-2 ${top ? 'bg-amber-400/[.06]' : ''}`}>
                 <span className="w-[42px] shrink-0 text-center leading-tight">
@@ -1486,9 +1482,9 @@ function RecordsSheet({ runs, total, best: recBest, loading, onReplay, onClose }
                     {top ? <span className="rounded-[4px] bg-amber-400/90 px-1 text-[9.5px] font-extrabold text-slate-950">최고</span> : null}
                     <b className={`ml-0.5 font-mono text-[13.5px] font-extrabold tabular-nums ${top ? 'text-amber-300' : 'text-slate-50'}`}>{n(r.score)}</b>
                   </div>
-                  <div className="mt-1 flex items-center gap-2">
+                  {/* 막대만 둔다 — 옆 글자(약점 노출·치명·빗나감 수)는 자리가 좁아 잘려서 뺐다(11-17 사용자). */}
+                  <div className="mt-1 flex items-center">
                     <HitStrip hits={r.hits} />
-                    <span className="truncate text-[10px] text-slate-400">{notes}</span>
                   </div>
                 </div>
                 <button

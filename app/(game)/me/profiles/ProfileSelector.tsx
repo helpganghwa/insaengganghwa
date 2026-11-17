@@ -389,32 +389,6 @@ export function ProfileSelector({
     });
   };
   const selRef = useRef<HTMLButtonElement | null>(null);
-  // 헤더 밀어 올리기 — 자리 표시가 스크롤 영역(main) 위로 사라지면 켜고, 다시 보이면 끈다. 헤더가 빠지며
-  // main이 커져도 scrollTop은 그대로라 표시는 계속 위에 있어 깜빡이지 않는다. 화면을 떠나면 반드시 끈다.
-  const stickMark = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = stickMark.current;
-    const root = el?.closest('main') ?? null;
-    if (!el || !root || typeof IntersectionObserver === 'undefined') return;
-    const html = document.documentElement;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e) return;
-        const above = !e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0);
-        // 스크롤 여유가 헤더 높이 언저리뿐이면 밀어 올리지 않는다 — 헤더가 빠지며 main이 커지면 맨 아래에서
-        // scrollTop이 줄어 표시가 다시 보이고, 헤더가 돌아오고… 를 되풀이할 수 있다.
-        const room = root.scrollHeight - root.clientHeight;
-        if (above && room < 120) return;
-        html.classList.toggle('ig-hide-header', above);
-      },
-      { root, threshold: 0 },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      html.classList.remove('ig-hide-header');
-    };
-  }, []);
 
   // 보이는 목록 — 편집 중엔 순서 그대로(필터·정렬 없음). 지역 필터: 고른 부위마다 그 부위 생성 장비가
   // 그 지역이어야 한다(AND). 정렬은 같은 값이면 지금 순서를 지킨다(안정 정렬).
@@ -434,14 +408,10 @@ export function ProfileSelector({
   const pill = 'rounded-full border px-2.5 py-1 text-[11px] font-bold transition active:scale-95 disabled:opacity-50';
 
   return (
-    <div className="relative space-y-3">
-      {/* 미리보기 줄이 붙기 시작하는 자리 표시 — 이 점이 스크롤 영역 위로 사라지면 헤더를 밀어 올린다.
-          흐름 밖(absolute)이라 아래 줄 간격(space-y)에 끼지 않는다. */}
-      <div ref={stickMark} aria-hidden className="pointer-events-none absolute top-0 left-0 h-px w-px" />
-      {/* 미리보기 줄(11-16 1안) — 목록을 내리면 맨 위 헤더 자리까지 올라가 붙는다(11-17, 헤더 높이만큼 목록이
-          더 보이게). 헤더는 스크롤 영역(main) 밖이라 덮을 수 없어서, 붙는 순간 헤더를 위로 밀어 올린다
-          (html.ig-hide-header, globals.css). 위로 끝까지 올리면 헤더가 돌아온다. z는 채팅 패널(z-40) 아래. */}
-      <div className="sticky top-[env(safe-area-inset-top)] z-[35] -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
+    <div className="space-y-3">
+      {/* 미리보기 줄(11-16 1안) — 목록을 내리면 헤더 바로 아래(스크롤 영역 맨 위)에 붙는다. 헤더는 가리지 않는다
+          (11-17 사용자: 헤더를 밀어 올리는 방식은 어색해 되돌림). z는 목록 칸 위. */}
+      <div className="sticky top-0 z-20 -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
         {/* 높이 고정(138 = 이미지 116 + 여백·테두리) — 장비 수(0~3)·기본 아바타·편집 안내에 따라 줄 높이가
             달라지면 아래 목록이 아바타를 고를 때마다 들썩인다(11-17). 장비 줄(이미지 칸+이름)은 3줄 자리를 늘 차지한다. */}
         <div className="flex h-[138px] items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
