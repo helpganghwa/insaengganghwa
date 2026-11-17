@@ -5,6 +5,7 @@ import { preload } from 'react-dom';
 import { getSessionUserId } from '@/lib/auth/session';
 import { db } from '@/lib/db/client';
 import { RAID_LEAVE_WINDOW_MS, raidTierOf } from '@/lib/game/balance';
+import { kstStartOfDay } from '@/lib/kst';
 import { characters } from '@/lib/db/schema/server';
 import { withTimeout, withTimeoutRetry } from '@/lib/db/with-timeout';
 import { profiles } from '@/lib/db/schema/profiles';
@@ -203,15 +204,23 @@ export default async function RaidDetail({
       if (parts.length === 1) {
         // 돌려받을 소환비 — 원장의 이 레이드 소환 지출(11-16부터 ref, 그 전엔 같은 시각의 소환 지출).
         // 시각은 DB 값끼리 비교한다 — JS Date는 밀리초까지라 마이크로초 시각과 같아지지 않는다(cancel.ts와 같은 조건).
-        const [paid] = (await withTimeout(
+        // freeAgain = 취소하면 오늘 무료 소환이 다시 생기는지 — 오늘 연 소환이 이 레이드 하나뿐일 때만(무료 판정은
+        // 오늘 raids 행 수로 센다). 어제 연 레이드이거나 오늘 다른 소환이 남아 있으면 무료 기회는 돌아오지 않는다.
+        const [row] = (await withTimeout(
           db.execute(sql`
-            select coalesce(-sum(delta), 0)::int as paid from diamond_ledger
-             where user_id = ${userId}::uuid and server_id = ${raid.serverId} and reason = 'raid_open'
-               and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = (select opened_at from raids where id = ${raidId}::bigint)))`),
+            select coalesce((select -sum(delta) from diamond_ledger
+               where user_id = ${userId}::uuid and server_id = ${raid.serverId} and reason = 'raid_open'
+                 and (ref = ${`raid_open:${raidId}`} or (ref is null and created_at = (select opened_at from raids where id = ${raidId}::bigint)))), 0)::int as paid,
+                   (select count(*)::int from raids where host_user_id = ${userId}::uuid and server_id = ${raid.serverId}
+                     and opened_at >= ${kstStartOfDay().toISOString()}::timestamptz) as today,
+                   (${raid.openedAt.toISOString()}::timestamptz >= ${kstStartOfDay().toISOString()}::timestamptz) as opened_today`),
           3000,
           'raid.cancelCost',
-        ).catch(() => [])) as unknown as { paid: number }[];
-        cancel = { kind: 'host', refund: Math.max(0, Number(paid?.paid ?? 0)) };
+        ).catch(() => [])) as unknown as { paid: number; today: number; opened_today: boolean }[];
+        // 조회가 실패하면 금액을 모른다(null) — 팝업은 금액 없이 안내한다(실제 환불은 서버가 다시 계산).
+        cancel = row
+          ? { kind: 'host', refund: Math.max(0, Number(row.paid ?? 0)), freeAgain: !!row.opened_today && Number(row.today) === 1 }
+          : { kind: 'host', refund: null, freeAgain: false };
       }
     } else {
       const deadline = me.joinedAt.getTime() + RAID_LEAVE_WINDOW_MS;

@@ -43,7 +43,10 @@ export function RaidCancel({
   const [busy, setBusy] = useState(false);
   const leave = cancel.kind === 'leave';
   const deadlineMs = leave ? Date.parse(cancel.deadlineIso) : 0;
+  // 무료 소환(낸 💎 0) — 금액 조회가 실패했으면(null) 무료로 단정하지 않는다.
   const free = !leave && cancel.refund === 0;
+  const freeAgain = !leave && cancel.freeAgain;
+  // 횟수는 참여·소환한 날 몫으로 돌려받는다(자정을 넘겨 취소하면 어제 몫) — '오늘'이라 쓰지 않는다.
 
   const run = async () => {
     if (busy) return;
@@ -60,10 +63,10 @@ export function RaidCancel({
       return;
     }
     if (leave) {
-      showHeaderToast({ title: '참여를 취소했어요', detail: '오늘 레이드 횟수 1회를 돌려받았어요.' });
+      showHeaderToast({ title: '참여를 취소했어요', detail: '레이드 횟수 1회를 돌려받았어요.' });
     } else {
       const refund = 'refund' in r ? Number(r.refund) : 0;
-      showHeaderToast({ title: '소환을 취소했어요', detail: refund > 0 ? josa(`💎${fmt(refund)}#{을} 돌려받았어요.`) : '오늘 첫 무료 소환을 다시 쓸 수 있어요.' });
+      showHeaderToast({ title: '소환을 취소했어요', detail: refund > 0 ? josa(`💎${fmt(refund)}#{을} 돌려받았어요.`) : freeAgain ? '오늘 첫 무료 소환을 다시 쓸 수 있어요.' : '레이드 횟수 1회를 돌려받았어요.' });
     }
     router.replace('/raid');
   };
@@ -88,7 +91,7 @@ export function RaidCancel({
       ) : (
         <button type="button" disabled={busy} onClick={() => setOpen(true)} className={btnCls}>
           소환 취소
-          {free ? <span className="text-[11px] font-semibold text-zinc-500">무료 소환 되돌리기</span> : null}
+          {free && freeAgain ? <span className="text-[11px] font-semibold text-zinc-500">무료 소환 되돌리기</span> : null}
         </button>
       )}
 
@@ -109,11 +112,19 @@ export function RaidCancel({
           >
             <div className="space-y-2 text-[12.5px] leading-relaxed break-keep text-zinc-200">
               {leave ? (
-                <p>이 레이드 참여자에서 빠지고, 오늘 레이드 횟수 1회를 돌려받아요.</p>
+                <p>이 레이드 참여자에서 빠지고, 레이드 횟수 1회를 돌려받아요.</p>
               ) : (
                 <>
-                  <p>{free ? '레이드가 사라지고 오늘 첫 무료 소환을 다시 쓸 수 있어요.' : josa(`레이드가 사라지고 소환비 💎${fmt(cancel.refund)}#{을} 돌려받아요.`)}</p>
-                  <p>오늘 레이드 횟수 1회도 함께 돌려받아요.</p>
+                  <p>
+                    {cancel.refund == null
+                      ? '레이드가 사라지고 낸 소환비를 돌려받아요.'
+                      : free
+                        ? freeAgain
+                          ? '레이드가 사라지고 오늘 첫 무료 소환을 다시 쓸 수 있어요.'
+                          : '레이드가 사라져요. 무료로 소환한 레이드라 돌려받을 다이아는 없어요.'
+                        : josa(`레이드가 사라지고 소환비 💎${fmt(cancel.refund)}#{을} 돌려받아요.`)}
+                  </p>
+                  <p>레이드 횟수 1회도 함께 돌려받아요.</p>
                 </>
               )}
             </div>

@@ -199,7 +199,7 @@ export function ProfileSelector({
     haptic.success();
     startEquip(async () => {
       patchNow(optimisticPatch(items));
-      const r = await equipSnapshotItems(items.map((c) => c.userEquipmentId ?? ''));
+      const r = await equipSnapshotItems(items.map((c) => c.userEquipmentId ?? '')).catch(() => ({ status: 'error' as const, message: '연결이 끊겨 장착하지 못했어요. 다시 시도해 주세요.' }));
       if (r.status === 'error') {
         showError(r.message);
         router.refresh();
@@ -293,7 +293,7 @@ export function ProfileSelector({
     if (pending) return;
     setReturnAsk(false);
     startTransition(async () => {
-      const r = await returnProfile(selectedId);
+      const r = await returnProfile(selectedId).catch(() => ({ status: 'error' as const, message: '연결이 끊겨 반환하지 못했어요. 다시 시도해 주세요.' }));
       if (r.status === 'error') return showError(r.message);
       showHeaderToast({ title: '검토 후 우편으로 반환 보상이 지급돼요' });
       // 회수된 캐릭터는 목록에서 제외하고 남은 프로필로 전환 — 상세 페이지 유지.
@@ -315,8 +315,12 @@ export function ProfileSelector({
   // 편집 중에는 반전·반환·장착·적용을 감춘다(순서만 만진다). 취소는 draft를 버린다.
   const [reorderPending, startReorder] = useTransition();
   const beginEdit = () => {
-    if (editing || list.length < 2 || sort !== 'mine' || filtering) return;
+    if (editing || list.length < 2) return;
     haptic.tap();
+    // 순서는 '내 순서'·필터 없음에서만 만진다 — 다른 정렬·필터 중이면 그 상태로 바꾸며 들어간다(11-17 검수:
+    // 버튼이 회색으로만 막혀 있으면 휴대폰에선 이유를 알 수 없었다).
+    if (sort !== 'mine') pickSort('mine');
+    if (filtering) setSlotRegion(NO_FILTER);
     setFlipPreview(false);
     setDraft(list.map((p) => p.id));
   };
@@ -340,6 +344,17 @@ export function ProfileSelector({
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  // 화면 읽기 안내 — dnd-kit 기본값은 영어라 한국어로(11-17 검수). 몇 번째 자리인지로 말한다.
+  const posOf = (id: unknown) => (draft ? draft.indexOf(String(id)) + 1 : 0);
+  const dndA11y = {
+    screenReaderInstructions: { draggable: '스페이스나 엔터로 아바타를 들고, 방향키로 옮긴 뒤 다시 스페이스나 엔터로 놓아요. ESC를 누르면 취소돼요.' },
+    announcements: {
+      onDragStart: ({ active }: { active: { id: unknown } }) => `${posOf(active.id)}번째 아바타를 들었어요.`,
+      onDragOver: ({ over }: { over: { id: unknown } | null }) => (over ? `${posOf(over.id)}번째 자리 위에 있어요.` : '놓을 자리를 벗어났어요.'),
+      onDragEnd: ({ over }: { over: { id: unknown } | null }) => (over ? `${posOf(over.id)}번째 자리에 놓았어요.` : '제자리에 놓았어요.'),
+      onDragCancel: () => '옮기기를 취소했어요.',
+    },
+  };
   const [dragId, setDragId] = useState<string | null>(null);
   const onDragStart = (e: DragStartEvent) => {
     haptic.tap();
@@ -364,7 +379,7 @@ export function ProfileSelector({
     haptic.success();
     startReorder(async () => {
       setShownOrder(next);
-      const r = await reorderProfiles(next);
+      const r = await reorderProfiles(next).catch(() => ({ status: 'error' as const, message: '연결이 끊겨 저장하지 못했어요. 다시 시도해 주세요.' }));
       if (r.status === 'error') {
         showError(r.message);
         router.refresh();
@@ -374,6 +389,32 @@ export function ProfileSelector({
     });
   };
   const selRef = useRef<HTMLButtonElement | null>(null);
+  // 헤더 밀어 올리기 — 자리 표시가 스크롤 영역(main) 위로 사라지면 켜고, 다시 보이면 끈다. 헤더가 빠지며
+  // main이 커져도 scrollTop은 그대로라 표시는 계속 위에 있어 깜빡이지 않는다. 화면을 떠나면 반드시 끈다.
+  const stickMark = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = stickMark.current;
+    const root = el?.closest('main') ?? null;
+    if (!el || !root || typeof IntersectionObserver === 'undefined') return;
+    const html = document.documentElement;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e) return;
+        const above = !e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? 0);
+        // 스크롤 여유가 헤더 높이 언저리뿐이면 밀어 올리지 않는다 — 헤더가 빠지며 main이 커지면 맨 아래에서
+        // scrollTop이 줄어 표시가 다시 보이고, 헤더가 돌아오고… 를 되풀이할 수 있다.
+        const room = root.scrollHeight - root.clientHeight;
+        if (above && room < 120) return;
+        html.classList.toggle('ig-hide-header', above);
+      },
+      { root, threshold: 0 },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      html.classList.remove('ig-hide-header');
+    };
+  }, []);
 
   // 보이는 목록 — 편집 중엔 순서 그대로(필터·정렬 없음). 지역 필터: 고른 부위마다 그 부위 생성 장비가
   // 그 지역이어야 한다(AND). 정렬은 같은 값이면 지금 순서를 지킨다(안정 정렬).
@@ -390,14 +431,16 @@ export function ProfileSelector({
         return xs;
       })();
   const isRep = sel.id === activeShown;
-  const canEditOrder = list.length > 1 && sort === 'mine' && !filtering;
   const pill = 'rounded-full border px-2.5 py-1 text-[11px] font-bold transition active:scale-95 disabled:opacity-50';
 
   return (
-    <div className="space-y-3">
-      {/* 미리보기 줄(11-16 1안) — 목록을 내리면 맨 위 헤더 자리까지 올라가 헤더를 덮고 붙는다(11-17,
-          헤더 높이만큼 목록이 더 보이게). 헤더(z-30) 위·채팅 패널(z-40) 아래. top은 상태 표시줄(safe-area)
-          아래 — 그 위는 헤더 자기 배경이 그대로 덮고 있다. */}
+    <div className="relative space-y-3">
+      {/* 미리보기 줄이 붙기 시작하는 자리 표시 — 이 점이 스크롤 영역 위로 사라지면 헤더를 밀어 올린다.
+          흐름 밖(absolute)이라 아래 줄 간격(space-y)에 끼지 않는다. */}
+      <div ref={stickMark} aria-hidden className="pointer-events-none absolute top-0 left-0 h-px w-px" />
+      {/* 미리보기 줄(11-16 1안) — 목록을 내리면 맨 위 헤더 자리까지 올라가 붙는다(11-17, 헤더 높이만큼 목록이
+          더 보이게). 헤더는 스크롤 영역(main) 밖이라 덮을 수 없어서, 붙는 순간 헤더를 위로 밀어 올린다
+          (html.ig-hide-header, globals.css). 위로 끝까지 올리면 헤더가 돌아온다. z는 채팅 패널(z-40) 아래. */}
       <div className="sticky top-[env(safe-area-inset-top)] z-[35] -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
         {/* 높이 고정(138 = 이미지 116 + 여백·테두리) — 장비 수(0~3)·기본 아바타·편집 안내에 따라 줄 높이가
             달라지면 아래 목록이 아바타를 고를 때마다 들썩인다(11-17). 장비 줄(이미지 칸+이름)은 3줄 자리를 늘 차지한다. */}
@@ -524,8 +567,7 @@ export function ProfileSelector({
               <button
                 type="button"
                 onClick={beginEdit}
-                disabled={!canEditOrder || pending || flipping || reorderPending}
-                title={canEditOrder ? undefined : '내 순서·필터 없음에서만 편집할 수 있어요'}
+                disabled={pending || flipping || reorderPending}
                 className={`${pill} border-zinc-300 bg-white text-violet-600 disabled:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-violet-400 dark:disabled:text-zinc-600`}
               >
                 순서 편집
@@ -601,7 +643,7 @@ export function ProfileSelector({
       {shown.length === 0 ? (
         <p className="py-10 pb-24 text-center text-[12px] text-zinc-400 dark:text-zinc-500">조건에 맞는 아바타가 없어요.</p>
       ) : editing && draft ? (
-        <DndContext id="avatar-reorder" sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragId(null)}>
+        <DndContext id="avatar-reorder" accessibility={dndA11y} sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragId(null)}>
           <SortableContext items={draft as string[]} strategy={rectSortingStrategy}>
             <div className="grid gap-1.5 pb-20" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
               {shown.map((p) => (
@@ -642,14 +684,14 @@ export function ProfileSelector({
       {!editing ? (
         <div
           className="pointer-events-none fixed inset-x-0 z-20 mx-auto flex w-full max-w-[390px] justify-center"
-          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px) + 3rem)' }}
+          style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom) + var(--gt-h, 0px) + var(--chat-dock-h, 0px) + 0.5rem)' }}
         >
           <Link
             prefetch={false}
             href="/me/create"
             className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-amber-600 px-5 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(0,0,0,.6)] ring-1 ring-amber-400/40 transition active:scale-95"
           >
-            <span aria-hidden>✨</span> 아바타 생성
+            아바타 생성
           </Link>
         </div>
       ) : null}
@@ -678,8 +720,16 @@ export function ProfileSelector({
                       type="button"
                       onClick={() => {
                         haptic.tap();
-                        setSlotRegion((v) => ({ ...v, [regionPick]: k }));
+                        const next = { ...slotRegion, [regionPick]: k };
+                        setSlotRegion(next);
                         setRegionPick(null);
+                        // 고른 아바타가 필터에 걸려 목록에서 사라지면 보이는 첫 아바타로 옮긴다 — 안 보이는 아바타에
+                        // '대표로 설정'·크게 보기가 걸려 헷갈리지 않게(11-17 검수).
+                        const match = (p: ProfileItem) => SLOTS.every((s) => next[s] === null || slotRegionKey(p, s) === next[s]);
+                        if (!match(sel)) {
+                          const first = list.find(match);
+                          if (first) setSelectedId(first.id);
+                        }
                       }}
                       aria-pressed={on}
                       className={`flex w-full items-center gap-2 border-t border-zinc-100 px-4 py-3 text-left text-[13px] dark:border-zinc-800 ${
@@ -797,7 +847,7 @@ export function ProfileSelector({
                                 type="button"
                                 onClick={() => askEquipOne(e)}
                                 disabled={st !== 'can' || equipPending}
-                                aria-label={`${SLOT_KO[e.slot]} ${e.name} — ${st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}`}
+                                aria-label={`${SLOT_KO[e.slot]} ${e.name}, ${st === 'on' ? '장착 중' : st === 'can' ? '장착' : '미보유'}`}
                                 className={`relative flex min-w-0 items-center gap-1.5 rounded-lg border px-1.5 pt-1.5 pb-4 text-left transition active:scale-[0.98] ${
                                   st === 'on'
                                     ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'

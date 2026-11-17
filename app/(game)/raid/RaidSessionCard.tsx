@@ -84,7 +84,7 @@ export type RaidView = {
    * 지금 할 수 있는 취소(11-16) — 참여 취소(마감 시각까지) 또는 소환 취소(돌려받을 소환비, 무료 소환이면 0). 못 하면 null.
    * 공격하면 카드가 낙관적으로 숨기고, 마감이 지나면 카운트다운이 숨긴다(서버가 다시 검사).
    */
-  cancel: { kind: 'leave'; deadlineIso: string } | { kind: 'host'; refund: number } | null;
+  cancel: { kind: 'leave'; deadlineIso: string } | { kind: 'host'; refund: number | null; freeAgain: boolean } | null;
 };
 
 const MEDAL = ['🥇', '🥈', '🥉'];
