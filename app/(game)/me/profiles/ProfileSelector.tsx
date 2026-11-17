@@ -399,7 +399,9 @@ export function ProfileSelector({
           헤더 높이만큼 목록이 더 보이게). 헤더(z-30) 위·채팅 패널(z-40) 아래. top은 상태 표시줄(safe-area)
           아래 — 그 위는 헤더 자기 배경이 그대로 덮고 있다. */}
       <div className="sticky top-[env(safe-area-inset-top)] z-[35] -mx-4 bg-white/95 px-4 pt-2 pb-2 backdrop-blur dark:bg-zinc-950/95">
-        <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
+        {/* 높이 고정(106 = 이미지 84 + 여백·테두리) — 장비 수(0~3)·기본 아바타·편집 안내에 따라 줄 높이가
+            달라지면 아래 목록이 아바타를 고를 때마다 들썩인다(11-17). 장비 줄은 3줄 자리를 늘 차지한다. */}
+        <div className="flex h-[106px] items-center gap-3 overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
           <button
             type="button"
             onClick={() => !editing && setBigOpen(true)}
@@ -417,15 +419,15 @@ export function ProfileSelector({
               />
             ) : null}
           </button>
-          <div className="min-w-0 flex-1">
+          <div className="flex h-full min-w-0 flex-1 flex-col justify-center">
             {editing ? (
               <p className="text-[11px] leading-snug break-keep text-zinc-500 dark:text-zinc-400">아바타를 꾹 누른 채 끌어서 원하는 자리에 놓고 완료를 눌러 저장하세요.</p>
             ) : sel.equipment && sel.equipment.length > 0 ? (
-              <ul className="space-y-0.5">
+              <ul className="h-[51px]">
                 {sel.equipment.map((e) => {
                   const ui = e.region ? catalogRegionUi(e.region) : null;
                   return (
-                    <li key={e.key} className="flex min-w-0 items-center gap-1.5 text-[11.5px]">
+                    <li key={e.key} className="flex h-[17px] min-w-0 items-center gap-1.5 text-[11.5px]">
                       <i aria-hidden className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ background: ui?.color ?? '#a1a1aa' }} />
                       <span className="truncate text-zinc-700 dark:text-zinc-200">{e.name}</span>
                     </li>
@@ -433,7 +435,7 @@ export function ProfileSelector({
                 })}
               </ul>
             ) : (
-              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">기본 아바타</p>
+              <p className="flex h-[51px] items-center text-[11px] text-zinc-400 dark:text-zinc-500">기본 아바타</p>
             )}
             {!editing ? (
               <div className="mt-1.5 flex gap-1.5">
