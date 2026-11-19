@@ -9,7 +9,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { getTodayDetail, getLifetimeStats, getRankHistory, getAllTabExtras, type RankPoint, type AllTabExtras } from '@/lib/game/today/stats';
-import { getAvatarStats, type AvatarStats } from '@/lib/game/today/avatar-stats';
+import { getAvatarStats, getTodayAvatarStats, type AvatarStats } from '@/lib/game/today/avatar-stats';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { EnhanceDailyChart, SingleRankChart } from './MiniCharts';
 
@@ -149,7 +149,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 async function TodayTab({
   userId, serverId, nickname, publicCode, inviteCode,
 }: { userId: string; serverId: number; nickname: string; publicCode: string; inviteCode: string }) {
-  const d = await withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null);
+  const [d, av] = await Promise.all([
+    withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null),
+    withTimeout(getTodayAvatarStats(userId, serverId), 3500, 'today.avatar.day').catch(() => null),
+  ]);
   if (!d) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const captureDate = `${kstNow.getUTCFullYear()}. ${kstNow.getUTCMonth() + 1}. ${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
@@ -228,6 +231,8 @@ async function TodayTab({
         />
       </Card>
 
+      {av ? <TodayAvatarCard a={av} /> : null}
+
       <TodayShareBox
         nickname={nickname}
         publicCode={publicCode}
@@ -239,6 +244,70 @@ async function TodayTab({
   );
 }
 
+/** 사용한 장비의 지역 막대 — 전체·오늘 아바타 카드 공용. */
+function RegionBar({ regions }: { regions: AvatarStats['regions'] }) {
+  const total = regions.reduce((t, r) => t + r.n, 0);
+  if (total === 0) return null;
+  return (
+    <div className="mt-1.5 rounded-lg bg-white/70 px-2 py-1.5 dark:bg-zinc-950/50">
+      <div className="mb-1 text-[9px] text-zinc-500">사용한 장비의 지역</div>
+      <div className="flex h-[8px] overflow-hidden rounded-full">
+        {regions.map((r) => (
+          <span key={r.key} style={{ width: `${(r.n / total) * 100}%`, background: r.color }} />
+        ))}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] tabular-nums text-zinc-500">
+        {regions.map((r) => (
+          <span key={r.key} className="inline-flex items-center gap-[3px]">
+            <i className="inline-block h-[6px] w-[6px] rounded-full" style={{ background: r.color }} />
+            {r.label} {fmt(r.n)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 오늘 탭 아바타 카드 — 오늘(KST 자정 이후) 만든 아바타만. 보유·순위·전체 대비처럼 오늘과 무관한 값은 뺀다. */
+function TodayAvatarCard({ a }: { a: Awaited<ReturnType<typeof getTodayAvatarStats>> }) {
+  return (
+    <Card title="오늘의 아바타">
+      {a.made === 0 ? (
+        <p className="py-0.5 text-center text-[11px] text-zinc-500">오늘 만든 아바타가 없어요.</p>
+      ) : (
+        <>
+          <StatGrid
+            cols={2}
+            items={[
+              { l: '만든 아바타', v: `${fmt(a.made)}개` },
+              { l: '성별', v: `여 ${fmt(a.female)} · 남 ${fmt(a.male)}` },
+            ]}
+          />
+          <div className="mt-1.5">
+            <StatGrid
+              cols={2}
+              items={[
+                { l: '많이 나온 눈 색', v: a.topEye?.label ?? '—', s: a.topEye ? `${fmt(a.topEye.n)}번` : undefined },
+                { l: '많이 나온 머리색', v: a.topHair?.label ?? '—', s: a.topHair ? `${fmt(a.topHair.n)}번` : undefined },
+              ]}
+            />
+          </div>
+          <RegionBar regions={a.regions} />
+          <div className="mt-1.5">
+            <StatGrid
+              cols={2}
+              items={[
+                { l: '많이 사용한 장비', v: <span className="break-keep text-[12px]">{a.topItem?.name ?? '—'}</span>, s: a.topItem ? `${fmt(a.topItem.n)}번` : undefined },
+                { l: '사용한 장비', v: `${fmt(a.kinds)}종` },
+              ]}
+            />
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 /** 아바타 카드(2026-11-19 #618) — 줄마다 같은 성격끼리: 생성·보유 / 외형 / 지역 막대 / 장비. */
 function AvatarCard({ a }: { a: AvatarStats }) {
   if (a.made === 0)
@@ -247,7 +316,6 @@ function AvatarCard({ a }: { a: AvatarStats }) {
         <p className="py-0.5 text-center text-[11px] text-zinc-500">아직 만든 아바타가 없어요.</p>
       </Card>
     );
-  const total = a.regions.reduce((t, r) => t + r.n, 0);
   return (
     <Card title="아바타">
       <StatGrid
@@ -266,24 +334,7 @@ function AvatarCard({ a }: { a: AvatarStats }) {
           ]}
         />
       </div>
-      {total > 0 ? (
-        <div className="mt-1.5 rounded-lg bg-white/70 px-2 py-1.5 dark:bg-zinc-950/50">
-          <div className="mb-1 text-[9px] text-zinc-500">사용한 장비의 지역</div>
-          <div className="flex h-[8px] overflow-hidden rounded-full">
-            {a.regions.map((r) => (
-              <span key={r.key} style={{ width: `${(r.n / total) * 100}%`, background: r.color }} />
-            ))}
-          </div>
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] tabular-nums text-zinc-500">
-            {a.regions.map((r) => (
-              <span key={r.key} className="inline-flex items-center gap-[3px]">
-                <i className="inline-block h-[6px] w-[6px] rounded-full" style={{ background: r.color }} />
-                {r.label} {fmt(r.n)}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <RegionBar regions={a.regions} />
       <div className="mt-1.5">
         <StatGrid
           cols={2}

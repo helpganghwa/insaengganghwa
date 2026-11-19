@@ -3,6 +3,7 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { kstStartOfDay } from '@/lib/kst';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 import { avatarSlotLimit } from '@/lib/game/profile/slots';
@@ -108,19 +109,32 @@ export function summarizeAvatarJobs(rows: AvatarJobRow[]): Pick<AvatarStats, 'fe
   };
 }
 
+/** 오늘 탭(KST 자정 이후)에서 쓰는 축소판 — 보유·순위·전체 장비 수처럼 '오늘'과 무관한 값은 세지 않는다. */
+export async function getTodayAvatarStats(userId: string, serverId: number): Promise<Pick<AvatarStats, 'made' | 'female' | 'male' | 'topEye' | 'topHair' | 'regions' | 'topItem' | 'kinds'>> {
+  const rows = await loadJobs(userId, serverId, sql`${kstStartOfDay().toISOString()}::timestamptz`);
+  return { made: rows.length, ...summarizeAvatarJobs(rows) };
+}
+
+async function loadJobs(userId: string, serverId: number, since: ReturnType<typeof sql>): Promise<AvatarJobRow[]> {
+  const jobs = await db.execute(sql`
+    select options->>'gender' as gender,
+           options->'v3Appearance'->>'eyeColor' as eye,
+           options->'v3Appearance'->>'hair' as hair,
+           equipment_snapshot->>'weaponKey' as w, equipment_snapshot->>'armorKey' as a, equipment_snapshot->>'accessoryKey' as x
+    from profile_generation_jobs
+    where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'accepted' and created_at >= ${since}
+    order by id
+  `);
+  return (jobs as unknown as { gender: string | null; eye: string | null; hair: string | null; w: string | null; a: string | null; x: string | null }[]).map(
+    (r) => ({ gender: r.gender, eye: r.eye, hair: r.hair, keys: [r.w, r.a, r.x] }),
+  );
+}
+
 export async function getAvatarStats(userId: string, serverId: number): Promise<AvatarStats> {
   // 캐릭터 생성 이후만(2서버 규칙 — 탈퇴·재가입으로 옛 기록이 되살아나지 않게).
   const since = sql`(select c.created_at from characters c where c.user_id = ${userId}::uuid and c.server_id = ${serverId})`;
-  const [jobs, own, rank, total, slots] = await Promise.all([
-    db.execute(sql`
-      select options->>'gender' as gender,
-             options->'v3Appearance'->>'eyeColor' as eye,
-             options->'v3Appearance'->>'hair' as hair,
-             equipment_snapshot->>'weaponKey' as w, equipment_snapshot->>'armorKey' as a, equipment_snapshot->>'accessoryKey' as x
-      from profile_generation_jobs
-      where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'accepted' and created_at >= ${since}
-      order by id
-    `),
+  const [rows, own, rank, total, slots] = await Promise.all([
+    loadJobs(userId, serverId, since),
     db.execute(sql`select count(*)::int as n from user_profiles where user_id = ${userId}::uuid and server_id = ${serverId}`),
     // 순위 = 나보다 많이 만든 사람 수 + 1. 서버 전체 집계지만 accepted 행은 수만 건이라 status 인덱스로 충분하다.
     db.execute(sql`
@@ -136,9 +150,6 @@ export async function getAvatarStats(userId: string, serverId: number): Promise<
     db.execute(sql`select count(*)::int as n from catalog_items where active`),
     avatarSlotLimit(userId, serverId),
   ]);
-  const rows = (jobs as unknown as { gender: string | null; eye: string | null; hair: string | null; w: string | null; a: string | null; x: string | null }[]).map(
-    (r) => ({ gender: r.gender, eye: r.eye, hair: r.hair, keys: [r.w, r.a, r.x] }),
-  );
   const rk = (rank as unknown as { mine: number | null; ahead: number }[])[0];
   return {
     made: rows.length,
