@@ -947,7 +947,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   </button>
                   {left >= 2 || allHold != null ? (
                     <>
-                      <span aria-hidden className="my-2.5 w-px shrink-0 bg-white/40" />
                       <button
                         type="button"
                         onClick={handleAttackAll}
