@@ -345,6 +345,9 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const atkKeyRef = useRef<string | null>(null);
   // 한 번에 공격 멱등키(2026-11-24) — 기본 공격과 같은 규칙(전송 실패 재시도에서만 재사용).
   const allKeyRef = useRef<string | null>(null);
+  // 한 번에 공격 진행 중 — 낙관 차감으로 남은 공격이 0이 돼도 결과를 보여 주는 동안은 두 버튼 자리를 그대로 둔다
+  // (안 그러면 버튼이 한 줄로 줄며 아래 목록이 튄다 — 캡처 검수 11-24). 끝나면 지금처럼 추가 공격 버튼으로 바뀐다.
+  const [allShown, setAllShown] = useState<number | null>(null);
   // ⚠ 멱등키는 **레이드마다 새로** 시작해야 한다(2026-09-12 자가 검수). Next App Router는
   // /raid/A → /raid/B 이동에서 같은 위치의 컴포넌트를 재사용하므로 ref가 살아남는다. 전송 실패로
   // 키를 쥔 채 다른 레이드로 이동해 공격하면, 서버가 그 키로 **앞 레이드의 공격 기록**을 찾아
@@ -422,6 +425,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // 공격 연출 — 로어 오버레이 + 쿨다운(연속 클릭 차단).
   const [attacking, setAttacking] = useState(false);
   const [attackLore, setAttackLore] = useState<string | null>(null);
+  // 한 번에 공격 결과를 보여 주는 동안(attacking)만 버튼 자리·숫자를 누르기 전 그대로 둔다.
+  const allHold = attacking && allShown != null ? allShown : null;
   // 보스 HP 낙관 반영(2026-07-23) — 공격 응답의 누적 데미지를 즉시 HP 바에 반영해
   // router.refresh(페이지 전체 재렌더) 지연과 무관하게 HP가 바로 줄어들게 한다.
   // prop이 그 값 이상으로 갱신되면(다른 유저 공격 포함) prop을 신뢰.
@@ -597,6 +602,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const handleAttackAll = () => {
     if (!canAttack || attacking || left < 2) return;
     const n = left;
+    setAllShown(n);
     setLocalUsed((u) => u + n);
     allKeyRef.current ??= crypto.randomUUID();
     const key = allKeyRef.current;
@@ -610,10 +616,13 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           damage: r.damage,
           isCrit: r.crits > 0,
           totalDamage: r.totalDamage,
-          sub: `${r.count}번 공격 · 치명타 ${r.crits}번`,
+          sub: r.crits > 0 ? `${r.count}번 공격 · 치명타 ${r.crits}번` : `${r.count}번 공격`,
         };
       },
-      () => setLocalUsed((u) => Math.max(0, u - n)),
+      () => {
+        setLocalUsed((u) => Math.max(0, u - n));
+        setAllShown(null);
+      },
       { lore: `${n}번 공격하는 중`, floatMs: 1800 },
     );
   };
@@ -923,7 +932,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   {v.join?.mode === 'free' ? '⚔️ 레이드 참가하기' : '참가 요청 보내기'}
                 </button>
               )
-            ) : canAttack ? (
+            ) : canAttack || allHold != null ? (
               <div className="relative space-y-2">
                 <button
                   type="button"
@@ -931,17 +940,17 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                   disabled={attacking}
                   className={`${ACTION_SLOT} bg-gradient-to-r from-red-600 to-orange-500 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 active:scale-95 hover:brightness-110 disabled:opacity-60`}
                 >
-                  ⚔️ {boss.name} 공격!  {left}/{allowed}
+                  ⚔️ {boss.name} 공격!  {allHold ?? left}/{allowed}
                 </button>
                 {/* 남은 공격 한 번에(2026-11-24 A안) — 2번 이상 남았을 때만. 1번이면 위 버튼과 같아서 숨긴다. */}
-                {left >= 2 ? (
+                {left >= 2 || allHold != null ? (
                   <button
                     type="button"
                     onClick={handleAttackAll}
                     disabled={attacking}
                     className={`${ACTION_SLOT} border-2 border-red-500/70 bg-red-500/10 text-sm font-bold text-red-200 active:scale-95 hover:brightness-110 disabled:opacity-60`}
                   >
-                    ⚔️ 남은 {left}번 한 번에 공격
+                    ⚔️ 남은 {allHold ?? left}번 한 번에 공격
                   </button>
                 ) : null}
                 {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). 두 버튼일 땐 둘 다 덮는다. */}
