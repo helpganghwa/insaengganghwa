@@ -23,7 +23,7 @@ function rngU32(): number {
 
 // CP 계산은 raid 행과 무관(유저 장비 read) → 트랜잭션/락 **밖**에서 db로 계산(감사 S2 — 락 보유 중
 // 전 장비 스캔 제거). raid 행 락 보유 시간을 인덱스 ops 몇 개로 단축.
-async function userTotalCP(userId: string, serverId: number): Promise<number> {
+export async function userTotalCP(userId: string, serverId: number): Promise<number> {
   // 보유 전체(착용 무관) → 카탈로그별 최강 1개 합산(BALANCE §3.2).
   const owned = await db
     .select({

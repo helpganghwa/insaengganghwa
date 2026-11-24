@@ -34,6 +34,7 @@ import { ConfirmButton } from '@/components/ui/ConfirmButton';
 
 import {
   attackRaidAction,
+  attackRaidAllAction,
   gemAttackRaidAction,
   claimRaidRewardAction,
   decideJoinRequestAction,
@@ -334,7 +335,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
 
   // ── 타격 FX: hit/crit. (insaeng은 미스 없음 — BALANCE §5.3.) ──
   const [fx, setFx] = useState<null | 'hit' | 'crit'>(null);
-  const [floatDmg, setFloatDmg] = useState<{ id: number; val: number; crit: boolean } | null>(
+  const [floatDmg, setFloatDmg] = useState<{ id: number; val: number; crit: boolean; sub?: string } | null>(
     null,
   );
   const fxKey = useRef(0);
@@ -342,6 +343,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const gemKeyRef = useRef<string | null>(null);
   // 기본 공격 멱등키(2026-09-12) — 다이아는 안 쓰지만 하루 공격 횟수를 먹으므로 같은 보호가 필요.
   const atkKeyRef = useRef<string | null>(null);
+  // 한 번에 공격 멱등키(2026-11-24) — 기본 공격과 같은 규칙(전송 실패 재시도에서만 재사용).
+  const allKeyRef = useRef<string | null>(null);
   // ⚠ 멱등키는 **레이드마다 새로** 시작해야 한다(2026-09-12 자가 검수). Next App Router는
   // /raid/A → /raid/B 이동에서 같은 위치의 컴포넌트를 재사용하므로 ref가 살아남는다. 전송 실패로
   // 키를 쥔 채 다른 레이드로 이동해 공격하면, 서버가 그 키로 **앞 레이드의 공격 기록**을 찾아
@@ -351,6 +354,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   useLayoutEffect(() => {
     gemKeyRef.current = null;
     atkKeyRef.current = null;
+    allKeyRef.current = null;
   }, [v.raidId]);
   // 개설자 참가요청 수락/거절 — 낙관적 제거(서버 확정 후 refresh).
   const [handledReqs, setHandledReqs] = useState<Set<string>>(new Set());
@@ -519,13 +523,16 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   // 공격 공통 — 로어 오버레이 + 쿨다운(연속 차단). 데미지/HP는 서버 응답 반영.
   const runAttack = (
     action: () => Promise<
-      | { status: 'success'; damage: number; isCrit: boolean; totalDamage?: string }
+      | { status: 'success'; damage: number; isCrit: boolean; totalDamage?: string; sub?: string }
       | { status: 'error'; message: string; code: string }
     >,
     onFail?: () => void,
+    /** 한 번에 공격 — 로어 대신 진행 문구, 합계 숫자는 길게(읽을 시간). */
+    opts?: { lore?: string; floatMs?: number },
   ) => {
+    const floatMs = opts?.floatMs ?? 850;
     setAttacking(true);
-    setAttackLore(pick(ATTACK_LORE[v.bossCode]));
+    setAttackLore(opts?.lore ?? pick(ATTACK_LORE[v.bossCode]));
     fxKey.current += 1;
     sounds.raidHit();
     haptic.hit();
@@ -553,8 +560,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         setFx('crit');
         setTimeout(() => setFx(null), 520);
       }
-      setFloatDmg({ id, val: r.damage, crit: r.isCrit });
-      setTimeout(() => setFloatDmg(null), 850);
+      setFloatDmg({ id, val: r.damage, crit: r.isCrit, sub: r.sub });
+      setTimeout(() => setFloatDmg(null), floatMs);
       // 보스 HP 즉시 반영 — 서버 액션 revalidate의 현재-페이지 재렌더(§11.7)가 응답에 실려
       // 권위 상태를 동기화하므로 별도 router.refresh는 중복(요청·loadLayoutData 2배)이라 제거(2026-07-27).
       if (r.totalDamage != null) setLocalTotal(Number(r.totalDamage));
@@ -562,7 +569,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       setTimeout(() => {
         setAttacking(false);
         setAttackLore(null);
-      }, 850);
+      }, floatMs);
     })();
   };
 
@@ -580,6 +587,34 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         return r;
       },
       () => setLocalUsed((n) => Math.max(0, n - 1)),
+    );
+  };
+
+  /**
+   * 남은 공격 한 번에(2026-11-24, A안) — 서버가 남은 공격을 한 번씩 따로 굴려 한 요청에 처리한다.
+   * 결과는 합계 피해 + 'N번 공격 · 치명타 N번'으로 한 번에 보여 준다.
+   */
+  const handleAttackAll = () => {
+    if (!canAttack || attacking || left < 2) return;
+    const n = left;
+    setLocalUsed((u) => u + n);
+    allKeyRef.current ??= crypto.randomUUID();
+    const key = allKeyRef.current;
+    runAttack(
+      async () => {
+        const r = await attackRaidAllAction(v.raidId, key);
+        if (r.status === 'success' || r.code !== 'NETWORK') allKeyRef.current = null;
+        if (r.status !== 'success') return r;
+        return {
+          status: 'success' as const,
+          damage: r.damage,
+          isCrit: r.crits > 0,
+          totalDamage: r.totalDamage,
+          sub: `${r.count}번 공격 · 치명타 ${r.crits}번`,
+        };
+      },
+      () => setLocalUsed((u) => Math.max(0, u - n)),
+      { lore: `${n}번 공격하는 중`, floatMs: 1800 },
     );
   };
 
@@ -718,12 +753,19 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
           {floatDmg ? (
             <span
               key={floatDmg.id}
-              className={`animate-dmg-float pointer-events-none absolute left-1/2 top-2 font-mono font-extrabold ${
-                floatDmg.crit ? 'text-3xl text-amber-300' : 'text-2xl text-red-300'
+              className={`animate-dmg-float pointer-events-none absolute left-1/2 top-2 whitespace-nowrap text-center font-mono font-extrabold ${
+                floatDmg.crit || floatDmg.sub ? 'text-3xl text-amber-300' : 'text-2xl text-red-300'
               }`}
-              style={{ textShadow: '0 2px 6px rgba(0,0,0,0.7)' }}
+              style={{
+                textShadow: '0 2px 6px rgba(0,0,0,0.7)',
+                // 한 번에 공격 합계는 두 줄을 읽을 시간이 필요해 길게(기본 0.8s).
+                ...(floatDmg.sub ? { animationDuration: '1.8s' } : null),
+              }}
             >
               {floatDmg.val.toLocaleString()}
+              {floatDmg.sub ? (
+                <span className="mt-0.5 block font-sans text-[11px] font-bold text-amber-100">{floatDmg.sub}</span>
+              ) : null}
             </span>
           ) : null}
         </div>
@@ -882,7 +924,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                 </button>
               )
             ) : canAttack ? (
-              <div className="relative">
+              <div className="relative space-y-2">
                 <button
                   type="button"
                   onClick={handleAttack}
@@ -891,9 +933,20 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                 >
                   ⚔️ {boss.name} 공격!  {left}/{allowed}
                 </button>
-                {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). */}
+                {/* 남은 공격 한 번에(2026-11-24 A안) — 2번 이상 남았을 때만. 1번이면 위 버튼과 같아서 숨긴다. */}
+                {left >= 2 ? (
+                  <button
+                    type="button"
+                    onClick={handleAttackAll}
+                    disabled={attacking}
+                    className={`${ACTION_SLOT} border-2 border-red-500/70 bg-red-500/10 text-sm font-bold text-red-200 active:scale-95 hover:brightness-110 disabled:opacity-60`}
+                  >
+                    ⚔️ 남은 {left}번 한 번에 공격
+                  </button>
+                ) : null}
+                {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). 두 버튼일 땐 둘 다 덮는다. */}
                 {attackLore ? (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[24px] bg-black/60 backdrop-blur-[2px]">
                     <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
                       {attackLore}
                     </span>

@@ -14,6 +14,7 @@ import {
   requestJoinRaid,
   decideJoinRequest,
   attackRaid,
+  attackRaidAll,
   buyExtraAttack,
   gemAttackRaid,
   settleRaid,
@@ -170,6 +171,23 @@ export async function attackRaidAction(raidId: string, idemKey?: string) {
   } catch (e) {
     if (e instanceof RaidError) return err(e.code);
     console.error('[raid.attack]', e);
+    return err('UNKNOWN');
+  }
+}
+
+/** 남은 공격 한 번에(2026-11-24) — 요청 1번에 남은 공격을 한 번씩 따로 굴려 처리한다(lib/game/raid/attack-all.ts). */
+export async function attackRaidAllAction(raidId: string, idemKey?: string) {
+  const u = await uid();
+  if (!u) return err('UNAUTHENTICATED');
+  if (await rateLimited(u, 'raid')) return err('RATE_LIMITED');
+  const __b = await actionBlock(); if (__b) return err(__b);
+  try {
+    const r = await attackRaidAll({ userId: u, raidId: BigInt(raidId), idemKey: asIdemKey(idemKey) });
+    rev(raidId);
+    return { status: 'success' as const, ...r };
+  } catch (e) {
+    if (e instanceof RaidError) return err(e.code);
+    console.error('[raid.attackAll]', e);
     return err('UNKNOWN');
   }
 }

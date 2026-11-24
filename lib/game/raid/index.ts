@@ -13,6 +13,7 @@ export {
 } from './join-request';
 export type { JoinScope, JoinRequestState } from './join-request';
 export { attackRaid, buyExtraAttack, gemAttackRaid } from './attack';
+export { attackRaidAll } from './attack-all';
 export { settleRaid } from './settle';
 export { claimRaidReward, claimAllRaidRewards } from './claim';
 export type { ClaimRaidResult, ClaimAllRaidResult } from './claim';
