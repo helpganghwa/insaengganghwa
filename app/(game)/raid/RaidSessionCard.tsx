@@ -933,29 +933,37 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
                 </button>
               )
             ) : canAttack || allHold != null ? (
-              <div className="relative space-y-2">
-                <button
-                  type="button"
-                  onClick={handleAttack}
-                  disabled={attacking}
-                  className={`${ACTION_SLOT} bg-gradient-to-r from-red-600 to-orange-500 text-sm font-extrabold text-white shadow-lg shadow-red-900/40 active:scale-95 hover:brightness-110 disabled:opacity-60`}
-                >
-                  ⚔️ {boss.name} 공격!  {allHold ?? left}/{allowed}
-                </button>
-                {/* 남은 공격 한 번에(2026-11-24 A안) — 2번 이상 남았을 때만. 1번이면 위 버튼과 같아서 숨긴다. */}
-                {left >= 2 || allHold != null ? (
+              // 공격 버튼 한 알약 안에 두 칸(2026-11-24 2안) — 왼쪽 1번 공격, 오른쪽 '한 번에'(2번 이상 남았을 때만).
+              // 세로로 버튼을 쌓지 않아 소환 취소까지 세 줄이 되던 것을 한 줄로 줄인다.
+              <div className="relative">
+                <div className="flex h-12 w-full overflow-hidden rounded-full bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg shadow-red-900/40">
                   <button
                     type="button"
-                    onClick={handleAttackAll}
+                    onClick={handleAttack}
                     disabled={attacking}
-                    className={`${ACTION_SLOT} border-2 border-red-500/70 bg-red-500/10 text-sm font-bold text-red-200 active:scale-95 hover:brightness-110 disabled:opacity-60`}
+                    className="flex min-w-0 flex-1 items-center justify-center px-3 text-sm font-extrabold transition active:bg-black/15 hover:brightness-110 disabled:opacity-60"
                   >
-                    ⚔️ 남은 {allHold ?? left}번 한 번에 공격
+                    ⚔️ {boss.name} 공격!  {allHold ?? left}/{allowed}
                   </button>
-                ) : null}
-                {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). 두 버튼일 땐 둘 다 덮는다. */}
+                  {left >= 2 || allHold != null ? (
+                    <>
+                      <span aria-hidden className="my-2.5 w-px shrink-0 bg-white/40" />
+                      <button
+                        type="button"
+                        onClick={handleAttackAll}
+                        disabled={attacking}
+                        aria-label={`남은 ${allHold ?? left}번 한 번에 공격`}
+                        className="flex w-[92px] shrink-0 flex-col items-center justify-center bg-black/15 leading-tight transition active:bg-black/30 hover:brightness-110 disabled:opacity-60"
+                      >
+                        <span className="text-[12px] font-extrabold">한 번에</span>
+                        <span className="text-[10px] font-semibold text-white/80">{allHold ?? left}번 모두</span>
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+                {/* 공격 로어 — 강화처럼 버튼에 정확히 맞춘 dim + 정적 텍스트(bg). */}
                 {attackLore ? (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[24px] bg-black/60 backdrop-blur-[2px]">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center rounded-full bg-black/60 backdrop-blur-[2px]">
                     <span className="rounded bg-black/80 px-2 py-0.5 text-[12px] font-semibold break-keep text-amber-200">
                       {attackLore}
                     </span>

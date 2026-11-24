@@ -22,7 +22,7 @@ function leftText(deadlineMs: number, now: number): string | null {
 }
 
 /**
- * 레이드 취소 버튼 + 확인 팝업(11-16, 시안 5J85UYsahKUhmiJh8GAYDE v2) — 공격 버튼 바로 아래 보조 버튼(h-9).
+ * 레이드 취소 버튼 + 확인 팝업(11-16, 시안 5J85UYsahKUhmiJh8GAYDE v2) — 공격 버튼 바로 아래 작은 글자 링크(11-24 2안).
  * 낙관적: 확인을 누르면 팝업을 닫고 곧바로 onOptimistic으로 카드를 '취소함' 상태로 바꾼다. 서버가 받으면 목록으로 가며
  * 헤더 알림, 거절·통신 실패면 onRollback으로 되돌리고 오류 토스트.
  */
@@ -71,8 +71,9 @@ export function RaidCancel({
     router.replace('/raid');
   };
 
+  // 글자 링크(2026-11-24 공격 버튼 2안) — 공격 줄 아래 보조 동작이라 버튼 무게를 빼고 작은 밑줄 글자로 둔다.
   const btnCls =
-    'flex h-9 w-full items-center justify-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 text-[12px] font-bold text-zinc-300 active:scale-95 disabled:opacity-60';
+    'mx-auto flex w-fit items-center gap-1.5 px-2 py-1 text-[12px] font-semibold text-zinc-500 underline decoration-zinc-700 underline-offset-4 active:text-zinc-300 disabled:opacity-60';
 
   return (
     <>
@@ -91,7 +92,7 @@ export function RaidCancel({
       ) : (
         <button type="button" disabled={busy} onClick={() => setOpen(true)} className={btnCls}>
           소환 취소
-          {free && freeAgain ? <span className="text-[11px] font-semibold text-zinc-500">무료 소환 되돌리기</span> : null}
+          {free && freeAgain ? <span className="text-[11px] font-semibold text-zinc-600 no-underline">무료 소환 되돌리기</span> : null}
         </button>
       )}
 
