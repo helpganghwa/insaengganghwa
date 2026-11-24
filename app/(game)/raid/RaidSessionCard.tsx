@@ -345,8 +345,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
   const atkKeyRef = useRef<string | null>(null);
   // 한 번에 공격 멱등키(2026-11-24) — 기본 공격과 같은 규칙(전송 실패 재시도에서만 재사용).
   const allKeyRef = useRef<string | null>(null);
-  // 한 번에 공격 진행 중 — 낙관 차감으로 남은 공격이 0이 돼도 결과를 보여 주는 동안은 두 버튼 자리를 그대로 둔다
-  // (안 그러면 버튼이 한 줄로 줄며 아래 목록이 튄다 — 캡처 검수 11-24). 끝나면 지금처럼 추가 공격 버튼으로 바뀐다.
+  // 한 번에 공격 진행 중 — 낙관 차감으로 남은 공격이 0이 돼도 결과를 보여 주는 동안은 공격 알약을 그대로 둔다
+  // (안 그러면 '공격 중' 덮개 아래가 곧바로 추가 공격 버튼으로 바뀐다 — 캡처 검수 11-24). 끝나면 추가 공격 버튼으로 바뀐다.
   const [allShown, setAllShown] = useState<number | null>(null);
   // ⚠ 멱등키는 **레이드마다 새로** 시작해야 한다(2026-09-12 자가 검수). Next App Router는
   // /raid/A → /raid/B 이동에서 같은 위치의 컴포넌트를 재사용하므로 ref가 살아남는다. 전송 실패로
