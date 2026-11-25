@@ -3,7 +3,6 @@ import 'server-only';
 import { sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { kstStartOfDay } from '@/lib/kst';
 import { CATALOG_ITEMS } from '@/lib/game/equipment/catalog';
 import { REGION_FILTER_ORDER, catalogRegionUi } from '@/lib/game/equipment/region-ui';
 import { avatarSlotLimit } from '@/lib/game/profile/slots';
@@ -112,13 +111,6 @@ export function summarizeAvatarJobs(rows: AvatarJobRow[]): Pick<AvatarStats, 'fe
   };
 }
 
-/** 오늘 탭(KST 자정 이후)에서 쓰는 축소판 — 보유·순위·전체 장비 수처럼 '오늘'과 무관한 값은 세지 않는다. */
-export async function getTodayAvatarStats(userId: string, serverId: number): Promise<Pick<AvatarStats, 'made' | 'female' | 'male' | 'topEye' | 'topHair' | 'regions' | 'topItem' | 'kinds'>> {
-  // 오늘 = 오늘 완성된 것(23:5x 신청·자정 뒤 완성도 오늘 카드에) — 지급(grant)처럼 완성 시각이 없으면 신청 시각.
-  const rows = await loadJobs(userId, serverId, sql`${kstStartOfDay().toISOString()}::timestamptz`, 'done');
-  return { made: rows.length, ...summarizeAvatarJobs(rows) };
-}
-
 /**
  * 성공한 생성 = hasGeneratedCustomAvatar(lib/game/profile/queue.ts)와 같은 기준 — 정상 통과(운영자 회수 제외) 또는 운영자 지급.
  * 회수(reject)는 전액 환불한 '없던 생성'이라 세지 않고, AI 반려 뒤 지급(grant)은 센다.
@@ -126,15 +118,14 @@ export async function getTodayAvatarStats(userId: string, serverId: number): Pro
 const SUCCEEDED = sql`((status = 'accepted' and admin_decision is distinct from 'reject') or admin_decision = 'grant')`;
 const SUCCEEDED_J = sql`((j.status = 'accepted' and j.admin_decision is distinct from 'reject') or j.admin_decision = 'grant')`;
 
-async function loadJobs(userId: string, serverId: number, since: ReturnType<typeof sql>, at: 'created' | 'done' = 'created'): Promise<AvatarJobRow[]> {
-  const atCol = at === 'done' ? sql`coalesce(resolved_at, created_at)` : sql`created_at`;
+async function loadJobs(userId: string, serverId: number, since: ReturnType<typeof sql>): Promise<AvatarJobRow[]> {
   const jobs = await db.execute(sql`
     select options->>'gender' as gender,
            options->'v3Appearance'->>'eyeColor' as eye,
            options->'v3Appearance'->>'hair' as hair,
            equipment_snapshot->>'weaponKey' as w, equipment_snapshot->>'armorKey' as a, equipment_snapshot->>'accessoryKey' as x
     from profile_generation_jobs
-    where user_id = ${userId}::uuid and server_id = ${serverId} and ${SUCCEEDED} and ${atCol} >= ${since}
+    where user_id = ${userId}::uuid and server_id = ${serverId} and ${SUCCEEDED} and created_at >= ${since}
     order by id
   `);
   return (jobs as unknown as { gender: string | null; eye: string | null; hair: string | null; w: string | null; a: string | null; x: string | null }[]).map(

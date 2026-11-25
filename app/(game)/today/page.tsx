@@ -9,7 +9,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { getTodayDetail, getLifetimeStats, getRankHistory, getAllTabExtras, type RankPoint, type AllTabExtras } from '@/lib/game/today/stats';
-import { getAvatarStats, getTodayAvatarStats, type AvatarStats } from '@/lib/game/today/avatar-stats';
+import { getAvatarStats, type AvatarStats } from '@/lib/game/today/avatar-stats';
 import { TranscendSprite } from '@/components/TranscendSprite';
 import { EnhanceDailyChart, SingleRankChart } from './MiniCharts';
 
@@ -149,10 +149,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 async function TodayTab({
   userId, serverId, nickname, publicCode, inviteCode,
 }: { userId: string; serverId: number; nickname: string; publicCode: string; inviteCode: string }) {
-  const [d, av] = await Promise.all([
-    withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null),
-    withTimeout(getTodayAvatarStats(userId, serverId), 3500, 'today.avatar.day').catch(() => null),
-  ]);
+  const d = await withTimeout(getTodayDetail(userId, serverId), 3500, 'today.detail').catch(() => null);
   if (!d) return <p className="py-10 text-center text-sm text-zinc-500">잠시 후 다시 시도해 주세요.</p>;
   const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
   const captureDate = `${kstNow.getUTCFullYear()}. ${kstNow.getUTCMonth() + 1}. ${kstNow.getUTCDate()} (${'일월화수목금토'[kstNow.getUTCDay()]})`;
@@ -231,7 +228,6 @@ async function TodayTab({
         />
       </Card>
 
-      {av ? <TodayAvatarCard a={av} /> : null}
 
       <TodayShareBox
         nickname={nickname}
@@ -244,7 +240,7 @@ async function TodayTab({
   );
 }
 
-/** 사용한 장비의 지역 막대 — 전체·오늘 아바타 카드 공용. */
+/** 사용한 장비의 지역 막대 — 아바타 카드. */
 function RegionBar({ regions }: { regions: AvatarStats['regions'] }) {
   const total = regions.reduce((t, r) => t + r.n, 0);
   if (total === 0) return null;
@@ -265,46 +261,6 @@ function RegionBar({ regions }: { regions: AvatarStats['regions'] }) {
         ))}
       </div>
     </div>
-  );
-}
-
-/** 오늘 탭 아바타 카드 — 오늘(KST 자정 이후) 만든 아바타만. 보유·순위·전체 대비처럼 오늘과 무관한 값은 뺀다. */
-function TodayAvatarCard({ a }: { a: Awaited<ReturnType<typeof getTodayAvatarStats>> }) {
-  return (
-    <Card title="오늘의 아바타">
-      {a.made === 0 ? (
-        <p className="py-0.5 text-center text-[11px] text-zinc-500">오늘 만든 아바타가 없어요.</p>
-      ) : (
-        <>
-          <StatGrid
-            cols={2}
-            items={[
-              { l: '만든 아바타', v: `${fmt(a.made)}개` },
-              { l: '성별', v: `여 ${fmt(a.female)} · 남 ${fmt(a.male)}` },
-            ]}
-          />
-          <div className="mt-1.5">
-            <StatGrid
-              cols={2}
-              items={[
-                { l: '많이 나온 눈 색', v: a.topEye?.label ?? '—', s: a.topEye ? `${fmt(a.topEye.n)}번` : undefined },
-                { l: '많이 나온 머리색', v: a.topHair?.label ?? '—', s: a.topHair ? `${fmt(a.topHair.n)}번` : undefined },
-              ]}
-            />
-          </div>
-          <RegionBar regions={a.regions} />
-          <div className="mt-1.5">
-            <StatGrid
-              cols={2}
-              items={[
-                { l: '많이 사용한 장비', v: <span className="break-keep text-[12px]">{a.topItem?.name ?? '—'}</span>, s: a.topItem ? `${fmt(a.topItem.n)}번` : undefined },
-                { l: '사용한 장비', v: `${fmt(a.kinds)}종` },
-              ]}
-            />
-          </div>
-        </>
-      )}
-    </Card>
   );
 }
 
@@ -348,8 +304,9 @@ function AvatarCard({ a }: { a: AvatarStats }) {
         <StatGrid
           cols={2}
           items={[
-            { l: '콘테스트 우승', v: `${fmt(a.contestWins)}회` },
-            { l: '콘테스트 입상', v: `${fmt(a.contestPlaces)}회` },
+            // 우승은 대난투 우승과 같은 표기(🥇·금색) — 0이면 다른 칸처럼 '—'.
+            { l: '콘테스트 우승', v: a.contestWins > 0 ? <span className="text-amber-500">🥇 {fmt(a.contestWins)}</span> : '—' },
+            { l: '콘테스트 입상', v: a.contestPlaces > 0 ? `${fmt(a.contestPlaces)}회` : '—' },
           ]}
         />
       </div>
