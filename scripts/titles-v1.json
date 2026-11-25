@@ -5659,5 +5659,104 @@
     "cond": "자정 정각(00:00:00, 1초 안)에 강화 결과 수령",
     "hidden": true,
     "diff": "중간"
+  },
+  {
+    "code": "solo_hw_apron",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "불똥 막이",
+    "cond": "장인의 앞치마를 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_hw_scarf",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "쇠빛 매듭",
+    "cond": "장인의 두건을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "solo_hw_tophat",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "비스듬한 멋",
+    "cond": "박쥐 미니 실크햇을 +70 이상으로 장착",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "azure_sky_blade",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "푸른 하늘의 검",
+    "cond": "창천검을 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "myriad_books",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "만권독파",
+    "cond": "금테 둥근 안경을 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "cloud_stroll",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "구름 위의 산책",
+    "cond": "구름 갑옷을 +100 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "raid_all_50",
+    "cat": "레이드",
+    "kind": "영구",
+    "label": "몰아치기",
+    "cond": "레이드에서 남은 공격 한 번에 50회",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "exp_six_slots",
+    "cat": "파견",
+    "kind": "영구",
+    "label": "원정 총사령관",
+    "cond": "파견 슬롯 6칸 개방",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "medal_collector_100",
+    "cat": "조합",
+    "kind": "영구",
+    "label": "훈장의 무게",
+    "cond": "칭호 100개 발견",
+    "hidden": false,
+    "diff": "어려움"
+  },
+  {
+    "code": "wbq_30",
+    "cat": "월드보스",
+    "kind": "영구",
+    "label": "달빛 순례자",
+    "cond": "그림자 거미 여왕 누적 도전 30회",
+    "hidden": false,
+    "diff": "중간"
+  },
+  {
+    "code": "frog_lord",
+    "cat": "아이템 발동",
+    "kind": "영구",
+    "label": "개구리 군주",
+    "cond": "개구리 탈 망토를 +200 이상으로 장착",
+    "hidden": false,
+    "diff": "어려움"
   }
 ]

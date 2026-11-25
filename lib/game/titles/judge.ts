@@ -244,8 +244,8 @@ export const SKIPPABLE_QUERIES: Readonly<Partial<Record<MetricQueryName, { feeds
   },
   raid: {
     feeds: ['raid_strike', 'raid_strike_20m', 'raid_365', 'raid_1000', 'vanguard', 'night_watch', 'raid_volcano', 'raid_swamp', 'raid_orc',
-      'raid_fallen', 'raid_temple', 'raid_kingdom', 'continent_sweep'],
-    cols: ['joins', 'max_dmg', 'vanguard', 'night', 'r_volcano', 'r_swamp', 'r_orc', 'r_fallen', 'r_temple', 'r_kingdom'],
+      'raid_fallen', 'raid_temple', 'raid_kingdom', 'continent_sweep', 'raid_all_50'],
+    cols: ['joins', 'max_dmg', 'vanguard', 'night', 'r_volcano', 'r_swamp', 'r_orc', 'r_fallen', 'r_temple', 'r_kingdom', 'all_uses'],
   },
   avatar: {
     feeds: ['initiation', 'rebirth', 'avatar_1000', 'avatar_50', 'two_mirrors', 'same_combo', 'disguise'],
@@ -274,7 +274,7 @@ export const SKIPPABLE_QUERIES: Readonly<Partial<Record<MetricQueryName, { feeds
     cols: ['cq_attack', 'cq_attack_win', 'cq_defend_win', 'cq_tax'],
   },
   exped: {
-    feeds: ['exp_first', 'exp_50', 'exp_200', 'exp_500', 'exp_all_regions', 'exp_crit_10', 'exp_crit_30', 'exp_four_slots'],
+    feeds: ['exp_first', 'exp_50', 'exp_200', 'exp_500', 'exp_all_regions', 'exp_crit_10', 'exp_crit_30', 'exp_four_slots', 'exp_six_slots'],
     cols: ['exp_claims', 'exp_regions', 'exp_crit', 'exp_enh_sum'],
   },
   tower: {
@@ -294,7 +294,7 @@ export const SKIPPABLE_QUERIES: Readonly<Partial<Record<MetricQueryName, { feeds
   chron: { feeds: ['chron_10', 'chron_20', 'chron_head'], cols: ['chron_n', 'chron_head'] },
   // 그림자 거미 여왕(개인 월드보스, 2026-11-14) — 첫 토벌도 이 쿼리의 도전 수를 함께 읽는다.
   wbq: {
-    feeds: ['wb_first', 'wb_kind_shadow_queen', 'wbq_rank1', 'wbq_top10', 'wbq_8m', 'wbq_dodge3', 'wbq_crit4'],
+    feeds: ['wb_first', 'wb_kind_shadow_queen', 'wbq_rank1', 'wbq_top10', 'wbq_8m', 'wbq_dodge3', 'wbq_crit4', 'wbq_30'],
     cols: ['wbq_runs', 'wbq_rank1', 'wbq_top10', 'wbq_best', 'wbq_dodge_max', 'wbq_crit_max'],
   },
 };
@@ -588,7 +588,13 @@ async function collectMetrics(
              count(distinct ra.raid_id) filter (where r.boss_code='orc_chief')::int as r_orc,
              count(distinct ra.raid_id) filter (where r.boss_code='fallen_angel')::int as r_fallen,
              count(distinct ra.raid_id) filter (where r.boss_code='stone_golem')::int as r_temple,
-             count(distinct ra.raid_id) filter (where r.boss_code='gold_griffin')::int as r_kingdom
+             count(distinct ra.raid_id) filter (where r.boss_code='gold_griffin')::int as r_kingdom,
+             -- 남은 공격 한 번에(2026-11-25 몰아치기) — 한 요청이 한 트랜잭션에서 여러 줄을 넣어 created_at(트랜잭션 시각)이 같다.
+             -- 1번 공격은 매번 다른 트랜잭션이라 같은 시각 2줄 이상 묶음 = '한 번에' 1회.
+             (select count(*)::int from (
+                select 1 from raid_attacks ra4 join raids r4 on r4.id=ra4.raid_id and r4.server_id=${s}
+                where ra4.user_id=${u} and ra4.created_at >= ${cAt}
+                group by ra4.raid_id, ra4.created_at having count(*) >= 2) g) as all_uses
       from raid_attacks ra join raids r on r.id=ra.raid_id
       where ra.user_id=${u} and r.server_id=${s} and ra.created_at >= ${cAt}
     `),
@@ -994,7 +1000,7 @@ async function collectMetrics(
     m_top10: n(me.top10), m_last: n(me.last_place), m_second_last: n(me.second_last), m_comet: n(me.comet), m_win_gap7: n(me.win_gap7),
     r_joins: n(ra.joins), r_max_dmg: n(ra.max_dmg), r_vanguard: n(ra.vanguard), r_night: n(ra.night),
     r_volcano: n(ra.r_volcano), r_swamp: n(ra.r_swamp), r_orc: n(ra.r_orc), r_fallen: n(ra.r_fallen),
-    r_temple: n(ra.r_temple), r_kingdom: n(ra.r_kingdom),
+    r_temple: n(ra.r_temple), r_kingdom: n(ra.r_kingdom), r_all_uses: n(ra.all_uses),
     av_cnt: n(av.cnt), av_genders: n(av.genders), av_combo: n(av.combo_max), av_combos: n(av.combos),
     av_owned: n(av.owned), av_first3: n(av.first3), av_slot_bonus: n(mi.slot_bonus),
     days: n(mi.days), challenge_claims: n(mi.challenge_claims),
@@ -1053,8 +1059,8 @@ async function collectMetrics(
   };
 }
 
-/** 지표 기반 규칙 — code → 술어. PENDING·아이템 발동·집행관은 여기 없음. */
-const RULES: Record<string, (m: Metrics) => boolean> = {
+/** 지표 기반 규칙 — code → 술어. PENDING·아이템 발동·집행관은 여기 없음. 테스트가 경계값을 직접 확인하려고 내보낸다. */
+export const RULES: Record<string, (m: Metrics) => boolean> = {
   // 소규모 업데이트 17(2026-11-04, 숨김) — 연대기 3종. 강화 3종·점령전 2종은 이벤트 훅(pending.ts EVENT_HOOK_CODES).
   chron_10: (m) => m.chron_n >= 10,
   chron_20: (m) => m.chron_n >= 20,
@@ -1074,6 +1080,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   exp_crit_10: (m) => m.exp_crit >= 10,
   exp_crit_30: (m) => m.exp_crit >= 30,
   exp_four_slots: (m) => m.exp_slots >= 4,
+  exp_six_slots: (m) => m.exp_slots >= 6, // 원정 총사령관(2026-11-25)
   // 무한의 탑(2026-09-29) — 숨은 5종. 랭킹 1위(rank_tower)는 랭킹형 블록.
   tower_revive: (m) => m.tw_revive_wins >= 1,
   tower_resonance: (m) => m.tw_reso_wins >= 10,
@@ -1097,6 +1104,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   wb_kind_ember_phoenix: (m) => m.wb_kind_ember >= 1,
   // 그림자 거미 여왕(2026-11-14, 6종 영구)
   wb_kind_shadow_queen: (m) => m.wbq_runs >= 1,
+  wbq_30: (m) => m.wbq_runs >= 30, // 달빛 순례자(2026-11-25)
   wbq_rank1: (m) => m.wbq_rank1 >= 1,
   wbq_top10: (m) => m.wbq_top10 >= 1,
   wbq_8m: (m) => m.wbq_best >= 8_000_000,
@@ -1205,6 +1213,7 @@ const RULES: Record<string, (m: Metrics) => boolean> = {
   raid_365: (m) => m.r_joins >= 365,
   raid_100days: (m) => m.raid_day_run >= 100,
   vanguard: (m) => m.r_vanguard >= 30,
+  raid_all_50: (m) => m.r_all_uses >= 50, // 몰아치기(2026-11-25)
   night_watch: (m) => m.r_night >= 50,
   raid_volcano: (m) => m.r_volcano >= 100,
   raid_swamp: (m) => m.r_swamp >= 100,
@@ -1478,6 +1487,7 @@ export async function discoverTitles(
   `)) as unknown as { total: number; hidden: number }[];
   const metaCodes: string[] = [];
   if (Number(meta?.total ?? 0) >= 50) metaCodes.push('medal_collector');
+  if (Number(meta?.total ?? 0) >= 100) metaCodes.push('medal_collector_100'); // 훈장의 무게(2026-11-25)
   if (Number(meta?.hidden ?? 0) >= 10) metaCodes.push('treasure_hunt');
   if (metaCodes.length) {
     const rows = (await db.execute(sql`

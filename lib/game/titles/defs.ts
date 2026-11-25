@@ -6723,6 +6723,122 @@ export const TITLE_DEFS: TitleDef[] = [
   style: {
    fx: "glassflow"
   }
+ },
+ {
+  code: "solo_hw_apron",
+  kind: "permanent",
+  label: "불똥 막이",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "cinderflow"
+  }
+ },
+ {
+  code: "solo_hw_scarf",
+  kind: "permanent",
+  label: "쇠빛 매듭",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "ashstatic"
+  }
+ },
+ {
+  code: "solo_hw_tophat",
+  kind: "permanent",
+  label: "비스듬한 멋",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "blushbreath"
+  }
+ },
+ {
+  code: "azure_sky_blade",
+  kind: "permanent",
+  label: "푸른 하늘의 검",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "glassflow",
+   glow: true
+  }
+ },
+ {
+  code: "myriad_books",
+  kind: "permanent",
+  label: "만권독파",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "linenflow",
+   glow: true
+  }
+ },
+ {
+  code: "cloud_stroll",
+  kind: "permanent",
+  label: "구름 위의 산책",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "starlight",
+   glow: true
+  }
+ },
+ {
+  code: "raid_all_50",
+  kind: "permanent",
+  label: "몰아치기",
+  hidden: false,
+  cat: "레이드",
+  style: {
+   fx: "bloodpulse"
+  }
+ },
+ {
+  code: "exp_six_slots",
+  kind: "permanent",
+  label: "원정 총사령관",
+  hidden: false,
+  cat: "파견",
+  style: {
+   fx: "royalflow",
+   glow: true
+  }
+ },
+ {
+  code: "medal_collector_100",
+  kind: "permanent",
+  label: "훈장의 무게",
+  hidden: false,
+  cat: "조합",
+  style: {
+   fx: "staticgold",
+   glow: true
+  }
+ },
+ {
+  code: "wbq_30",
+  kind: "permanent",
+  label: "달빛 순례자",
+  hidden: false,
+  cat: "월드보스",
+  style: {
+   fx: "moonlight"
+  }
+ },
+ {
+  code: "frog_lord",
+  kind: "permanent",
+  label: "개구리 군주",
+  hidden: false,
+  cat: "아이템 발동",
+  style: {
+   fx: "slimeflow",
+   glow: true
+  }
  }
 ] as const;
 

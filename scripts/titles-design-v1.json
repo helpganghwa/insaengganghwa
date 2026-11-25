@@ -737,6 +737,39 @@
     "wbq_crit4": {
       "fx": "qstorm",
       "pt": "qglide"
+    },
+    "solo_hw_apron": {
+      "fx": "cinderflow"
+    },
+    "solo_hw_scarf": {
+      "fx": "ashstatic"
+    },
+    "solo_hw_tophat": {
+      "fx": "blushbreath"
+    },
+    "azure_sky_blade": {
+      "fx": "glassflow"
+    },
+    "myriad_books": {
+      "fx": "linenflow"
+    },
+    "cloud_stroll": {
+      "fx": "starlight"
+    },
+    "raid_all_50": {
+      "fx": "bloodpulse"
+    },
+    "exp_six_slots": {
+      "fx": "royalflow"
+    },
+    "medal_collector_100": {
+      "fx": "staticgold"
+    },
+    "wbq_30": {
+      "fx": "moonlight"
+    },
+    "frog_lord": {
+      "fx": "slimeflow"
     }
   },
   "executor": "기존 ExecutorTag 유지(구역명=지역색+집행관 인디고)",

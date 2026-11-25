@@ -6170,6 +6170,114 @@ export const TITLE_SECRETS: TitleSecret[] = [
   cat: "강화",
   cond: "자정 정각(00:00:00, 1초 안)에 강화 결과 수령",
   diff: "중간"
+ },
+ {
+  code: "solo_hw_apron",
+  cat: "아이템 발동",
+  cond: "장인의 앞치마를 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_smith_apron"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_hw_scarf",
+  cat: "아이템 발동",
+  cond: "장인의 두건을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_smith_scarf"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "solo_hw_tophat",
+  cat: "아이템 발동",
+  cond: "박쥐 미니 실크햇을 +70 이상으로 장착",
+  diff: "중간",
+  req: {
+   items: [
+    "halloween_vamp_tophat"
+   ],
+   min: 70
+  }
+ },
+ {
+  code: "azure_sky_blade",
+  cat: "아이템 발동",
+  cond: "창천검을 +100 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "kingdom_ribbon_rapier"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "myriad_books",
+  cat: "아이템 발동",
+  cond: "금테 둥근 안경을 +100 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "round_gold_glasses"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "cloud_stroll",
+  cat: "아이템 발동",
+  cond: "구름 갑옷을 +100 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "angel_cherub_armor"
+   ],
+   min: 100
+  }
+ },
+ {
+  code: "raid_all_50",
+  cat: "레이드",
+  cond: "레이드에서 남은 공격 한 번에 50회",
+  diff: "중간"
+ },
+ {
+  code: "exp_six_slots",
+  cat: "파견",
+  cond: "파견 슬롯 6칸 개방",
+  diff: "어려움"
+ },
+ {
+  code: "medal_collector_100",
+  cat: "조합",
+  cond: "칭호 100개 발견",
+  diff: "어려움"
+ },
+ {
+  code: "wbq_30",
+  cat: "월드보스",
+  cond: "그림자 거미 여왕 누적 도전 30회",
+  diff: "중간"
+ },
+ {
+  code: "frog_lord",
+  cat: "아이템 발동",
+  cond: "개구리 탈 망토를 +200 이상으로 장착",
+  diff: "어려움",
+  req: {
+   items: [
+    "marsh_frog_hood"
+   ],
+   min: 200
+  }
  }
 ] as const;
 
