@@ -10,7 +10,7 @@ import { avatarSlotLimit } from '@/lib/game/profile/slots';
 
 /**
  * 나의 인생강화 '전체' 탭 아바타 카드(2026-11-19, 소규모 21 · #618 문의) — 생성에 성공한 아바타(반환한 것 포함)를 센다.
- * 정본은 profile_generation_jobs(status='accepted'): user_profiles는 반환하면 지워져 '만든 수'·외형·장비를 셀 수 없다.
+ * 정본은 profile_generation_jobs(성공한 생성 — 아래 SUCCEEDED): user_profiles는 반환하면 지워져 '만든 수'·외형·장비를 셀 수 없다.
  * 외형은 생성 때 **요청한** 값(options.v3Appearance)이라 그림과 다를 수 있다 — 화면도 '많이 나온'으로만 부른다.
  */
 export type AvatarRegionCount = { key: string; label: string; color: string; n: number };
@@ -29,6 +29,9 @@ export type AvatarStats = {
   topItem: { name: string; n: number } | null;
   kinds: number;
   catalogTotal: number;
+  /** 아바타 콘테스트 우승·입상 횟수 — 콘테스트가 아직 없어 0(콘테스트 개발 때 결과 표에서 센다, 11-25 자리 먼저). */
+  contestWins: number;
+  contestPlaces: number;
 };
 
 // 생성 프롬프트의 색 단어(appearance-v3.ts 풀) → 화면 이름. 풀에 없는 값(옛 생성)은 세지 않는다.
@@ -111,18 +114,27 @@ export function summarizeAvatarJobs(rows: AvatarJobRow[]): Pick<AvatarStats, 'fe
 
 /** 오늘 탭(KST 자정 이후)에서 쓰는 축소판 — 보유·순위·전체 장비 수처럼 '오늘'과 무관한 값은 세지 않는다. */
 export async function getTodayAvatarStats(userId: string, serverId: number): Promise<Pick<AvatarStats, 'made' | 'female' | 'male' | 'topEye' | 'topHair' | 'regions' | 'topItem' | 'kinds'>> {
-  const rows = await loadJobs(userId, serverId, sql`${kstStartOfDay().toISOString()}::timestamptz`);
+  // 오늘 = 오늘 완성된 것(23:5x 신청·자정 뒤 완성도 오늘 카드에) — 지급(grant)처럼 완성 시각이 없으면 신청 시각.
+  const rows = await loadJobs(userId, serverId, sql`${kstStartOfDay().toISOString()}::timestamptz`, 'done');
   return { made: rows.length, ...summarizeAvatarJobs(rows) };
 }
 
-async function loadJobs(userId: string, serverId: number, since: ReturnType<typeof sql>): Promise<AvatarJobRow[]> {
+/**
+ * 성공한 생성 = hasGeneratedCustomAvatar(lib/game/profile/queue.ts)와 같은 기준 — 정상 통과(운영자 회수 제외) 또는 운영자 지급.
+ * 회수(reject)는 전액 환불한 '없던 생성'이라 세지 않고, AI 반려 뒤 지급(grant)은 센다.
+ */
+const SUCCEEDED = sql`((status = 'accepted' and admin_decision is distinct from 'reject') or admin_decision = 'grant')`;
+const SUCCEEDED_J = sql`((j.status = 'accepted' and j.admin_decision is distinct from 'reject') or j.admin_decision = 'grant')`;
+
+async function loadJobs(userId: string, serverId: number, since: ReturnType<typeof sql>, at: 'created' | 'done' = 'created'): Promise<AvatarJobRow[]> {
+  const atCol = at === 'done' ? sql`coalesce(resolved_at, created_at)` : sql`created_at`;
   const jobs = await db.execute(sql`
     select options->>'gender' as gender,
            options->'v3Appearance'->>'eyeColor' as eye,
            options->'v3Appearance'->>'hair' as hair,
            equipment_snapshot->>'weaponKey' as w, equipment_snapshot->>'armorKey' as a, equipment_snapshot->>'accessoryKey' as x
     from profile_generation_jobs
-    where user_id = ${userId}::uuid and server_id = ${serverId} and status = 'accepted' and created_at >= ${since}
+    where user_id = ${userId}::uuid and server_id = ${serverId} and ${SUCCEEDED} and ${atCol} >= ${since}
     order by id
   `);
   return (jobs as unknown as { gender: string | null; eye: string | null; hair: string | null; w: string | null; a: string | null; x: string | null }[]).map(
@@ -141,7 +153,7 @@ export async function getAvatarStats(userId: string, serverId: number): Promise<
       with per as (
         select j.user_id, count(*) as n from profile_generation_jobs j
         join characters c on c.user_id = j.user_id and c.server_id = j.server_id
-        where j.server_id = ${serverId} and j.status = 'accepted' and j.created_at >= c.created_at
+        where j.server_id = ${serverId} and ${SUCCEEDED_J} and j.created_at >= c.created_at
         group by j.user_id
       )
       select (select n from per where user_id = ${userId}::uuid)::int as mine,
@@ -157,6 +169,8 @@ export async function getAvatarStats(userId: string, serverId: number): Promise<
     slots,
     rank: rk?.mine ? Number(rk.ahead) + 1 : null,
     catalogTotal: Number((total as unknown as { n: number }[])[0]?.n ?? 0),
+    contestWins: 0,
+    contestPlaces: 0,
     ...summarizeAvatarJobs(rows),
   };
 }

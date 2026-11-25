@@ -556,6 +556,7 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
         else showError(r.message);
         setAttacking(false);
         setAttackLore(null);
+        setAllShown(null);
         return;
       }
       const id = (fxKey.current += 1);
@@ -574,6 +575,8 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       setTimeout(() => {
         setAttacking(false);
         setAttackLore(null);
+        // '한 번에' 숫자 고정은 이번 공격 동안만 — 남겨 두면 다음 보석·1회 공격 중에 옛 숫자 알약이 되살아난다.
+        setAllShown(null);
       }, floatMs);
     })();
   };
@@ -621,7 +624,6 @@ export function RaidSessionCard({ view: v, serverId }: { view: RaidView; serverI
       },
       () => {
         setLocalUsed((u) => Math.max(0, u - n));
-        setAllShown(null);
       },
       { lore: `${n}번 공격하는 중`, floatMs: 1800 },
     );
