@@ -212,7 +212,7 @@ async function TodayTab({
         <EnhanceBar success={d.success} hold={d.hold} down={d.down} attempts={d.attempts} />
       </Card>
 
-      {/* 5칸 한 줄(11-25 A안) — 아바타 생성 칸 추가로 4→5칸, 카드 높이는 그대로. */}
+      {/* 5칸 한 줄(11-25 A안) — 만든 아바타 칸 추가로 4→5칸, 카드 높이는 그대로. */}
       <Card title="오늘의 활동">
         <StatGrid
           cols={5}
@@ -225,7 +225,7 @@ async function TodayTab({
               v: d.melee?.myRank != null ? `#${d.melee.myRank}` : '—',
               s: d.melee ? <>{d.melee.total}명 참가</> : undefined,
             },
-            { l: '아바타 생성', v: d.avatarsMade > 0 ? `${d.avatarsMade}개` : '—' },
+            { l: '만든 아바타', v: d.avatarsMade > 0 ? `${d.avatarsMade}개` : '—' },
           ]}
         />
       </Card>

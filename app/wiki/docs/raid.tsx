@@ -120,6 +120,10 @@ export default function Doc() {
         </LI>
         <LI>{bpPct(RAID_CRIT_RATE_BP)} 확률로 크리티컬이 발생하면 그 공격은 데미지가 크게 오른다.</LI>
         <LI>
+          남은 공격이 2회 이상이면 공격 버튼 오른쪽 &lsquo;한 번에&rsquo;로 남은 공격을 모두 쓸 수 있다. 이미 구매한
+          추가 공격도 함께 쓰이고, 공격마다 데미지와 크리티컬을 따로 정하므로 한 번씩 공격한 것과 결과가 같다.
+        </LI>
+        <LI>
           레이드 중에 <DocLink slug="enhance">강화</DocLink>로 전투력을 올리면 다음 공격부터 바로
           반영된다.
         </LI>

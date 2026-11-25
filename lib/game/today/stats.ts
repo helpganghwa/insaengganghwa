@@ -142,7 +142,9 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         select count(*)::int n from profile_generation_jobs
         where user_id = ${userId}::uuid and server_id = ${serverId}
           and ((status = 'accepted' and admin_decision is distinct from 'reject') or admin_decision = 'grant')
-          and coalesce(resolved_at, created_at) >= ${KST_DAY_START}
+          -- 운영자 지급(grant)은 지급한 날(admin_reviewed_at), 나머지는 완성 시각 — 어제 AI 반려·오늘 지급이 오늘에 잡히게.
+          and (case when admin_decision = 'grant' then coalesce(admin_reviewed_at, resolved_at, created_at)
+                    else coalesce(resolved_at, created_at) end) >= ${KST_DAY_START}
       ),
       days as (select distinct kst_day from checkin_claim_logs
         where user_id = ${userId}::uuid and server_id = ${serverId}

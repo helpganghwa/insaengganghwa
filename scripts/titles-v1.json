@@ -5694,7 +5694,7 @@
     "label": "푸른 하늘의 검",
     "cond": "창천검을 +100 이상으로 장착",
     "hidden": false,
-    "diff": "어려움"
+    "diff": "중간"
   },
   {
     "code": "myriad_books",
@@ -5703,7 +5703,7 @@
     "label": "만권독파",
     "cond": "금테 둥근 안경을 +100 이상으로 장착",
     "hidden": false,
-    "diff": "어려움"
+    "diff": "중간"
   },
   {
     "code": "cloud_stroll",
@@ -5712,14 +5712,14 @@
     "label": "구름 위의 산책",
     "cond": "구름 갑옷을 +100 이상으로 장착",
     "hidden": false,
-    "diff": "어려움"
+    "diff": "중간"
   },
   {
     "code": "raid_all_50",
     "cat": "레이드",
     "kind": "영구",
     "label": "몰아치기",
-    "cond": "레이드에서 남은 공격 한 번에 50회",
+    "cond": "레이드에서 남은 공격을 한 번에 쓰기 50회",
     "hidden": false,
     "diff": "중간"
   },

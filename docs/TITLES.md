@@ -300,15 +300,16 @@ type TitleDef = {
 | `solo_hw_apron` | 불똥 막이 | 장인의 앞치마 +70 장착 | 중간 | `cinderflow` |
 | `solo_hw_scarf` | 쇠빛 매듭 | 장인의 두건 +70 장착 | 중간 | `ashstatic` |
 | `solo_hw_tophat` | 비스듬한 멋 | 박쥐 미니 실크햇 +70 장착 | 중간 | `blushbreath` |
-| `azure_sky_blade` | 푸른 하늘의 검 | 창천검 +100 장착 | 어려움 | `glassflow` |
-| `myriad_books` | 만권독파 | 금테 둥근 안경 +100 장착 | 어려움 | `linenflow` |
+| `azure_sky_blade` | 푸른 하늘의 검 | 창천검 +100 장착 | 중간 | `glassflow` |
+| `myriad_books` | 만권독파 | 금테 둥근 안경 +100 장착 | 중간 | `linenflow` |
 | `frog_lord` | 개구리 군주 | 개구리 탈 망토 +200 장착 | 어려움 | `slimeflow` |
-| `cloud_stroll` | 구름 위의 산책 | 구름 갑옷 +100 장착 | 어려움 | `starlight` |
-| `raid_all_50` | 몰아치기 | 레이드 남은 공격 한 번에 50회 | 중간 | `bloodpulse` |
+| `cloud_stroll` | 구름 위의 산책 | 구름 갑옷 +100 장착 | 중간 | `starlight` |
+| `raid_all_50` | 몰아치기 | 레이드에서 남은 공격을 한 번에 쓰기 50회 | 중간 | `bloodpulse` |
 | `exp_six_slots` | 원정 총사령관 | 파견 슬롯 6칸 개방 | 어려움 | `royalflow` |
 | `medal_collector_100` | 훈장의 무게 | 칭호 100개 발견 | 어려움 | `staticgold` |
 | `wbq_30` | 달빛 순례자 | 그림자 거미 여왕 누적 도전 30회 | 중간 | `moonlight` |
 
+- 난이도: 공개 단일 장비 칭호 관례대로 +70·+100은 중간, +200(개구리 군주)만 어려움.
 - 장비 7종: 할로윈 단일 칭호가 없던 3종에 +70, +10 칭호만 있던 장비 중 4종에 상위 단계. 개구리 탈 망토는 '개구리 왕자'(개구리 세트 +30 숨김 칭호)와 이름이 겹쳐 '개구리 군주' +200으로 정했다(사용자 결정).
 - 몰아치기: '한 번에'는 한 트랜잭션이 여러 줄을 넣어 `raid_attacks.created_at`(트랜잭션 시각)이 같다. 판정 지표 `r_all_uses` = (레이드, created_at) 묶음 중 2줄 이상인 수. 1번 공격은 매번 다른 트랜잭션이라 섞이지 않는다. 기능이 이번에 생겨 소급할 기록이 없다.
 - 원정 총사령관 `exp_slots >= 6`, 달빛 순례자 `wbq_runs >= 30`, 훈장의 무게는 메타 칭호(발견 원장 100개, `medal_collector`와 같은 자리). 모두 칭호 화면 진입 판정이라 소급 불필요.

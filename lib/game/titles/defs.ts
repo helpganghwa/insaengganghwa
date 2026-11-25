@@ -6761,8 +6761,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "glassflow",
-   glow: true
+   fx: "glassflow"
   }
  },
  {
@@ -6772,8 +6771,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "linenflow",
-   glow: true
+   fx: "linenflow"
   }
  },
  {
@@ -6783,8 +6781,7 @@ export const TITLE_DEFS: TitleDef[] = [
   hidden: false,
   cat: "아이템 발동",
   style: {
-   fx: "starlight",
-   glow: true
+   fx: "starlight"
   }
  },
  {

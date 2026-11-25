@@ -74,7 +74,7 @@ export function RaidCancel({
   // 글자 링크(2026-11-24 공격 버튼 2안) — 공격 줄 아래 보조 동작이라 버튼 무게를 빼고 작은 밑줄 글자로 둔다.
   // 누르는 자리는 py-2로 손가락 크기를 지킨다.
   const btnCls =
-    'mx-auto flex w-fit items-center gap-1.5 px-3 py-2 text-[12px] font-semibold text-zinc-500 active:text-zinc-300 disabled:opacity-60';
+    'mx-auto flex w-fit items-center gap-1.5 px-3 py-2.5 text-[12px] font-semibold text-zinc-500 active:text-zinc-300 disabled:opacity-60';
   // 밑줄은 '취소' 글자에만 — 버튼(flex)에 주면 옆 보조 글자(남은 시간·무료 되돌리기)까지 전파된다(캡처 검수 11-24).
   const linkCls = 'underline decoration-zinc-700 underline-offset-4';
 

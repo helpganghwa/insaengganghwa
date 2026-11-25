@@ -6211,7 +6211,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "azure_sky_blade",
   cat: "아이템 발동",
   cond: "창천검을 +100 이상으로 장착",
-  diff: "어려움",
+  diff: "중간",
   req: {
    items: [
     "kingdom_ribbon_rapier"
@@ -6223,7 +6223,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "myriad_books",
   cat: "아이템 발동",
   cond: "금테 둥근 안경을 +100 이상으로 장착",
-  diff: "어려움",
+  diff: "중간",
   req: {
    items: [
     "round_gold_glasses"
@@ -6235,7 +6235,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
   code: "cloud_stroll",
   cat: "아이템 발동",
   cond: "구름 갑옷을 +100 이상으로 장착",
-  diff: "어려움",
+  diff: "중간",
   req: {
    items: [
     "angel_cherub_armor"
@@ -6246,7 +6246,7 @@ export const TITLE_SECRETS: TitleSecret[] = [
  {
   code: "raid_all_50",
   cat: "레이드",
-  cond: "레이드에서 남은 공격 한 번에 50회",
+  cond: "레이드에서 남은 공격을 한 번에 쓰기 50회",
   diff: "중간"
  },
  {
