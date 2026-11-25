@@ -308,7 +308,7 @@ function TodayAvatarCard({ a }: { a: Awaited<ReturnType<typeof getTodayAvatarSta
   );
 }
 
-/** 아바타 카드(2026-11-19 #618) — 줄마다 같은 성격끼리: 생성·보유 / 외형 / 지역 막대 / 장비. */
+/** 아바타 카드(2026-11-19 #618) — 줄마다 같은 성격끼리: 생성·보유 / 외형 / 지역 막대 / 장비 / 콘테스트(11-25). */
 function AvatarCard({ a }: { a: AvatarStats }) {
   if (a.made === 0)
     return (
@@ -341,6 +341,15 @@ function AvatarCard({ a }: { a: AvatarStats }) {
           items={[
             { l: '많이 사용한 장비', v: <span className="break-keep text-[12px]">{a.topItem?.name ?? '—'}</span>, s: a.topItem ? `${fmt(a.topItem.n)}번` : undefined },
             { l: '사용해 본 장비', v: `${fmt(a.kinds)}종`, s: `/ ${fmt(a.catalogTotal)}종` },
+          ]}
+        />
+      </div>
+      <div className="mt-1.5">
+        <StatGrid
+          cols={2}
+          items={[
+            { l: '콘테스트 우승', v: `${fmt(a.contestWins)}회` },
+            { l: '콘테스트 입상', v: `${fmt(a.contestPlaces)}회` },
           ]}
         />
       </div>
