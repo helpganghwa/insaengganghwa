@@ -91,6 +91,8 @@ export type TodayDetail = TodayTicker & {
   combatRankPrev: number | null;
   melee: { myRank: number | null; total: number; prevRank: number | null; top3: { rank: number; nickname: string }[] } | null;
   boxesOpened: number;
+  /** 오늘 완성한 아바타 수(성공 기준은 아바타 카드와 같음). */
+  avatarsMade: number;
   transcendUps: number;
   raidAttacks: number;
   streakDays: number;
@@ -135,6 +137,13 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
           where user_id = ${userId}::uuid and server_id = ${serverId}
             and kst_date = (now() at time zone 'Asia/Seoul')::date), 0)::int n
       ),
+      avatars_today as (
+        -- 오늘 완성한 아바타(2026-11-25) — 성공 기준은 hasGeneratedCustomAvatar·아바타 카드와 같다(정상 통과·지급, 회수 제외).
+        select count(*)::int n from profile_generation_jobs
+        where user_id = ${userId}::uuid and server_id = ${serverId}
+          and ((status = 'accepted' and admin_decision is distinct from 'reject') or admin_decision = 'grant')
+          and coalesce(resolved_at, created_at) >= ${KST_DAY_START}
+      ),
       days as (select distinct kst_day from checkin_claim_logs
         where user_id = ${userId}::uuid and server_id = ${serverId}
         order by kst_day desc limit 60)
@@ -154,6 +163,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
         (select n from boxes) boxes_opened,
         (select n from tups) transcend_ups,
         (select n from raids_today) raid_attacks,
+        (select n from avatars_today) avatars_made,
         (select coalesce(json_agg(kst_day::text order by kst_day desc), '[]'::json) from days) checkin_days,
         (select d::text from today_day) kst_day
     `),
@@ -198,6 +208,7 @@ export async function getTodayDetail(userId: string, serverId: number): Promise<
           }
         : null,
     boxesOpened: Number(e.boxes_opened ?? 0),
+    avatarsMade: Number(e.avatars_made ?? 0),
     transcendUps: Number(e.transcend_ups ?? 0),
     raidAttacks: Number(e.raid_attacks ?? 0),
     streakDays: streak,

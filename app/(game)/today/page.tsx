@@ -50,7 +50,7 @@ function Card({ title, aside, children }: { title: string; aside?: React.ReactNo
 /** N열 미니 스탯 — 한 줄 숫자 그리드(행 목록보다 절반 높이). */
 function StatGrid({ items, cols = 3 }: { items: { l: string; v: React.ReactNode; s?: React.ReactNode }[]; cols?: number }) {
   return (
-    <div className={`grid gap-1.5 ${cols === 4 ? 'grid-cols-4' : cols === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+    <div className={`grid gap-1.5 ${cols === 5 ? 'grid-cols-5' : cols === 4 ? 'grid-cols-4' : cols === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
       {items.map((k) => (
         <div key={k.l} className="rounded-lg bg-white/70 px-1.5 py-1.5 text-center dark:bg-zinc-950/50">
           <div className="text-[9px] text-zinc-500">{k.l}</div>
@@ -212,9 +212,10 @@ async function TodayTab({
         <EnhanceBar success={d.success} hold={d.hold} down={d.down} attempts={d.attempts} />
       </Card>
 
+      {/* 5칸 한 줄(11-25 A안) — 아바타 생성 칸 추가로 4→5칸, 카드 높이는 그대로. */}
       <Card title="오늘의 활동">
         <StatGrid
-          cols={4}
+          cols={5}
           items={[
             { l: '상자 개봉', v: d.boxesOpened > 0 ? `${d.boxesOpened}개` : '—' },
             { l: '초월 진척', v: d.transcendUps > 0 ? <span className="text-emerald-500">+{d.transcendUps}</span> : '—' },
@@ -224,6 +225,7 @@ async function TodayTab({
               v: d.melee?.myRank != null ? `#${d.melee.myRank}` : '—',
               s: d.melee ? <>{d.melee.total}명 참가</> : undefined,
             },
+            { l: '아바타 생성', v: d.avatarsMade > 0 ? `${d.avatarsMade}개` : '—' },
           ]}
         />
       </Card>
