@@ -1517,6 +1517,12 @@ export function ChatDock() {
     setDeleteTarget(null);
     inputRef.current?.focus();
   }, []);
+  // 답장 표시가 입력창 위에 생기면 목록 높이가 줄어 맨 아래 메시지가 가려진다 — 바닥 근처였으면 바닥을 유지.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el || !replyTarget) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 120) el.scrollTop = el.scrollHeight;
+  }, [replyTarget]);
   // 인용 줄 탭 → 원래 메시지로 스크롤 + 잠깐 깜빡임. 목록에 없으면(오래돼 안 불러온 메시지) 무동작.
   const onJump = useCallback((id: string) => {
     const el = listRef.current?.querySelector<HTMLElement>(`[data-mid="${CSS.escape(id)}"]`);
