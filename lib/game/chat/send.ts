@@ -11,7 +11,7 @@ import { db } from '@/lib/db/client';
 import { profiles } from '@/lib/db/schema/profiles';
 import { characters } from '@/lib/db/schema/server';
 import { guildMembers } from '@/lib/db/schema/guild';
-import { chatBlocks } from '@/lib/db/schema/chat';
+import { chatBlocks, chatMessages } from '@/lib/db/schema/chat';
 import { filterByActiveServer, sendPushToUser } from '@/lib/push/send';
 import { markChallengeEvent } from '@/lib/game/challenges/events';
 import {
@@ -25,7 +25,9 @@ import {
   isChatEnabled,
   isDuplicateOfLast,
   persistAndBroadcast,
+  toReplyRef,
   type ChatMessageDto,
+  type ChatReplyRef,
 } from '@/lib/game/chat/service';
 
 /**
@@ -40,7 +42,12 @@ export type SendChatResult =
   | { status: 'ok'; message: ChatMessageDto }
   | { status: 'error'; message: string };
 
-export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'): Promise<SendChatResult> {
+export async function sendChatCore(
+  raw: string,
+  channel: 'all' | 'guild' = 'all',
+  /** 답장(0254) — 원래 메시지 id(숫자 문자열). 같은 서버·같은 채널의 보이는 메시지만 허용. */
+  replyToRaw: string | null = null,
+): Promise<SendChatResult> {
   const userId = await getSessionUserId();
   if (!userId) return { status: 'error', message: '로그인이 필요합니다.' };
   const __b = await actionBlock(); // 밴·점검 캐시 — 저비용.
@@ -52,6 +59,8 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   const body = check.body;
 
   const serverId = await getActiveServerId(); // 쿠키 — 왕복 없음.
+  const replyToId = replyToRaw && /^\d{1,19}$/.test(replyToRaw) ? BigInt(replyToRaw) : null;
+  if (replyToRaw && replyToId === null) return { status: 'error', message: '답장할 메시지를 찾을 수 없어요.' };
   // 길드 채널 — 소속 검증(미가입이면 전송 불가). 전체 채널은 guildId null.
   let guildId: bigint | null = null;
   if (channel === 'guild') {
@@ -61,7 +70,7 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   }
   // 독립 검증 병렬화 — 순차 5왕복 → 1왕복 시간. 킬스위치/뮤트 탈락 시 레이트 토큰이
   // 소모되는 부작용은 무해(어차피 전송 불가 상태)로 수용.
-  const [enabled, [p], sendGate, duplicate, myChar] = await Promise.all([
+  const [enabled, [p], sendGate, duplicate, myChar, replyRows] = await Promise.all([
     isChatEnabled(),
     db
       .select({ mutedUntil: profiles.chatMutedUntil })
@@ -77,6 +86,26 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
       .from(characters)
       .where(and(eq(characters.userId, userId), eq(characters.serverId, serverId)))
       .limit(1),
+    // 답장 원문 — 같은 왕복에. 작성자 닉은 이 서버 캐릭터에서(탈퇴·정리로 없으면 null).
+    replyToId === null
+      ? Promise.resolve([])
+      : db
+          .select({
+            userId: chatMessages.userId,
+            serverId: chatMessages.serverId,
+            guildId: chatMessages.guildId,
+            body: chatMessages.body,
+            hiddenAt: chatMessages.hiddenAt,
+            deletedAt: chatMessages.deletedAt,
+            nickname: characters.nickname,
+          })
+          .from(chatMessages)
+          .leftJoin(
+            characters,
+            and(eq(characters.userId, chatMessages.userId), eq(characters.serverId, chatMessages.serverId)),
+          )
+          .where(eq(chatMessages.id, replyToId))
+          .limit(1),
   ]);
   // 서버 경계(SERVER.md §1) — 활성 서버는 클라가 통제하는 쿠키고 chat_messages.server_id엔 FK도
   // 없어서, 귓속말·길드는 이미 소속을 보는데 전체 채널만 뚫려 있었다(쿠키만 바꾸면 소속 아닌
@@ -92,6 +121,18 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
   if (sendGate === 'cooldown') return { status: 'error', message: '잠시 후 다시 보낼 수 있어요. (5초)' };
   if (sendGate === 'burst') return { status: 'error', message: '메시지를 너무 자주 보내고 있어요. 잠시 쉬어주세요.' };
   if (duplicate) return { status: 'error', message: '같은 내용을 연속으로 보낼 수 없어요.' };
+
+  // 답장 검증 — 다른 서버·다른 채널(전체↔길드·남의 길드)·숨김·삭제된 메시지엔 답할 수 없다.
+  // 채널 검사가 없으면 길드 밖 사람이 길드 메시지 id로 답장해 본문 일부를 전체 채팅에 끌어낼 수 있다.
+  let reply: ChatReplyRef | undefined;
+  if (replyToId !== null) {
+    const o = replyRows[0];
+    const sameChannel = o && o.serverId === serverId && (o.guildId ?? null) === guildId;
+    if (!o || !sameChannel || o.hiddenAt || o.deletedAt) {
+      return { status: 'error', message: '답장할 메시지를 찾을 수 없어요.' };
+    }
+    reply = toReplyRef(replyToId, o, () => o.nickname ?? undefined);
+  }
 
   // @멘션(0128) — 실제 유저 닉과 일치하는 것만 유효. 저장(표시 시 @ 제거·강조) + 푸시(최대 3명).
   let mentionTargets: { uid: string; nickname: string; code: string | null }[] = [];
@@ -133,44 +174,75 @@ export async function sendChatCore(raw: string, channel: 'all' | 'guild' = 'all'
     body,
     mentionTargets.map((t) => ({ n: t.nickname, c: t.code })),
     guildId,
+    reply,
   );
 
   // 도전 과제 '채팅 메시지 보내기'(2026-07-21) — 메시지는 7일 보존이라 영구 마킹으로 기록.
   await markChallengeEvent(db, userId, serverId, 'chat_send');
 
-  if (mentionTargets.length > 0) {
-    // 나를 차단한 유저에게는 멘션 푸시 미발송 — 차단 우회 알림 채널 방지(2026-07-22).
+  // 알림 대상 — 멘션(최대 3명) + 답장 받은 사람(0254). 둘 다면 답장으로 한 번만.
+  type PushTarget = { uid: string; kind: 'mention' | 'reply' };
+  const replyUid = reply && 'uid' in reply && reply.uid !== userId ? reply.uid : null;
+  let pushTargets: PushTarget[] = [
+    ...(replyUid ? [{ uid: replyUid, kind: 'reply' as const }] : []),
+    ...mentionTargets.filter((t) => t.uid !== replyUid).map((t) => ({ uid: t.uid, kind: 'mention' as const })),
+  ];
+  // 길드 채널 답장 — 원문 작성자가 그새 길드를 떠났으면 볼 수 없는 메시지의 알림이 된다(멘션과 같은 규칙).
+  if (replyUid && guildId) {
+    try {
+      const [still] = await db
+        .select({ uid: guildMembers.userId })
+        .from(guildMembers)
+        .where(
+          and(eq(guildMembers.serverId, serverId), eq(guildMembers.guildId, guildId), eq(guildMembers.userId, replyUid)),
+        )
+        .limit(1);
+      if (!still) pushTargets = pushTargets.filter((t) => t.uid !== replyUid);
+    } catch {
+      /* 조회 실패 — 발송이 낫다고 보고 진행 */
+    }
+  }
+  if (pushTargets.length > 0) {
+    // 나를 차단한 유저에게는 푸시 미발송 — 차단 우회 알림 채널 방지(2026-07-22).
     try {
       const blockers = await db
         .select({ uid: chatBlocks.userId })
         .from(chatBlocks)
-        .where(and(eq(chatBlocks.blockedUserId, userId), inArray(chatBlocks.userId, mentionTargets.map((t) => t.uid))));
+        .where(and(eq(chatBlocks.blockedUserId, userId), inArray(chatBlocks.userId, pushTargets.map((t) => t.uid))));
       const blockerSet = new Set(blockers.map((b) => b.uid));
-      mentionTargets = mentionTargets.filter((t) => !blockerSet.has(t.uid));
+      pushTargets = pushTargets.filter((t) => !blockerSet.has(t.uid));
     } catch {
       // 차단 조회 실패 — 푸시 스킵보다 발송이 낫다고 보고 진행.
     }
   }
-  if (mentionTargets.length > 0) {
+  if (pushTargets.length > 0) {
     // 경계규칙 1 — 이 채널의 서버가 활성(last_server_id)인 유저에게만. 다른 서버에서 플레이
-    // 중인 유저에게 타 서버 채팅 멘션 푸시는 오알림이다(조회 실패 시엔 발송이 낫다고 보고 진행).
+    // 중인 유저에게 타 서버 채팅 알림은 오알림이다(조회 실패 시엔 발송이 낫다고 보고 진행).
     try {
-      const active = new Set(
-        await filterByActiveServer(mentionTargets.map((t) => t.uid), serverId),
-      );
-      mentionTargets = mentionTargets.filter((t) => active.has(t.uid));
+      const active = new Set(await filterByActiveServer(pushTargets.map((t) => t.uid), serverId));
+      pushTargets = pushTargets.filter((t) => active.has(t.uid));
     } catch {
       /* keep unfiltered */
     }
   }
-  if (mentionTargets.length > 0) {
+  // 멘션은 거른 뒤 최대 3명(기존 규칙) — 답장 대상은 별도로 항상 포함.
+  {
+    let n = 0;
+    pushTargets = pushTargets.filter((t) => t.kind === 'reply' || ++n <= 3);
+  }
+  if (pushTargets.length > 0) {
+    const where = channel === 'guild' ? '길드 ' : '';
     await Promise.all(
-      mentionTargets.slice(0, 3).map((t) =>
+      pushTargets.map((t) =>
         sendPushToUser(t.uid, {
-          title: `💬 ${message.nickname}님이 ${channel === 'guild' ? '길드 ' : ''}채팅에서 언급했어요`,
+          title:
+            t.kind === 'reply'
+              ? `💬 ${message.nickname}님이 ${where}채팅에서 답장했어요`
+              : `💬 ${message.nickname}님이 ${where}채팅에서 언급했어요`,
           body: body.slice(0, 60),
           url: `/?chat=${channel}`,
           serverId,
+          // 멘션과 같은 묶음·같은 설정 토글 — 답장도 '나를 부른 채팅'이다.
           tag: 'chat-mention',
           category: 'chat_mention',
         }).catch(() => null),

@@ -1,9 +1,9 @@
 'use client';
 
-import { memo, type MouseEvent as ReactMouseEvent } from 'react';
+import { memo, useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 
 import { TitleTag } from '@/components/TitleTag';
-import type { ChatMessageDto } from '@/lib/game/chat/service';
+import type { ChatMessageDto, ChatReplyRef } from '@/lib/game/chat/service';
 import { worldEventMessage } from '@/app/(game)/world-message';
 import { guildLogMessage } from '@/app/(game)/guild/GuildLogFeed';
 
@@ -69,6 +69,106 @@ export function markRestoreIfLink(e: ReactMouseEvent) {
   }
 }
 
+/** 밀어서 답장(0254) — 이만큼 왼쪽으로 밀었다 놓으면 답장, 그 이상은 더 따라가지 않는다. */
+const SWIPE_TRIGGER = 48;
+const SWIPE_MAX = 64;
+
+/**
+ * 밀어서 답장 — 터치·펜만(마우스는 본문 탭 팝업의 '답장'으로). 매 이동마다 setState를 하면
+ * 150행 목록이 다시 그려지므로 transform을 DOM에 직접 쓴다. 세로 스크롤은 브라우저 몫이라
+ * 행에 touch-action: pan-y를 주고, 처음 8px에서 가로로 판정된 경우에만 따라 움직인다.
+ */
+function useSwipeReply(onTrigger: (() => void) | null) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const iconRef = useRef<HTMLSpanElement | null>(null);
+  const st = useRef<{ x: number; y: number; id: number; dx: number; lock: 'h' | 'v' | null } | null>(null);
+  /** 방금 밀기로 끝난 제스처 — 뒤따르는 click(본문 탭 팝업)을 한 번 무시한다. */
+  const swipedRef = useRef(false);
+  const paint = (dx: number, anim: boolean) => {
+    const el = rowRef.current;
+    if (el) {
+      el.style.transition = anim ? 'transform 0.18s ease-out' : 'none';
+      el.style.transform = dx ? `translateX(${dx}px)` : '';
+    }
+    const ic = iconRef.current;
+    if (ic) {
+      ic.style.opacity = String(Math.min(1, -dx / SWIPE_TRIGGER));
+      ic.style.transform = `scale(${-dx >= SWIPE_TRIGGER ? 1 : 0.8})`;
+    }
+  };
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (!onTrigger || e.pointerType === 'mouse') return;
+    st.current = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0, lock: null };
+    swipedRef.current = false;
+  };
+  const onPointerMove = (e: ReactPointerEvent) => {
+    const s = st.current;
+    if (!s || s.id !== e.pointerId) return;
+    const dx = e.clientX - s.x;
+    const dy = e.clientY - s.y;
+    if (!s.lock) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      s.lock = dx < 0 && Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'v';
+      if (s.lock === 'v') {
+        st.current = null;
+        return;
+      }
+      try {
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      } catch {
+        /* 캡처 실패 — 행 위에서만 따라가도 동작한다 */
+      }
+    }
+    s.dx = Math.max(-SWIPE_MAX, Math.min(0, dx));
+    paint(s.dx, false);
+  };
+  const onPointerEnd = (e: ReactPointerEvent) => {
+    const s = st.current;
+    if (!s || s.id !== e.pointerId) return;
+    st.current = null;
+    if (s.lock !== 'h') return;
+    swipedRef.current = true;
+    if (e.type === 'pointerup' && s.dx <= -SWIPE_TRIGGER) onTrigger?.();
+    paint(0, true);
+  };
+  /** 방금 밀기였으면 true를 돌려주고 표시를 지운다(뒤따르는 click 1회 무시용). */
+  const consumeSwiped = () => {
+    const v = swipedRef.current;
+    swipedRef.current = false;
+    return v;
+  };
+  return {
+    rowRef,
+    iconRef,
+    consumeSwiped,
+    handlers: { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd },
+  };
+}
+
+/** 답장 인용 줄(0254, A안 왼쪽 세로줄) — 누르면 원래 메시지로 이동. 볼 수 없으면 회색 문구. */
+function ReplyQuote({ r, onJump }: { r: ChatReplyRef; onJump?: (id: string) => void }) {
+  if ('gone' in r) {
+    return (
+      <div className="mt-[3px] border-l-2 border-zinc-200 pl-2 text-[10.5px] leading-[1.35] text-zinc-400 italic dark:border-zinc-700 dark:text-zinc-500">
+        {r.gone === 'deleted' ? '삭제된 메시지입니다' : '볼 수 없는 메시지입니다'}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onJump?.(r.id);
+      }}
+      className="mt-[3px] flex w-full min-w-0 items-baseline gap-1 border-l-2 border-amber-500/70 pl-2 text-left text-[10.5px] leading-[1.35]"
+    >
+      <span className="shrink-0 font-semibold text-zinc-500 dark:text-zinc-400">{r.nick}</span>
+      <span className="min-w-0 truncate text-zinc-400 dark:text-zinc-500">{r.body}</span>
+    </button>
+  );
+}
+
 /**
  * memo 분리(2026-08-06) — 기존엔 인라인 map이라 한 글자 입력·쿨다운 1초 틱마다 최대 150행이
  * 전부 재렌더됐다(전수조사 렉 1위). props가 전부 안정 참조·원시값이라 memo가 실효:
@@ -83,6 +183,8 @@ export const ChatRow = memo(function ChatRow({
   onProfile,
   onReport,
   onDelete,
+  onReply,
+  onJump,
 }: {
   m: ChatMessageDto;
   prevMsg: ChatMessageDto | undefined;
@@ -93,7 +195,14 @@ export const ChatRow = memo(function ChatRow({
   onReport: (m: ChatMessageDto) => void;
   /** 내 메시지 본문 탭 → 삭제 확인(0177). 없으면 내 메시지 탭은 무동작. */
   onDelete?: (m: ChatMessageDto) => void;
+  /** 답장 시작(0254) — 전체·길드만 넘긴다(귓속말은 없음 = 밀기·인용 없음). */
+  onReply?: (m: ChatMessageDto) => void;
+  /** 인용 줄 탭 → 원래 메시지로 이동. */
+  onJump?: (id: string) => void;
 }) {
+  const pendingId = m.id.startsWith('tmp-');
+  const canReply = !!onReply && !m.sys && !m.sysGuild && !m.deleted && !pendingId;
+  const swipe = useSwipeReply(canReply ? () => onReply!(m) : null);
   // 시스템 라인 — 전체=월드 이벤트, 길드=길드 활동 로그. 가운데 정렬 회색.
   if (m.sys || m.sysGuild) {
     return (
@@ -117,6 +226,7 @@ export const ChatRow = memo(function ChatRow({
     new Date(m.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() < 60_000;
   // 본문 탭 — 남의 메시지=신고, 내 메시지=삭제(0177). 삭제된 자리표시·전송 중은 무동작.
   const onBodyClick = (e: ReactMouseEvent) => {
+    if (swipe.consumeSwiped()) return;
     if ((e.target as HTMLElement).closest('a')) return;
     if (m.deleted || pending) return;
     if (mine) onDelete?.(m);
@@ -127,28 +237,55 @@ export const ChatRow = memo(function ChatRow({
     ? 'italic text-zinc-400 dark:text-zinc-500'
     : 'text-zinc-800 dark:text-zinc-200';
   const body = m.deleted ? m.body : renderBody(m.body, m.mentions, meCode, serverId);
+  const quote = m.reply ? <ReplyQuote r={m.reply} onJump={onJump} /> : null;
+  // 밀기 레이어 — 답장 가능한 행만 감싼다. ↩ 원은 opacity 0에서 시작해 민 만큼만 드러난다.
+  // overflow-x-clip: 민 만큼 행이 오른쪽 밖으로 나가지 않게(세로는 칭호 광채가 넘칠 수 있어 그대로).
+  const wrap = (row: React.ReactNode) =>
+    canReply ? (
+      <div data-mid={m.id} className="relative overflow-x-clip">
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
+          <span
+            ref={swipe.iconRef}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-[14px] font-bold text-white opacity-0"
+          >
+            ↩
+          </span>
+        </span>
+        {row}
+      </div>
+    ) : (
+      <div data-mid={m.id}>{row}</div>
+    );
+  const swipeProps = canReply
+    ? { ref: swipe.rowRef, ...swipe.handlers, style: { touchAction: 'pan-y pinch-zoom' } as const }
+    : {};
   if (grouped) {
-    return (
+    return wrap(
       <div
+        {...swipeProps}
         className={`flex items-start gap-2 px-1.5 py-[2px] ${
           mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
         } ${pending ? 'opacity-50' : ''}`}
       >
-        <p
-          onClickCapture={markRestoreIfLink}
-          onClick={onBodyClick}
-          className={`min-w-0 flex-1 pl-8 text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
-        >
-          {body}
-        </p>
-      </div>
+        <div className="min-w-0 flex-1 pl-8">
+          {quote}
+          <p
+            onClickCapture={markRestoreIfLink}
+            onClick={onBodyClick}
+            className={`${quote ? 'mt-[2px] ' : ''}text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
+          >
+            {body}
+          </p>
+        </div>
+      </div>,
     );
   }
-  return (
+  return wrap(
     <div
+      {...swipeProps}
       className={`flex items-start gap-2 px-1.5 py-[5px] ${
-        mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
-      } ${pending ? 'opacity-50' : ''}`}
+          mine ? 'bg-amber-50/70 dark:bg-amber-500/[0.07]' : ''
+        } ${pending ? 'opacity-50' : ''}`}
     >
       <button type="button" onClick={() => onProfile(m.userId)} aria-label={`${m.nickname} 정보`} className="mt-[3px]">
         {avatarBox(m, 'block h-6 w-6')}
@@ -188,15 +325,16 @@ export const ChatRow = memo(function ChatRow({
             {TIME_FMT.format(new Date(m.createdAt))}
           </span>
         </div>
-        {/* 본문 탭 = 남의 메시지 신고 팝업 / 내 메시지 삭제 팝업(별도 버튼 없음) */}
+        {quote}
+        {/* 본문 탭 = 남의 메시지 신고·답장 팝업 / 내 메시지 삭제·답장 팝업(별도 버튼 없음) */}
         <p
           onClickCapture={markRestoreIfLink}
           onClick={onBodyClick}
-          className={`mt-[3px] text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
+          className={`${quote ? 'mt-[2px]' : 'mt-[3px]'} text-[12.5px] leading-[1.45] break-words ${BODY_CLS}`}
         >
           {body}
         </p>
       </div>
-    </div>
+    </div>,
   );
 });

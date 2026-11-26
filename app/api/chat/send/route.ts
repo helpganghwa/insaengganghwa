@@ -14,12 +14,14 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   let raw = '';
   let channel: 'all' | 'guild' = 'all';
+  let replyTo: string | null = null;
   try {
-    const b = (await req.json()) as { body?: unknown; channel?: unknown };
+    const b = (await req.json()) as { body?: unknown; channel?: unknown; replyTo?: unknown };
     raw = typeof b.body === 'string' ? b.body : '';
     channel = b.channel === 'guild' ? 'guild' : 'all';
+    replyTo = typeof b.replyTo === 'string' && b.replyTo ? b.replyTo : null;
   } catch {
     return NextResponse.json({ status: 'error', message: '잘못된 요청입니다.' }, { status: 400 });
   }
-  return NextResponse.json(await sendChatCore(raw, channel));
+  return NextResponse.json(await sendChatCore(raw, channel, replyTo));
 }

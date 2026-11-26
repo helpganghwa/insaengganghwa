@@ -597,3 +597,13 @@ html.ig-modal-open [data-app-shell] .animate-pulse, html.ig-modal-open [data-app
 @keyframes wb-zone-label-solo { 0%, 46%, 100% { border-color: rgba(167, 139, 250, 0.8); } 50%, 70%, 96% { border-color: rgba(226, 232, 240, 1); } 60%, 85% { border-color: rgba(248, 250, 252, 1); } }
 .wb-zone-label.wb-solo::after { box-shadow: 0 0 7px 3px rgba(139, 92, 246, 0.9); }
 
+
+/* 채팅 답장 인용 이동(0254) — 원래 메시지 행이 잠깐 노랗게 2번. ChatDock onJump이 붙였다 뗀다. */
+@keyframes chat-reply-flash {
+  0%, 100% { background-color: transparent; }
+  30% { background-color: rgba(245, 158, 11, 0.22); }
+}
+.chat-reply-flash { animation: chat-reply-flash 0.8s ease-in-out 2; }
+@media (prefers-reduced-motion: reduce) {
+  .chat-reply-flash { animation: none; background-color: rgba(245, 158, 11, 0.14); }
+}

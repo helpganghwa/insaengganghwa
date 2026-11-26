@@ -26,6 +26,8 @@ export const chatMessages = pgTable(
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     /** 본인 삭제(0177) — 행은 노출되되 본문이 자리표시로 대체. 원문 보존(어드민 검수용). */
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    /** 답장(0254) — 답한 원래 메시지 id. FK 없음(원문이 먼저 정리돼도 '답장'임은 남긴다). */
+    replyToId: bigint('reply_to_id', { mode: 'bigint' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

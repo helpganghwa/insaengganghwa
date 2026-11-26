@@ -10,7 +10,7 @@ import { subscribeBroadcast } from '@/lib/supabase-browser';
 import { ZoomSafeInput } from '@/components/ui/ZoomSafeField';
 import { type FaceBox } from '@/components/faceCrop';
 import { TitleTag } from '@/components/TitleTag';
-import type { ChatMessageDto, ChatUserMeta } from '@/lib/game/chat/service';
+import type { ChatMessageDto, ChatReplyRef, ChatUserMeta } from '@/lib/game/chat/service';
 import { CHAT_DELETED_BODY } from '@/lib/game/chat/filter';
 
 /** 정규화 응답 조립용 빈 메타 — 시스템 라인/미등재 유저(종전 sys DTO의 빈 값과 동일). */
@@ -163,6 +163,16 @@ type MiniProfile = {
   isMe: boolean;
 };
 
+/** 답장 원문 → 인용(0254). 낙관 렌더용 — 서버 확정본이 오면 서버 값으로 바뀐다. */
+function replyRefOf(m: ChatMessageDto): ChatReplyRef {
+  return { id: m.id, uid: m.userId, nick: m.nickname, body: m.body.slice(0, 40) };
+}
+
+/** 원문이 삭제·숨김되면 그 원문을 인용한 답장의 인용 줄만 회색 문구로 바꾼다. */
+function goneQuote(m: ChatMessageDto, id: string, gone: 'deleted' | 'unavailable'): ChatMessageDto {
+  return m.reply && m.reply.id === id && !('gone' in m.reply) ? { ...m, reply: { id, gone } } : m;
+}
+
 /** 헤더 탭. 귓속말은 별도 데이터 경로라 버퍼·폴링이 다루는 채널 탭(ChatTab)과 구분한다. */
 type Tab = 'all' | 'guild' | 'whisper';
 type ChatTab = 'all' | 'guild';
@@ -222,6 +232,8 @@ export function ChatDock() {
   const [profile, setProfile] = useState<{ userId: string; data: MiniProfile } | null>(null);
   const [reportTarget, setReportTarget] = useState<ChatMessageDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ChatMessageDto | null>(null);
+  // 답장 대상(0254) — 입력창 위 표시 + 전송 시 replyTo. 탭(채널)을 바꾸면 버린다(원문은 그 채널 것).
+  const [replyTarget, setReplyTarget] = useState<ChatMessageDto | null>(null);
   const [popupFlash, setPopupFlash] = useState<string | null>(null);
   // 유저 팝업 열기 — 아래 복원 layout effect가 쓰므로 그보다 앞에 선언한다(선언 전 접근은 컴파일러가 거부, 코드 품질 조사 10-12).
   const openProfile = useCallback((userId: string) => {
@@ -864,21 +876,29 @@ export function ChatDock() {
 
   /** hide broadcast(운영자 숨김) 반영 — 화면·미니바·양쪽 버퍼에서 제거. 전체/길드 구독 공용. */
   const removeMessage = useCallback((id: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
+    // 이 메시지를 인용한 답장(0254)은 남기고 인용 줄만 '볼 수 없는 메시지'로.
+    const strip = (list: ChatMessageDto[]) =>
+      list.filter((m) => m.id !== id).map((m) => goneQuote(m, id, 'unavailable'));
+    setMessages(strip);
     setLatest((prev) => (prev?.id === id ? null : prev));
+    setReplyTarget((prev) => (prev?.id === id ? null : prev));
     for (const b of Object.values(bufRef.current)) {
-      b.messages = b.messages.filter((m) => m.id !== id);
+      b.messages = strip(b.messages);
     }
   }, []);
 
   /** delete broadcast(본인 삭제, 0177) 반영 — 행은 남기고 본문만 자리표시로. 화면·미니바·버퍼 공통. */
   const markDeleted = useCallback((id: string) => {
     const mark = (m: ChatMessageDto): ChatMessageDto =>
-      m.id === id && !m.deleted ? { ...m, body: CHAT_DELETED_BODY, mentions: null, deleted: true } : m;
-    setMessages((prev) => (prev.some((m) => m.id === id) ? prev.map(mark) : prev));
+      m.id === id && !m.deleted
+        ? { ...m, body: CHAT_DELETED_BODY, mentions: null, deleted: true }
+        : goneQuote(m, id, 'deleted');
+    const touches = (list: ChatMessageDto[]) => list.some((m) => m.id === id || m.reply?.id === id);
+    setMessages((prev) => (touches(prev) ? prev.map(mark) : prev));
     setLatest((prev) => (prev?.id === id ? mark(prev) : prev));
+    setReplyTarget((prev) => (prev?.id === id ? null : prev));
     for (const b of Object.values(bufRef.current)) {
-      if (b.messages.some((m) => m.id === id)) b.messages = b.messages.map(mark);
+      if (touches(b.messages)) b.messages = b.messages.map(mark);
     }
   }, []);
 
@@ -1198,6 +1218,7 @@ export function ChatDock() {
   // 귓속말은 채널 탭(전체/길드)의 목록·버퍼를 건드리지 않는다 — 되돌아오면 보던 그대로.
   const switchTab = (next: Tab, limitOverride?: number) => {
     if (next === tab) return;
+    setReplyTarget(null);
     if (next === 'whisper') {
       setTab(next);
       setUnseenBelow(false);
@@ -1399,9 +1420,12 @@ export function ChatDock() {
       mentions: null,
       body,
       createdAt: new Date().toISOString(),
+      ...(replyTarget ? { reply: replyRefOf(replyTarget) } : {}),
     };
+    const sentReply = replyTarget;
     setMessages((prev) => [...prev, temp]);
     setInput('');
+    setReplyTarget(null);
     setCooldown(COOLDOWN_S);
     // 재포커스(2026-08-07 제보) — 한글 IME 조합 중 전송하면 setInput('')이 조합 세션을 깨며
     // 간헐적으로 입력창이 blur돼 키보드가 닫혔다. 제스처 콜스택 안의 focus()는 iOS에서도
@@ -1420,6 +1444,8 @@ export function ChatDock() {
       if (sentTab === tabRef.current) {
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
         setInput(body);
+        // 답장도 되살린다 — 새로 다른 답장을 고른 중이면 덮지 않는다.
+        setReplyTarget((cur) => cur ?? sentReply);
         setCooldown(0);
       } else {
         const b = bufRef.current[sentTab];
@@ -1434,7 +1460,7 @@ export function ChatDock() {
     void fetch('/api/chat/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, channel: sentTab }),
+      body: JSON.stringify({ body, channel: sentTab, ...(sentReply ? { replyTo: sentReply.id } : {}) }),
       cache: 'no-store',
     })
       .then(async (res) => (await res.json()) as SendChatResult)
@@ -1484,6 +1510,23 @@ export function ChatDock() {
     return () => clearTimeout(t);
   }, [deleteCooldown]);
   const onDelete = useCallback((m: ChatMessageDto) => setDeleteTarget(m), []);
+  // 답장(0254) — 밀기·팝업 공용. 입력창에 포커스를 줘 바로 이어 쓰게 한다.
+  const onReply = useCallback((m: ChatMessageDto) => {
+    setReplyTarget(m);
+    setReportTarget(null);
+    setDeleteTarget(null);
+    inputRef.current?.focus();
+  }, []);
+  // 인용 줄 탭 → 원래 메시지로 스크롤 + 잠깐 깜빡임. 목록에 없으면(오래돼 안 불러온 메시지) 무동작.
+  const onJump = useCallback((id: string) => {
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-mid="${CSS.escape(id)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('chat-reply-flash');
+    void el.offsetWidth; // 연속 탭에도 애니메이션을 처음부터 다시
+    el.classList.add('chat-reply-flash');
+    window.setTimeout(() => el.classList.remove('chat-reply-flash'), 1700);
+  }, []);
 
   // ── WhisperPane 연결 콜백 —— 전부 안정 참조(패널 내부 effect 재실행 방지).
   const handleWhisperThreads = useCallback((res: WhisperThreadsRes) => {
@@ -1578,7 +1621,13 @@ export function ChatDock() {
   // 목록 파생 useMemo(감사 B) — 종전엔 매 렌더(글자 입력 포함)마다 150건 filter +
   // 행당 chatDateLabel(Date 4개)이 재실행됐다. 참조가 안정되면 ChatRow memo도 실효.
   const visibleMessages = useMemo(
-    () => messages.filter((m) => !blocked.has(m.userId)),
+    () =>
+      messages
+        .filter((m) => !blocked.has(m.userId))
+        // 차단한 사람의 원문을 인용한 답장 — 답장은 보이되 인용 줄은 가린다(0254).
+        .map((m) =>
+          m.reply && 'uid' in m.reply && blocked.has(m.reply.uid) ? goneQuote(m, m.reply.id, 'unavailable') : m,
+        ),
     [messages, blocked],
   );
   const listRows = useMemo(
@@ -1780,6 +1829,8 @@ export function ChatDock() {
                       onProfile={openProfile}
                       onReport={onReport}
                       onDelete={onDelete}
+                      onReply={onReply}
+                      onJump={onJump}
                     />
                   </Fragment>
                 ))}
@@ -1802,6 +1853,26 @@ export function ChatDock() {
             <div className="shrink-0 border-t border-zinc-100 px-2.5 py-2 dark:border-zinc-800/70">
               {error ? (
                 <p className="mb-1 px-1 text-[11px] text-amber-600 dark:text-amber-400">{error}</p>
+              ) : null}
+              {replyTarget ? (
+                // 답장 표시(0254) — 인용 줄과 같은 왼쪽 세로줄. 멘션 후보와 같은 자리(입력창 바로 위).
+                <div className="mb-1.5 flex items-center gap-2 rounded-lg bg-zinc-100 py-1.5 pr-1 pl-2.5 dark:bg-zinc-900">
+                  <div className="min-w-0 flex-1 border-l-2 border-amber-500/70 pl-2 leading-[1.35]">
+                    <p className="text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">
+                      {replyTarget.userId === me ? '내 메시지에 답장' : `${replyTarget.nickname}님에게 답장`}
+                    </p>
+                    <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{replyTarget.body}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={() => setReplyTarget(null)}
+                    aria-label="답장 취소"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[15px] text-zinc-400"
+                  >
+                    ×
+                  </button>
+                </div>
               ) : null}
               {mentionCands.length > 0 ? (
                 <div className="mb-1 flex flex-wrap gap-1">
@@ -2079,9 +2150,10 @@ export function ChatDock() {
 
       {/* 본인 메시지 삭제 확인 팝업(0177) */}
       {deleteTarget ? (
-        <ModalShell onClose={() => setDeleteTarget(null)} onSubmit={confirmDelete} label="메시지 삭제">
+        // Enter=답장(0254) — 제목이 '내 메시지'로 바뀌어 삭제 확인 팝업이 아니게 됐다. 되돌릴 수 없는 삭제는 버튼으로만.
+        <ModalShell onClose={() => setDeleteTarget(null)} onSubmit={() => onReply(deleteTarget)} label="내 메시지">
           <ModalLayout
-            title="이 메시지를 삭제할까요?"
+            title="내 메시지"
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setDeleteTarget(null)}>
@@ -2089,6 +2161,9 @@ export function ChatDock() {
                 </ModalButton>
                 <ModalButton tone="danger" onClick={confirmDelete} disabled={deleteCooldown > 0}>
                   {deleteCooldown > 0 ? `삭제 ${deleteCooldown}s` : '삭제'}
+                </ModalButton>
+                <ModalButton tone="primary" onClick={() => onReply(deleteTarget)}>
+                  답장
                 </ModalButton>
               </>
             }
@@ -2106,18 +2181,15 @@ export function ChatDock() {
       {/* 신고 확인 팝업 */}
       {reportTarget ? (
         // 공용 셸로 — Esc·포커스 이동을 얻는다(2026-07-29 점검).
+        // 제목=닉네임(0254) — 답장이 같이 들어가 신고 전용 팝업이 아니다. Enter도 신고 대신 답장.
         <ModalShell
           onClose={() => setReportTarget(null)}
-          onSubmit={confirmReport}
-          label="메시지 신고"
+          onSubmit={() => onReply(reportTarget)}
+          label="메시지"
         >
           <ModalLayout
-            title="이 메시지를 신고할까요?"
-            subtitle={
-              <span className="font-bold text-zinc-600 dark:text-zinc-300">
-                {reportTarget.nickname}
-              </span>
-            }
+            title={reportTarget.nickname}
+            subtitle={reportTarget.guildName ?? undefined}
             footer={
               <>
                 <ModalButton tone="ghost" onClick={() => setReportTarget(null)}>
@@ -2137,6 +2209,9 @@ export function ChatDock() {
                 </ModalButton>
                 <ModalButton tone="danger" onClick={confirmReport}>
                   신고
+                </ModalButton>
+                <ModalButton tone="primary" onClick={() => onReply(reportTarget)}>
+                  답장
                 </ModalButton>
               </>
             }

@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import { db } from '@/lib/db/client';
 import { chatBlocks, chatMessages, chatReports } from '@/lib/db/schema/chat';
@@ -28,6 +29,31 @@ export { CHAT_DELETED_BODY };
  */
 
 export type ChatMention = { n: string; c: string | null };
+
+/**
+ * 답장 인용(0254) — 원문을 볼 수 있으면 작성자·본문 앞부분, 없으면 gone.
+ * uid는 받는 쪽 차단 판정용(차단한 사람의 원문은 클라가 '볼 수 없는 메시지'로 가린다).
+ * 본문은 표시 시점 조인이라 원문이 삭제·숨김되면 다음 조회부터 바로 gone이 된다.
+ */
+export type ChatReplyRef =
+  | { id: string; uid: string; nick: string; body: string }
+  | { id: string; gone: 'deleted' | 'unavailable' };
+
+/** 인용 본문 길이 — 한 줄 말줄임이라 길게 보낼 이유가 없다(페이로드 절약). */
+export const CHAT_REPLY_EXCERPT = 40;
+
+/** 원문 행 → 인용. 없음(정리·탈퇴)·운영 숨김=unavailable, 본인 삭제=deleted. */
+export function toReplyRef(
+  replyToId: bigint | null,
+  orig: { userId: string | null; body: string | null; hiddenAt: Date | null; deletedAt: Date | null } | null,
+  nickOf: (uid: string) => string | undefined,
+): ChatReplyRef | undefined {
+  if (replyToId === null) return undefined;
+  const id = String(replyToId);
+  if (!orig || !orig.userId || orig.body === null || orig.hiddenAt) return { id, gone: 'unavailable' };
+  if (orig.deletedAt) return { id, gone: 'deleted' };
+  return { id, uid: orig.userId, nick: nickOf(orig.userId) ?? '대장장이', body: orig.body.slice(0, CHAT_REPLY_EXCERPT) };
+}
 
 /** 발신자 표시 메타 — /api/chat/recent 정규화 응답의 users 값(감사 C). DTO에서 분리. */
 export type ChatUserMeta = Pick<
@@ -75,6 +101,8 @@ export type ChatMessageDto = {
   createdAt: string; // ISO
   /** 본인 삭제(0177) — true면 body는 CHAT_DELETED_BODY 자리표시. 탭·멘션·신고 비활성. */
   deleted?: boolean;
+  /** 답장(0254) — 이 메시지가 답한 원래 메시지. 없으면 일반 메시지. */
+  reply?: ChatReplyRef;
 };
 
 
@@ -288,6 +316,8 @@ export async function getRecentChat(
   const channelCond = guildId
     ? eq(chatMessages.guildId, guildId)
     : sql`${chatMessages.guildId} is null`;
+  // 답장 원문 — 같은 문장에서 자기 조인(PK)으로. 왕복을 늘리지 않는다.
+  const rq = alias(chatMessages, 'rq');
   const [rows, sysFeed] = await Promise.all([
     db
       .select({
@@ -297,8 +327,14 @@ export async function getRecentChat(
         mentions: chatMessages.mentions,
         createdAt: chatMessages.createdAt,
         deletedAt: chatMessages.deletedAt,
+        replyToId: chatMessages.replyToId,
+        rqUserId: rq.userId,
+        rqBody: rq.body,
+        rqHiddenAt: rq.hiddenAt,
+        rqDeletedAt: rq.deletedAt,
       })
       .from(chatMessages)
+      .leftJoin(rq, and(eq(rq.id, chatMessages.replyToId), eq(rq.serverId, serverId)))
       .where(and(eq(chatMessages.serverId, serverId), channelCond, sql`${chatMessages.hiddenAt} is null`))
       .orderBy(desc(chatMessages.id))
       .limit(limit),
@@ -311,7 +347,10 @@ export async function getRecentChat(
         : getWorldFeed(serverId, 150).catch(() => [])
       : Promise.resolve([]),
   ]);
-  const fields = await displayFields(rows.map((r) => r.userId), serverId);
+  const fields = await displayFields(
+    [...rows.map((r) => r.userId), ...rows.flatMap((r) => (r.rqUserId ? [r.rqUserId] : []))],
+    serverId,
+  );
   const msgs = rows
     .reverse()
     .map((r) => {
@@ -335,6 +374,17 @@ export async function getRecentChat(
         body: r.deletedAt ? CHAT_DELETED_BODY : r.body,
         createdAt: r.createdAt.toISOString(),
         ...(r.deletedAt ? { deleted: true } : {}),
+        ...(r.replyToId !== null
+          ? {
+              reply: toReplyRef(
+                r.replyToId,
+                r.rqUserId
+                  ? { userId: r.rqUserId, body: r.rqBody, hiddenAt: r.rqHiddenAt, deletedAt: r.rqDeletedAt }
+                  : null,
+                (uid) => fields.get(uid)?.nickname,
+              ),
+            }
+          : {}),
       } satisfies ChatMessageDto;
     });
   if (sysFeed.length === 0) {
@@ -364,10 +414,18 @@ export async function persistAndBroadcast(
   body: string,
   mentions: ChatMention[] = [],
   guildId: bigint | null = null,
+  reply?: ChatReplyRef,
 ): Promise<ChatMessageDto> {
   const [row] = await db
     .insert(chatMessages)
-    .values({ serverId, userId, body, guildId, mentions: mentions.length ? mentions : null })
+    .values({
+      serverId,
+      userId,
+      body,
+      guildId,
+      mentions: mentions.length ? mentions : null,
+      replyToId: reply ? BigInt(reply.id) : null,
+    })
     .returning({ id: chatMessages.id, createdAt: chatMessages.createdAt });
   const fields = await displayFields([userId], serverId);
   const f = fields.get(userId);
@@ -388,6 +446,7 @@ export async function persistAndBroadcast(
     mentions: mentions.length ? mentions : null,
     body,
     createdAt: row!.createdAt.toISOString(),
+    ...(reply ? { reply } : {}),
   };
   invalidateRecentCache(serverId, guildId); // 같은 인스턴스의 폴링이 곧바로 새 메시지를 보게
   // 미니바 준실시간(2026-08-06) — 월드 채널만, 서버당 15초에 최대 1건을 미니 토픽에 동봉.
