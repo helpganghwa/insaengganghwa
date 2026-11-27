@@ -231,8 +231,11 @@ export async function getExpeditionBoard(userId: string, serverId: number): Prom
     const row = active.find((r) => r.slot === slot);
     // 닫힌 슬롯: 진행 중(running) 파견이 남아 있으면 그대로 보여준다(합산 강화 하락 케이스 — 수령까지 유지).
     if (slot > eff && row?.status !== 'running') {
-      const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot)!;
-      locked.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
+      // 잠긴 칸은 다음 1칸만(2026-11-27, 10칸 확장) — 전부 보이면 초반 유저 화면에 잠긴 카드 9장이 늘어선다.
+      if (locked.length === 0) {
+        const def = EXPEDITION_SLOT_UNLOCKS.find((u) => u.slot === slot)!;
+        locked.push({ slot, state: 'locked', unlock: { enhanceSum: def.enhanceSum } });
+      }
       continue;
     }
     const card = cardOf(slot, false);

@@ -137,7 +137,13 @@ describe('expedition engine — 슬롯', () => {
     expect(effectiveSlots(12000)).toBe(5);
     expect(effectiveSlots(14999)).toBe(5);
     expect(effectiveSlots(15000)).toBe(6); // 2026-10-29 6칸
-    expect(effectiveSlots(999999)).toBe(6);
+    expect(effectiveSlots(17999)).toBe(6);
+    expect(effectiveSlots(18000)).toBe(7); // 2026-11-27 7~10칸
+    expect(effectiveSlots(21000)).toBe(8);
+    expect(effectiveSlots(24000)).toBe(9);
+    expect(effectiveSlots(26999)).toBe(9);
+    expect(effectiveSlots(27000)).toBe(10);
+    expect(effectiveSlots(999999)).toBe(10);
   });
   it('상수 참조 무결(엔진↔밸런스)', () => {
     expect(EXPEDITION_HOURS).toBe(8);

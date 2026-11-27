@@ -62,17 +62,20 @@ describe('expedition balance invariants', () => {
     const launchDaily = perSlot * 4;
     expect(launchDaily).toBeGreaterThanOrEqual(222);
     expect(launchDaily).toBeLessThanOrEqual(237);
-    // 6슬롯(합산 강화 15,000+, 2026-10-29) — 4슬롯의 6/4.
-    expect(EXPEDITION_SLOTS).toBe(6);
-    expect(perSlot * EXPEDITION_SLOTS).toBeGreaterThanOrEqual(333);
-    expect(perSlot * EXPEDITION_SLOTS).toBeLessThanOrEqual(356);
+    // 6슬롯(합산 강화 15,000+, 2026-10-29) — 4슬롯의 6/4. 10슬롯(27,000+, 2026-11-27) — 4슬롯의 10/4.
+    expect(perSlot * 6).toBeGreaterThanOrEqual(333);
+    expect(perSlot * 6).toBeLessThanOrEqual(356);
+    expect(EXPEDITION_SLOTS).toBe(10);
+    expect(perSlot * EXPEDITION_SLOTS).toBeGreaterThanOrEqual(555);
+    expect(perSlot * EXPEDITION_SLOTS).toBeLessThanOrEqual(593);
     // 축 ③(아바타 강화 합, 상한 없음) — AS 1,000 아바타는 ×3.20.
     const as1000 = 1 + expeditionAsBonusBp(1000) / 10000;
     expect(launchDaily * as1000).toBeGreaterThanOrEqual(712);
     expect(launchDaily * as1000).toBeLessThanOrEqual(758);
-    // 대성공 총 상한(35% = 기본 5 + 합산 30, 2026-10-29 A안)만 얹은 상한(축 ③ 제외) — 6슬롯 전부 기준.
+    // 대성공 총 상한(35% = 기본 5 + 합산 30, 2026-10-29 A안)만 얹은 상한(축 ③ 제외) — 6슬롯 500·10슬롯 834 이하.
     const critMax = 1 + (expeditionCritBp(100000) / 10000) * (EXPEDITION_CRIT_MULT - 1);
-    expect(perSlot * EXPEDITION_SLOTS * (critMax / critMult)).toBeLessThanOrEqual(500);
+    expect(perSlot * 6 * (critMax / critMult)).toBeLessThanOrEqual(500);
+    expect(perSlot * EXPEDITION_SLOTS * (critMax / critMult)).toBeLessThanOrEqual(834);
     expect(expeditionCritBp(100000)).toBe(EXPEDITION_CRIT_BP + EXPEDITION_CRIT_SUM_BP_MAX);
     expect(expeditionCritBp(0)).toBe(EXPEDITION_CRIT_BP);
     // A안(2026-10-29): 기울기 1%p/1k 유지, 상한 +30%p — 20k 미만은 종전과 같고 30k에서 35%에 닿는다.
@@ -81,23 +84,23 @@ describe('expedition balance invariants', () => {
     expect(expeditionCritBp(24882)).toBe(500 + 2488);
     expect(expeditionCritBp(30000)).toBe(3500);
     expect(expeditionCritBp(45000)).toBe(3500);
-    // 추가 파견 칸 번호 구역 — 해금 칸(1~6)·예약(7~10)과 겹치지 않는다.
-    expect(EXPEDITION_EXTRA_SLOT_BASE).toBeGreaterThan(EXPEDITION_SLOTS);
+    // 추가 파견 칸 번호 구역 — 해금 칸(1~10)과 겹치지 않는다(2026-11-27 10칸으로 예약 구역을 다 씀).
+    expect(EXPEDITION_EXTRA_SLOT_BASE).toBeGreaterThanOrEqual(EXPEDITION_SLOTS);
     expect(isExtraExpeditionSlot(EXPEDITION_SLOTS)).toBe(false);
     expect(isExtraExpeditionSlot(EXPEDITION_EXTRA_SLOT_BASE)).toBe(false);
     expect(isExtraExpeditionSlot(EXPEDITION_EXTRA_SLOT_BASE + 1)).toBe(true);
   });
 
-  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 6칸은 합산 강화 0/3k/6k/9k/12k/15k 단조 증가', () => {
+  it('시너지·슬롯 정합 — 가중 일치 1.3 > 일반 1.15 > 1, 슬롯 10칸은 합산 강화 0부터 3k 간격 단조 증가', () => {
     expect(EXPEDITION_SYNERGY_MATCH_MULT).toBeGreaterThan(EXPEDITION_SYNERGY_GENERAL_MULT);
     expect(EXPEDITION_SYNERGY_GENERAL_MULT).toBeGreaterThan(1);
     expect(expeditionWeightedSum([{ level: 100, region: 'volcano' }, { level: 100, region: 'general' }, { level: 100, region: 'orc' }], 'volcano')).toBe(345);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([0, 3000, 6000, 9000, 12000, 15000]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.slot)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(EXPEDITION_SLOT_UNLOCKS.map((u) => u.enhanceSum)).toEqual([0, 3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000]);
     expect(EXPEDITION_SLOT_UNLOCKS.length).toBe(EXPEDITION_SLOTS);
   });
 
-  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 0/3k/6k/9k/12k/15k, 무료 3회·20💎)', () => {
+  it('슬롯 해금·새로고침 — 확정 수치(합산 강화 0~27k 3k 간격, 무료 3회·20💎)', () => {
     expect(EXPEDITION_SLOT_UNLOCKS).toEqual([
       { slot: 1, enhanceSum: 0 },
       { slot: 2, enhanceSum: 3000 },
@@ -105,6 +108,10 @@ describe('expedition balance invariants', () => {
       { slot: 4, enhanceSum: 9000 },
       { slot: 5, enhanceSum: 12000 },
       { slot: 6, enhanceSum: 15000 },
+      { slot: 7, enhanceSum: 18000 },
+      { slot: 8, enhanceSum: 21000 },
+      { slot: 9, enhanceSum: 24000 },
+      { slot: 10, enhanceSum: 27000 },
     ]);
     expect(EXPEDITION_REFRESH_FREE_PER_DAY).toBe(3);
     expect(EXPEDITION_REFRESH_COST).toBe(20);

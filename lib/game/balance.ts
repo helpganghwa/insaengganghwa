@@ -902,8 +902,9 @@ export const FIRST_MILESTONES: readonly { key: string; metric: FirstMilestoneMet
 /* ═══════════════════════ 파견 (정본: docs/EXPEDITION.md, v1) ═══════════════════════ */
 /* 모든 수치는 확률 공시(/probability §파견)와 1:1 — 변경 시 BALANCE.md·공시 동기(§33). */
 
-/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09, 6칸째는 2026-10-29 추가. */
-export const EXPEDITION_SLOTS = 6;
+/** 동시 파견 슬롯 수(유저×서버) — 전부 합산 강화로 해금(EXPEDITION_SLOT_UNLOCKS). 일일 시작 상한 없음(2026-08-28). 5칸째는 2026-09-09, 6칸째는 2026-10-29, 7~10칸은 2026-11-27 추가.
+ * 10이 해금 칸의 끝 — 11번부터는 추가 파견 칸 구역(EXPEDITION_EXTRA_SLOT_BASE)이라 더 늘리려면 0248처럼 추가 칸 번호를 먼저 옮겨야 한다. */
+export const EXPEDITION_SLOTS = 10;
 /**
  * 추가 파견 칸(2026-10-10, POINT-SHOP §6) — 대난투 포인트·마일리지로 산 '오늘만 쓰는' 칸. 번호는 해금 칸과 분리된 구역
  * **EXPEDITION_EXTRA_SLOT_BASE+1(=11)부터**, 산 순서가 아니라 그때 비어 있는 가장 작은 번호(어제 산 칸의 진행 중 파견이 번호를 쥐고 있을 수 있다).
@@ -946,6 +947,9 @@ export const EXPEDITION_DAILY_LIMIT_SINCE_ISO = '2026-09-01T01:29:30.000Z';
  * 다이아 해금·시간 단축은 계속 없음 — 3,000 간격 유지.
  * 2026-10-29 6칸(15k) 추가 — 지인(24.9k) 반복 요청(9/8·10/17·10/23)과 9/9 답변 약속분. 12k 도달자가 2명(24.9k·14.5k)이라 15k는 즉시 1명,
  * 그다음(10.8k)은 한참 뒤. "3천마다 무한 해금"은 지인 속도(월 +5.4k)면 17일마다 1칸이라 기각 — 7칸(20k)은 다음 경제 점검 때.
+ * 2026-11-27 7~10칸 추가(18k/21k/24k/27k, 3,000 간격 유지 — 사용자 A안) — 지인(26.3k) 재요청. 7일 활동 440명 중 15k 이상은
+ * 지인·세이렌느(16.7k)뿐이라 즉시 효과는 지인 +3칸(≈ 💎3,000/일, 전체 파견 유입의 약 3%). 대성공 식은 그대로(상한 35%).
+ * 파견 화면은 잠긴 칸 중 **다음 1칸만** 보여 준다(lib/game/expedition/queries.ts) — 10칸이면 초반 유저에게 잠긴 카드 9장이 늘어서던 것.
  */
 export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: number }[] = [
   { slot: 1, enhanceSum: 0 },
@@ -954,6 +958,10 @@ export const EXPEDITION_SLOT_UNLOCKS: readonly { slot: number; enhanceSum: numbe
   { slot: 4, enhanceSum: 9_000 },
   { slot: 5, enhanceSum: 12_000 },
   { slot: 6, enhanceSum: 15_000 },
+  { slot: 7, enhanceSum: 18_000 },
+  { slot: 8, enhanceSum: 21_000 },
+  { slot: 9, enhanceSum: 24_000 },
+  { slot: 10, enhanceSum: 27_000 },
 ] as const;
 /** 합산 강화 → 열린 슬롯 수(0~EXPEDITION_SLOTS). */
 export function expeditionSlotsFor(enhanceSum: number): number {
